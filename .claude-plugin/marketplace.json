@@ -1,0 +1,50 @@
+{
+  "name": "indie-native-app",
+  "owner": {
+    "name": "Sungwook Baek",
+    "email": "sungwook.baek@yahoo.com"
+  },
+  "description": "Agents for indie developers shipping Apple-platform native apps end-to-end: UI implementation (SwiftUI/UIKit + HIG), Apple-platform performance review (SwiftUI + UIKit), Xcode build automation, App Store screenshot pipeline, App Store Connect release management, the one-page app introduction website, GitHub Actions CI/CD on a self-hosted Mac runner, and good commit messages.",
+  "plugins": [
+    {
+      "name": "apple-platform-ui",
+      "source": "./plugins/apple-platform-ui",
+      "description": "UI implementation skill for iOS, iPadOS, watchOS, and macOS. Generates SwiftUI/UIKit code grounded in Apple HIG — SF Symbols, SF Pro, semantic colors, dark mode, Dynamic Type, mock UseCase injection, Light/Dark/XXL previews. Kills the rebuild-tweak-rebuild loop."
+    },
+    {
+      "name": "apple-platform-performance",
+      "source": "./plugins/apple-platform-performance",
+      "description": "Effective Apple Platform Performance — 23 numbered Do/Don't items for SwiftUI and UIKit with code snippets, grounded in Apple's five canonical perf docs. Diagnoses hangs, hitches, slow launches, and view-cost regressions; recommends the right Instruments template and the one code change to try."
+    },
+    {
+      "name": "xcodebuild",
+      "source": "./plugins/xcodebuild",
+      "description": "Drives Xcode builds, simulators, tests, debugging, and UI automation through the XcodeBuildMCP server (xcodebuildmcp.com). Walks through MCP install + per-project config, then picks the right tool for the job instead of shelling out to raw xcodebuild."
+    },
+    {
+      "name": "screenshot",
+      "source": "./plugins/screenshot",
+      "description": "End-to-end App Store screenshot pipeline. Boots simulators, drives UI, captures at every required device size, optionally frames, and uploads via asc. Wraps the xcodebuild and app-store-connect agents."
+    },
+    {
+      "name": "app-store-connect",
+      "source": "./plugins/app-store-connect",
+      "description": "Handles App Store Connect operations through the asc CLI (asccli.sh) — TestFlight, App Store submission, code signing, metadata, screenshots, crash triage, Xcode Cloud. Walks through asc install and API-key auth."
+    },
+    {
+      "name": "app-website",
+      "source": "./plugins/app-website",
+      "description": "Builds the one-page app introduction website. Forces SwiftUI-For-Web stack so the site reads like the app's SwiftUI code; applies Gridlover-style vertical rhythm; aesthetic anchored on developer.apple.com/swiftui and airbnb.com. Sections: About/Hero, Key Features with iPhone-framed screenshots, parallax showcase, Download, Share."
+    },
+    {
+      "name": "cicd",
+      "source": "./plugins/cicd",
+      "description": "GitHub Actions CI/CD on a macOS self-hosted runner. Writes the workflow, registers the runner via gh CLI, tests locally with `act -P macos-latest=-self-hosted`, then opens a PR. Installs via Homebrew. Always cleans up DerivedData / simulators / cache. On failure, routes to xcodebuild / app-store-connect / apple-platform-performance for triage."
+    },
+    {
+      "name": "commit-message",
+      "source": "./plugins/commit-message",
+      "description": "Writes good git commit messages from the staged diff. Supports Conventional Commits, Swift-style [area] prefix, or plain imperative; detects which style the repo uses and matches it. Refuses to write a message without reading the diff."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "cicd",
+  "version": "0.1.0",
+  "description": "GitHub Actions CI/CD for indie native mobile developers, on a macOS self-hosted runner. Writes the workflow file, registers the runner via gh CLI, tests locally with `act -P macos-latest=-self-hosted` before pushing, then opens a PR. Installs packages via Homebrew (Mac-first audience). Wires secrets via `gh secret set` and non-sensitive config via `gh variable set`. Always cleans up cached files (DerivedData, simulators, Homebrew cache) to save disk. Routes build failures to xcodebuild agent and ASC failures to app-store-connect agent.",
+  "author": {
+    "name": "Sungwook Baek",
+    "email": "sungwook.baek@yahoo.com"
+  },
+  "keywords": [
+    "github-actions",
+    "ci",
+    "cd",
+    "self-hosted-runner",
+    "act",
+    "homebrew",
+    "asc",
+    "xcodebuild",
+    "ios",
+    "macos",
+    "indie"
+  ]
+}

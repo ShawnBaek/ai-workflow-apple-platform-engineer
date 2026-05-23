@@ -1,0 +1,22 @@
+{
+  "name": "apple-platform-ui",
+  "version": "0.1.0",
+  "description": "Apple platform UI design agent for indie developers. Generates SwiftUI/UIKit code for iOS, iPadOS, watchOS, and macOS grounded in Apple Human Interface Guidelines — SF Symbols, SF Pro, semantic colors, dark mode, Dynamic Type, RTL, and Disney 12 animation principles.",
+  "author": {
+    "name": "Sungwook Baek",
+    "email": "sungwook.baek@yahoo.com"
+  },
+  "keywords": [
+    "apple",
+    "ios",
+    "ipados",
+    "watchos",
+    "macos",
+    "swiftui",
+    "uikit",
+    "design",
+    "hig",
+    "sf-symbols",
+    "indie"
+  ]
+}

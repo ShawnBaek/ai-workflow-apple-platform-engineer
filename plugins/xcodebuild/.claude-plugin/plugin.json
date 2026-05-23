@@ -1,0 +1,19 @@
+{
+  "name": "xcodebuild",
+  "version": "0.1.0",
+  "description": "Drives Xcode builds, simulators, tests, debugging, and UI automation through the XcodeBuildMCP server (https://www.xcodebuildmcp.com). Walks the developer through MCP install + per-project config, then runs the right build/test/run/screenshot/log command without leaving Claude Code.",
+  "author": {
+    "name": "Sungwook Baek",
+    "email": "sungwook.baek@yahoo.com"
+  },
+  "keywords": [
+    "xcode",
+    "xcodebuild",
+    "ios",
+    "simulator",
+    "mcp",
+    "build",
+    "test",
+    "indie"
+  ]
+}

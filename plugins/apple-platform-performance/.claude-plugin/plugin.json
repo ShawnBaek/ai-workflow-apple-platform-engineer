@@ -1,0 +1,21 @@
+{
+  "name": "apple-platform-performance",
+  "version": "0.1.0",
+  "description": "Effective Apple Platform Performance — numbered Do/Don't items with code snippets for SwiftUI and UIKit, grounded in Apple's five canonical performance docs (SwiftUI performance, hangs, hitches, diagnosing early, launch time). Covers view-body cost, dependency tracking, hangs (main-thread blocks), hitches (dropped frames), launch-time budget, image decoding, off-screen rendering, and XCTest perf metrics for CI gating.",
+  "author": {
+    "name": "Sungwook Baek",
+    "email": "sungwook.baek@yahoo.com"
+  },
+  "keywords": [
+    "swiftui",
+    "uikit",
+    "performance",
+    "hangs",
+    "hitches",
+    "launch-time",
+    "instruments",
+    "metrickit",
+    "xctest",
+    "indie"
+  ]
+}
