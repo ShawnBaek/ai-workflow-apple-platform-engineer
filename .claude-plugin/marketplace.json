@@ -4,12 +4,17 @@
     "name": "Sungwook Baek",
     "email": "sungwook.baek@yahoo.com"
   },
-  "description": "Agents for indie developers shipping Apple-platform native apps end-to-end: UI implementation (SwiftUI/UIKit + HIG), Apple-platform performance review (SwiftUI + UIKit), Xcode build automation, App Store screenshot pipeline, App Store Connect release management, the one-page app introduction website, GitHub Actions CI/CD on a self-hosted Mac runner, and good commit messages.",
+  "description": "Agents for indie developers shipping Apple-platform native apps end-to-end: UI implementation (SwiftUI/UIKit + HIG) with two paths — pure-indie HIG-anchored generation OR Figma-collaborating handoff with Code Connect — Apple-platform performance review, Xcode build automation, App Store screenshot pipeline, App Store Connect release management, the one-page app introduction website, GitHub Actions CI/CD on a self-hosted Mac runner, and good commit messages.",
   "plugins": [
     {
       "name": "apple-platform-ui",
       "source": "./plugins/apple-platform-ui",
-      "description": "UI implementation skill for iOS, iPadOS, watchOS, and macOS. Generates SwiftUI/UIKit code grounded in Apple HIG — SF Symbols, SF Pro, semantic colors, dark mode, Dynamic Type, mock UseCase injection, Light/Dark/XXL previews. Kills the rebuild-tweak-rebuild loop."
+      "description": "UI implementation skill for iOS, iPadOS, watchOS, and macOS — the pure-indie / no-Figma path. Generates SwiftUI/UIKit code grounded in Apple HIG — SF Symbols, SF Pro, semantic colors, dark mode, Dynamic Type, mock UseCase injection, Light/Dark/XXL previews. Kills the rebuild-tweak-rebuild loop. For Figma-collaborating engineers, see figma-bridge for the handoff layer that feeds into this agent."
+    },
+    {
+      "name": "figma-bridge",
+      "source": "./plugins/figma-bridge",
+      "description": "The Figma-collaborating path for engineers working from a real design source (designer or own mockup). Sets up the Figma MCP server (Claude Code or Codex), establishes Code Connect for SwiftUI so the engineer's real component code shows up in Figma's Dev Mode, generates SwiftUI from a selected Figma frame via generate_figma_design (with the avoid-large-frames discipline), maintains a // figma: comment sitemap linking source files to frames, reviews Figma files for developer-friendliness (auto-layout, components, variants, naming, frame size, styles), and hands off to apple-platform-ui for the HIG polish pass."
     },
     {
       "name": "apple-platform-performance",

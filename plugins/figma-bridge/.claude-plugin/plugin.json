@@ -1,0 +1,21 @@
+{
+  "name": "figma-bridge",
+  "version": "0.1.0",
+  "description": "Bridges Figma designs to SwiftUI / UIKit code for engineers collaborating with a designer (or working from a Figma mockup). Sets up the Figma MCP server for Claude Code or Codex, establishes Code Connect mappings so the engineer's real code surfaces inside Figma's Dev Mode, generates first-draft SwiftUI from a selected Figma frame, maps the codebase ↔ design with a comment-as-sitemap convention, and reviews Figma files for developer-friendliness (auto-layout, components, variants, naming, frame size). Hands off to apple-platform-ui for the HIG polish pass. The complement to apple-platform-ui's pure-indie / no-Figma path.",
+  "author": {
+    "name": "Sungwook Baek",
+    "email": "sungwook.baek@yahoo.com"
+  },
+  "keywords": [
+    "figma",
+    "design-to-code",
+    "code-connect",
+    "swiftui",
+    "uikit",
+    "mcp",
+    "claude-code",
+    "codex",
+    "design-handoff",
+    "design-systems"
+  ]
+}
