@@ -80,7 +80,7 @@ For any of those, you have to switch to a `LaunchScreen.storyboard` (older appro
 
 ## macOS / watchOS
 
-- **macOS:** no launch screen concept. The window appears when ready; keep `App.init()` fast (see the `apple-platform-performance` agent, Item 18).
+- **macOS:** no launch screen concept. The window appears when ready; keep `App.init()` fast (see the `apple-platform-performance` skill, Item 18).
 - **watchOS:** uses an "Asset Catalog Launch Image" — typically a solid color matching the app. No text, no logo.
 
 ## Self-review checklist

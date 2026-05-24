@@ -49,7 +49,7 @@ Publish so designers see the snippet in Dev Mode:
 swift run figma publish
 ```
 
-CI: run `swift run figma validate` on every PR — catches stale mappings whose Figma node was deleted or renamed. Add to `.github/workflows/build-and-test.yml` (the `cicd` agent's workflow templates have a slot for it).
+CI: run `swift run figma validate` on every PR — catches stale mappings whose Figma node was deleted or renamed. Add to `.github/workflows/build-and-test.yml` (the `cicd` skill's workflow templates have a slot for it).
 
 ## Route B — GitHub plugin UI
 

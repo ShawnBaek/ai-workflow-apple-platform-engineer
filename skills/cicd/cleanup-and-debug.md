@@ -121,7 +121,7 @@ When you read a failed-build log:
 1. **Search for `error:` first**, then `warning:`. Skip success lines.
 2. **Find the FIRST error** — later errors are usually cascades.
 3. **Quote the error to the developer** with file:line — don't paste 200 lines of unrelated output.
-4. **Then hand off** to the right specialist agent with the diagnostic.
+4. **Then hand off** to the right specialist skill with the diagnostic.
 
 ## Common runner failures + fixes
 

@@ -172,7 +172,7 @@ Replace the Image with a spinnable iPhone/iPad/Mac/Watch model. See `3d-devices.
 - **App Store badge** — Apple's official SVG from https://tools.applemediaservices.com/app-store/
 - **System requirements** in one line: "Requires iOS 26, iPadOS 26, macOS 26, or watchOS 26 or later."
 - Optional: **TestFlight beta link** if you have one ("Try the beta on TestFlight →")
-- Future: Google Play badge when the planned `agent-android-ui` ships
+- Future: Google Play badge when the planned `android-ui` skill ships
 
 Centered. Generous vertical padding (`SPACING.s4` top and bottom). **No form, no email capture** — those belong on a separate page.
 
@@ -236,7 +236,7 @@ export function ShareSection() {
 
 ---
 
-## File layout the agent generates
+## File layout this skill generates
 
 ```
 my-app-website/

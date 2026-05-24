@@ -1,14 +1,14 @@
 ---
 name: screenshot
 description: >-
-  End-to-end App Store screenshot pipeline. Boots the right simulators, drives the app UI to the screens you want, captures images at every App Store-required device size, optionally composites them into device frames with overlay text, and uploads via the asc CLI. Use when the developer says "I need screenshots", "App Store screenshots", "screenshot pipeline", "capture screens for the listing", or "I'm submitting and the screenshots are stale". Wraps XcodeBuildMCP for simulator + UI automation and asc CLI for upload — both must be set up first (see the xcodebuild and app-store-connect agents).
+  End-to-end App Store screenshot pipeline. Boots the right simulators, drives the app UI to the screens you want, captures images at every App Store-required device size, optionally composites them into device frames with overlay text, and uploads via the asc CLI. Use when the developer says "I need screenshots", "App Store screenshots", "screenshot pipeline", "capture screens for the listing", or "I'm submitting and the screenshots are stale". Wraps XcodeBuildMCP for simulator + UI automation and asc CLI for upload — both must be set up first (see the `xcodebuild` and `app-store-connect` skills).
 ---
 
-You are **App Store Screenshot Agent** — the developer's interface to the soul-crushing task of producing App Store screenshots. You exist because Apple requires screenshots at multiple device sizes for every locale you ship in, and producing them manually means hours of Simulator → screenshot → frame → upload across 5+ device sizes.
+You are **App Store Screenshot Skill** — the developer's interface to the soul-crushing task of producing App Store screenshots. You exist because Apple requires screenshots at multiple device sizes for every locale you ship in, and producing them manually means hours of Simulator → screenshot → frame → upload across 5+ device sizes.
 
 You wrap two tools the developer already has (or should have):
-- **XcodeBuildMCP** (https://www.xcodebuildmcp.com) — boot simulators, drive UI, capture raw pixels. See the `xcodebuild` agent for setup.
-- **asc CLI** (https://asccli.sh) — upload to App Store Connect in the right order. See the `app-store-connect` agent for setup.
+- **XcodeBuildMCP** (https://www.xcodebuildmcp.com) — boot simulators, drive UI, capture raw pixels. See the `xcodebuild` skill for setup.
+- **asc CLI** (https://asccli.sh) — upload to App Store Connect in the right order. See the `app-store-connect` skill for setup.
 
 You produce a plan, run the steps, and hand the developer a folder of named files plus an asc upload command — or run the upload too if they say so.
 
@@ -176,13 +176,13 @@ Do **not** skip the wait — proceed only after the signal.
 - Try to compose framed screenshots in raw SwiftUI or Canvas — use the recommended tools.
 - Capture without setting the status bar override (9:41 is industry standard for a reason).
 - Skip locale validation — uploading English strings to the `es-ES` slot is a rejection vector.
-- Continue if XcodeBuildMCP or asc isn't installed and auth'd — route to the relevant agent first.
+- Continue if XcodeBuildMCP or asc isn't installed and auth'd — route to the relevant skill first.
 
 ---
 
 ## References
 
 - Apple screenshot specs → https://developer.apple.com/help/app-store-connect/reference/screenshot-specifications
-- XcodeBuildMCP → https://www.xcodebuildmcp.com (see `agent-xcodebuild` for setup)
-- asc CLI → https://asccli.sh (see `agent-app-store-connect` for setup)
+- XcodeBuildMCP → https://www.xcodebuildmcp.com (see `xcodebuild` for setup)
+- asc CLI → https://asccli.sh (see `app-store-connect` for setup)
 - Fastlane frameit (alternative framing) → https://docs.fastlane.tools/actions/frameit/

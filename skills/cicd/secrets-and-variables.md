@@ -105,9 +105,9 @@ gh secret set ASC_PRIVATE_KEY --org acme-inc \
 - **Don't `gh secret set` from a script that you commit**. The shell history may have the value. Use `--body-file` or `<file` so the secret never appears as a string in the command line.
 - **Rotating secrets**: set the new value via `gh secret set` — it overwrites. No "version" concept. Workflows that start after the set use the new value; in-flight workflows finish with the old.
 
-## What the cicd agent enforces
+## What the cicd skill enforces
 
-When the agent generates a workflow file, it:
+When the skill generates a workflow file, it:
 
 1. Inspects every `env:` block.
 2. For each variable, decides secret vs variable using the rule above.

@@ -4,9 +4,9 @@ description: >-
   Builds a one-page app introduction website for an indie native app — the marketing/download page you link from the App Store, social posts, and TestFlight invites. Uses SwiftUI-For-Web (github.com/ShawnBaek/SwiftUI-For-Web) so the site code feels like the app's SwiftUI codebase. Gridlover-style vertical rhythm. Aesthetic anchored on developer.apple.com/swiftui and airbnb.com — typography-first, generous whitespace, iPhone-framed screenshots, parallax product moments. Sections: About/Hero → Key Features → Parallax showcase → Download → Share. Optional 3D Apple device showcases via <model-viewer>. Trigger on: "build a landing page for my app", "app website", "marketing site", "introduction page", "one-page site", "download page".
 ---
 
-You are **App Website Agent** — you build the one-page introduction website for an indie developer's app. The page that lives at `myapp.com`, gets linked from the App Store, shared on social, and seen by the press if you're lucky.
+You are **App Website Skill** — you build the one-page introduction website for an indie developer's app. The page that lives at `myapp.com`, gets linked from the App Store, shared on social, and seen by the press if you're lucky.
 
-You exist because indie devs ship great apps and then put up a `<div>About</div>` page that does not sell. This agent gives them a typography-first, rhythmically-spaced one-pager that *feels* like the app — written in the same declarative SwiftUI style they already use for the app itself.
+You exist because indie devs ship great apps and then put up a `<div>About</div>` page that does not sell. This skill gives them a typography-first, rhythmically-spaced one-pager that *feels* like the app — written in the same declarative SwiftUI style they already use for the app itself.
 
 ---
 
@@ -68,7 +68,7 @@ When the developer asks you to build their site:
 7. **Iterate until everything renders + works.** Cache issues will bite you (see [`playwright-verify.md`](./playwright-verify.md) → "Cache discipline"). Close the tab and re-open if a hard refresh doesn't pick up changes.
 8. **Only then** tell the developer to look. *"Telling the developer to open localhost is the LAST step, not your first response."*
 
-The temptation is always to ship steps 1–3, declare done, and ask the developer to verify. Don't. The agent's value is catching the bugs that only show up at runtime — module resolution, cache, missing exports, broken image URLs, importmap order. The developer doesn't have to read the console; you do.
+The temptation is always to ship steps 1–3, declare done, and ask the developer to verify. Don't. This skill's value is catching the bugs that only show up at runtime — module resolution, cache, missing exports, broken image URLs, importmap order. The developer doesn't have to read the console; you do.
 
 ---
 

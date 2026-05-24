@@ -1,6 +1,6 @@
 # Generating SwiftUI from a Figma frame
 
-The `generate_figma_design` MCP tool turns a selected Figma node into framework code (SwiftUI for this agent; the same tool can emit React, Vue, etc. for web). It's the highest-value MCP call in the whole workflow — but the one that fails most often if you call it carelessly.
+The `generate_figma_design` MCP tool turns a selected Figma node into framework code (SwiftUI for this skill; the same tool can emit React, Vue, etc. for web). It's the highest-value MCP call in the whole workflow — but the one that fails most often if you call it carelessly.
 
 ## The whole flow
 
@@ -10,7 +10,7 @@ The `generate_figma_design` MCP tool turns a selected Figma node into framework 
 4. **Generate.** `generate_figma_design(fileKey, nodeId, framework: "swiftui")` returns Swift code.
 5. **Write to the right file.** New screen → new file in `Views/`. Existing screen → ask the engineer where to insert.
 6. **Add the `// figma:` code-connect-map comment** at the top of the file ([`code-connect-map.md`](code-connect-map.md)).
-7. **Hand off to `agent-apple-platform-ui`** for the HIG polish pass — previews, semantic colors, Dynamic Type, Container/Presenter, SF Symbol substitution.
+7. **Hand off to `apple-platform-ui`** for the HIG polish pass — previews, semantic colors, Dynamic Type, Container/Presenter, SF Symbol substitution.
 
 ## Avoid large frames — the rule and the recovery
 
@@ -36,7 +36,7 @@ Reference: https://developers.figma.com/docs/figma-mcp-server/avoid-large-frames
 
 `generate_figma_design` emits structurally-faithful SwiftUI: `VStack`/`HStack`/`ZStack` matching the Figma Auto Layout, `Text` with the right font / weight / size, `Image`s referencing layer names, colour values pulled from styles where mapped (raw hex otherwise).
 
-What it does **not** do well — these are why you hand off to `agent-apple-platform-ui`:
+What it does **not** do well — these are why you hand off to `apple-platform-ui`:
 
 | Missing | Why `apple-platform-ui` adds it |
 |---|---|
@@ -53,11 +53,11 @@ So a typical sequence is:
 ```
 generate_figma_design  →  ProfileView.swift (first draft, ~80% structurally right)
        ↓
-agent-apple-platform-ui  →  ProfileView.swift refined + ProfileContent.swift split out + 3 previews
+apple-platform-ui  →  ProfileView.swift refined + ProfileContent.swift split out + 3 previews
        ↓
 xcodebuild simulator run  →  see it on iPhone 16 Pro, compare to the Figma frame
        ↓
-agent-screenshot (optional)  →  capture the as-built, share back to the designer
+screenshot (optional)  →  capture the as-built, share back to the designer
 ```
 
 ## Re-generating an existing view
@@ -72,7 +72,7 @@ The safe loop:
 4. Update the `// figma:` comment if the node-id changed.
 5. Delete the temp file.
 
-This is the kind of careful merge work that's worth doing by hand or with `agent-apple-platform-ui`'s help, not a one-shot regenerate.
+This is the kind of careful merge work that's worth doing by hand or with `apple-platform-ui`'s help, not a one-shot regenerate.
 
 ## Variables and tokens
 
@@ -104,7 +104,7 @@ The screenshot tool is cheap. Use it freely.
 - [ ] `// figma:` comment at the top points at the exact node generated from.
 - [ ] No raw hex colours where a semantic / variable colour was available.
 - [ ] No empty `VStack {}` or `Spacer()` artefacts left from un-rendered nodes.
-- [ ] Routed to `agent-apple-platform-ui` for the HIG polish (or told the engineer to).
+- [ ] Routed to `apple-platform-ui` for the HIG polish (or told the engineer to).
 
 ## Self-review when a generate call fails
 
