@@ -4,17 +4,18 @@ Agent **skills** for indie developers shipping **Apple-platform native apps end-
 
 Distributed through the open [skills.sh](https://skills.sh) ecosystem, so one `npx skills add` installs them into **Claude Code, Codex, Cursor, Gemini CLI, Copilot, and 50+ other agents** — not just one tool.
 
-Nine skills that share one job: kill the time-sinks that make shipping native apps painful. **Two paths for the UI layer** — pick the one that matches your situation:
+A **team lead** plus **nine specialist skills**, sharing one job: kill the time-sinks that make shipping native apps painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — pick the one that matches your situation:
 
 | Situation | UI path |
 |---|---|
 | Pure indie, no designer, no Figma file | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) directly — makes HIG-anchored decisions itself |
 | Designer hands you a Figma file (or you have your own Figma mockup) | [`figma-bridge`](skills/figma-bridge/SKILL.md) → [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) — Figma extraction, then HIG polish |
 
-## The nine skills
+## The team: a lead + nine specialists
 
 | Skill | When it kicks in | What it owns |
 |-------|------------------|--------------|
+| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other nine: locates you on the pipeline, names the next move, hands off to the specialist that owns it |
 | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | "Build me a screen", "design this view", "SwiftUI / UIKit" | UI implementation in SwiftUI/UIKit, grounded in Apple HIG (pure-indie path) |
 | [`figma-bridge`](skills/figma-bridge/SKILL.md) | "Figma", "generate from this frame", "code connect", "review my figma file", "set up figma mcp" | Figma → SwiftUI handoff. MCP setup (Claude Code + Codex), formal Code Connect for SwiftUI, generate-from-frame, dev-friendliness file review, lightweight `// figma:` code-connect-map convention. Hands off to `apple-platform-ui` for HIG polish. |
 | [`apple-platform-performance`](skills/apple-platform-performance/SKILL.md) | "App is janky", "scroll stutters", "launch is slow", "Instruments shows…" | Hangs / hitches / launch / body cost / ML inference / audio pipeline — 27 Effective-style items in 6 Parts |
@@ -129,6 +130,7 @@ Each skill walks you through its install on first run.
 indie-native-app/
 ├── README.md
 └── skills/
+    ├── native-app-lead/SKILL.md    # the team lead — coordinates the nine below
     ├── apple-platform-ui/
     │   ├── SKILL.md
     │   ├── keyboard.md
@@ -158,6 +160,7 @@ Indie developers ship. They don't theme, don't have a release engineer, don't ha
 
 Each skill saves the most expensive thing — the loop of *do it, realize you missed a step, do it again*:
 
+- **native-app-lead** kills the "what do I even do next" loop by sequencing the whole journey and handing each stage to the specialist that owns it.
 - **apple-platform-ui** kills the rebuild-tweak loop by reasoning through layout in-head before ⌘R.
 - **figma-bridge** kills the design-handoff-as-screenshot loop — wires the Figma MCP server, sets up Code Connect for SwiftUI, generates first-draft code from a chosen frame, then hands off to apple-platform-ui for the HIG polish. The Figma path complements (doesn't replace) the pure-indie path.
 - **apple-platform-performance** kills the "ship → real users complain → reverse-engineer the regression" loop by gating it in CI with XCTMetric.
