@@ -14,7 +14,7 @@ Nine agents that share one job: kill the time-sinks that make shipping native ap
 | Agent | When to invoke | What it owns |
 |-------|----------------|--------------|
 | [`apple-platform-ui`](plugins/apple-platform-ui/README.md) | "Build me a screen", "design this view", "SwiftUI / UIKit" | UI implementation in SwiftUI/UIKit, grounded in Apple HIG (pure-indie path) |
-| [`figma-bridge`](plugins/figma-bridge/README.md) | "Figma", "generate from this frame", "code connect", "review my figma file", "set up figma mcp" | Figma → SwiftUI handoff. MCP setup (Claude Code + Codex), Code Connect for SwiftUI, generate-from-frame, dev-friendliness file review, `// figma:` sitemap convention. Hands off to `apple-platform-ui` for HIG polish. |
+| [`figma-bridge`](plugins/figma-bridge/README.md) | "Figma", "generate from this frame", "code connect", "review my figma file", "set up figma mcp" | Figma → SwiftUI handoff. MCP setup (Claude Code + Codex), formal Code Connect for SwiftUI, generate-from-frame, dev-friendliness file review, lightweight `// figma:` code-connect-map convention. Hands off to `apple-platform-ui` for HIG polish. |
 | [`apple-platform-performance`](plugins/apple-platform-performance/README.md) | "App is janky", "scroll stutters", "launch is slow", "Instruments shows…" | Hangs / hitches / launch / body cost / ML inference / audio pipeline — 27 Effective-style items in 6 Parts |
 | [`xcodebuild`](plugins/xcodebuild/README.md) | "Build", "run on sim", "screenshot the screen", "attach debugger" | Xcode builds + simulator + UI automation via XcodeBuildMCP (XcodeGen-aware) |
 | [`screenshot`](plugins/screenshot/README.md) | "App Store screenshots", "capture and upload" | End-to-end App Store screenshot pipeline (capture → frame → upload) |
@@ -33,7 +33,7 @@ Each agent has its own README in `plugins/<name>/README.md` with detailed setup,
    Figma MCP setup,              SwiftUI code              Hangs / hitches /        Build + run on
    Code Connect for SwiftUI,     with mocks,               launch / body cost /     simulator;
    generate from frame,    →     Light/Dark/XXL    →       ML inference / audio →   capture logs;
-   // figma: sitemap             previews,                 — 27 Effective items     UI tests
+   // figma: code-connect map    previews,                 — 27 Effective items     UI tests
    (skip if no Figma file)       HIG polish                + XCTMetric tests
                                                           ↓
                             screenshot                app-store-connect
@@ -137,7 +137,7 @@ agent-design/
 │   │       └── agent-figma-bridge/
 │   │           ├── mcp-setup.md                # Claude Code + Codex MCP install
 │   │           ├── code-connect.md             # SwiftUI Code Connect (CLI + GitHub UI)
-│   │           ├── sitemap.md                  # // figma: URL comment convention
+│   │           ├── code-connect-map.md         # // figma: URL comment convention (lightweight, file-level)
 │   │           ├── figma-review.md             # developer-friendliness audit
 │   │           └── generate-from-frame.md      # generate_figma_design + avoid-large-frames
 │   ├── apple-platform-performance/
@@ -203,7 +203,7 @@ Default to system. Deviate only when there's a real reason.
 
 - **Plugins** live in `plugins/<short-name>/` (e.g. `xcodebuild`). The plugin name in `plugin.json` matches the folder name.
 - **Agents** live in `plugins/<short-name>/agents/agent-<name>.md` (e.g. `agent-xcodebuild`). All agent names start with `agent-`.
-- **Sub-docs** for big agents live in `plugins/<short-name>/agents/agent-<name>/<topic>.md`. The router agent file stays small (overview + quick-reference table) and tells the subagent to `Read` the matching sub-doc when a topic comes up. Used today by `app-website` (6 sub-docs), `apple-platform-performance` (6 sub-docs: parts 1–6 including ML/audio), `cicd` (5 sub-docs), `figma-bridge` (5 sub-docs: mcp-setup, code-connect, sitemap, figma-review, generate-from-frame), and `apple-platform-ui` (2 sub-docs: keyboard, launch-screen).
+- **Sub-docs** for big agents live in `plugins/<short-name>/agents/agent-<name>/<topic>.md`. The router agent file stays small (overview + quick-reference table) and tells the subagent to `Read` the matching sub-doc when a topic comes up. Used today by `app-website` (6 sub-docs), `apple-platform-performance` (6 sub-docs: parts 1–6 including ML/audio), `cicd` (5 sub-docs), `figma-bridge` (5 sub-docs: mcp-setup, code-connect, code-connect-map, figma-review, generate-from-frame), and `apple-platform-ui` (2 sub-docs: keyboard, launch-screen).
 
 ## Publish / contribute
 

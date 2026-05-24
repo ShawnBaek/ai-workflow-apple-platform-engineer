@@ -14,7 +14,7 @@
     {
       "name": "figma-bridge",
       "source": "./plugins/figma-bridge",
-      "description": "The Figma-collaborating path for engineers working from a real design source (designer or own mockup). Sets up the Figma MCP server (Claude Code or Codex), establishes Code Connect for SwiftUI so the engineer's real component code shows up in Figma's Dev Mode, generates SwiftUI from a selected Figma frame via generate_figma_design (with the avoid-large-frames discipline), maintains a // figma: comment sitemap linking source files to frames, reviews Figma files for developer-friendliness (auto-layout, components, variants, naming, frame size, styles), and hands off to apple-platform-ui for the HIG polish pass."
+      "description": "The Figma-collaborating path for engineers working from a real design source (designer or own mockup). Sets up the Figma MCP server (Claude Code or Codex), establishes formal Code Connect for SwiftUI so the engineer's real component code shows up in Figma's Dev Mode, generates SwiftUI from a selected Figma frame via generate_figma_design (with the avoid-large-frames discipline), maintains a lightweight `// figma:` code-connect map linking source files to frames (file/screen level), reviews Figma files for developer-friendliness (auto-layout, components, variants, naming, frame size, styles), and hands off to apple-platform-ui for the HIG polish pass."
     },
     {
       "name": "apple-platform-performance",

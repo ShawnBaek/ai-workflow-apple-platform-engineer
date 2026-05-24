@@ -1,8 +1,15 @@
-# The comment-as-sitemap convention
+# The lightweight Code Connect map — `// figma:` comments
 
-The cheapest, most durable link between a code file and a Figma frame is a one-line comment at the top of the file. No tooling, no plugin, no database — just a URL that points back to the design.
+This is the *informal* code-connect map: a one-line `// figma: <url>` comment at the top of every screen / component file. Companion to Figma's formal Code Connect ([`code-connect.md`](code-connect.md)) — the two work together:
 
-The whole convention:
+| Mechanism | Granularity | Setup cost | What it maps |
+|---|---|---|---|
+| **Formal Code Connect** | Component | CLI install + `figma.config.json` + `.figma.swift` per mapping + publish step | Design-system primitives (Button, Card, Field) — designers see real code in Dev Mode |
+| **`// figma:` map (this doc)** | File / screen | Zero — just a comment | Anything: screens, partial flows, sub-views, one-offs — engineers click through from code to design |
+
+Use both. Formal Code Connect for the design system; `// figma:` comments for everything else.
+
+## The whole convention
 
 ```swift
 // figma: https://www.figma.com/design/AbCdEf/MyApp?node-id=42-7
@@ -13,20 +20,22 @@ The whole convention:
 
 That's it. The next engineer (or agent) reads the file, clicks the URL, lands on the exact frame. The next designer can grep the codebase for the Figma file ID and see every file that implements something from it.
 
-## Why this beats fancier alternatives
+## Why a comment, not a config file
 
-Code Connect (the formal Figma mechanism) only maps **components** — buttons, badges, toggles. It doesn't naturally map *screens* (which compose many components). And it requires CI to keep mappings fresh.
+A comment lives where the engineer already is — at the top of the source file they're editing. Three properties that fancier alternatives sacrifice:
 
-A `// figma:` comment maps **anything** — components, screens, partial flows, sub-views. It costs zero. It survives renames (only the URL needs updating if the node moves; the file path is irrelevant). It's greppable. It shows up in code review automatically.
+1. **Zero tooling.** Works in any editor, any OS, any CI, any AI agent that can read a file.
+2. **Survives renames and refactors.** Move the file, rename the type, split into multiple files — the URL still points at the right Figma node. Only the URL needs updating if the *node* moves on Figma's side.
+3. **Greppable in both directions.** `rg '^// figma:'` lists every mapped file; `rg 'figma\.com/design/AbCdEf'` finds every file mapped to a given Figma file.
 
-You can — and probably should — use both. Code Connect for the design-system primitives, comment-sitemap for screens and one-off views.
+Formal Code Connect is the right tool for design-system components (designers benefit too). The `// figma:` comment is the right tool for *screens and one-offs* (where designers don't read code, but engineers need to find the design).
 
 ## Where to put the comment
 
 | Kind of file | Where the comment goes |
 |---|---|
 | Screen / page-level `View` | Top of the file, above `import` |
-| Reusable component (`Button`, `Card`, `Badge`) | Top of the file. Also consider Code Connect for these. |
+| Reusable component (`Button`, `Card`, `Badge`) | Top of the file. Also consider formal Code Connect for these. |
 | UseCase / ViewModel | Skip — these aren't UI, no Figma mapping |
 | Section / sub-view inside a larger file | Inline comment above the `struct` declaration |
 
@@ -81,12 +90,12 @@ If the agent is editing an existing file and notices the comment is missing, **s
 ## Self-review
 
 - [ ] Every screen-level View file has a `// figma:` comment with a valid URL.
-- [ ] Reusable components either have a `// figma:` comment OR a Code Connect mapping (often both — see [`code-connect.md`](code-connect.md)).
+- [ ] Reusable components either have a `// figma:` comment OR a formal Code Connect mapping (often both — see [`code-connect.md`](code-connect.md)).
 - [ ] No `// figma:` URL points at a deleted node (the URL would 404 or land on a "page not found" Figma view).
 - [ ] The comment is at the top of the file, above `import`, so it's the first thing reviewers see.
 
 ## What this is NOT
 
-- Not a replacement for Code Connect. They serve different purposes — Code Connect maps *components* for designer-facing Dev Mode; the sitemap maps *files* for engineer-facing navigation.
-- Not a design spec. The comment links to the design; it doesn't describe the design. Don't paste prose ("blue button, 16pt corner radius") — that's what the Figma file is for.
-- Not a project-management tool. Don't add ticket numbers, sprint labels, status fields. The line stays short and stable.
+- **Not a replacement for formal Code Connect.** Different granularities, different audiences. Code Connect maps components for designer-facing Dev Mode; `// figma:` maps files for engineer-facing navigation. They complement each other.
+- **Not a design spec.** The comment links to the design; it doesn't describe the design. Don't paste prose ("blue button, 16pt corner radius") — that's what the Figma file is for.
+- **Not a project-management tool.** Don't add ticket numbers, sprint labels, status fields. The line stays short and stable.

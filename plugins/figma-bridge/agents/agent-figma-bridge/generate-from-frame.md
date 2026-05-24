@@ -9,7 +9,7 @@ The `generate_figma_design` MCP tool turns a selected Figma node into framework 
 3. **Check the size budget.** If the node is too big (≈ multiple screens of content), `generate_figma_design` will refuse. See "Avoid large frames" below — pick a smaller child node instead.
 4. **Generate.** `generate_figma_design(fileKey, nodeId, framework: "swiftui")` returns Swift code.
 5. **Write to the right file.** New screen → new file in `Views/`. Existing screen → ask the engineer where to insert.
-6. **Add the `// figma:` sitemap comment** at the top of the file ([`sitemap.md`](sitemap.md)).
+6. **Add the `// figma:` code-connect-map comment** at the top of the file ([`code-connect-map.md`](code-connect-map.md)).
 7. **Hand off to `agent-apple-platform-ui`** for the HIG polish pass — previews, semantic colors, Dynamic Type, Container/Presenter, SF Symbol substitution.
 
 ## Avoid large frames — the rule and the recovery
