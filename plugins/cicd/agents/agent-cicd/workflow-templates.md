@@ -136,9 +136,21 @@ jobs:
           fi
 
       - name: Set version
+        # If the project uses .xcodeproj directly: use agvtool.
+        # If the project uses XcodeGen (project.yml is the source of truth):
+        # patch project.yml + regenerate the .xcodeproj. agvtool would write
+        # into the generated file and the next `xcodegen generate` would
+        # overwrite it.
         run: |
-          agvtool new-marketing-version "${{ inputs.version }}"
-          agvtool new-version -all "${{ inputs.build }}"
+          if [ -f project.yml ] || [ -f project.yaml ]; then
+            YAML=$([ -f project.yml ] && echo project.yml || echo project.yaml)
+            sed -i '' "s/MARKETING_VERSION: \"[^\"]*\"/MARKETING_VERSION: \"${{ inputs.version }}\"/g" "$YAML"
+            sed -i '' "s/CURRENT_PROJECT_VERSION: \"[^\"]*\"/CURRENT_PROJECT_VERSION: \"${{ inputs.build }}\"/g" "$YAML"
+            xcodegen generate
+          else
+            agvtool new-marketing-version "${{ inputs.version }}"
+            agvtool new-version -all "${{ inputs.build }}"
+          fi
 
       - name: Archive
         run: |
@@ -259,6 +271,25 @@ Path referenced by the release workflow. Adjust `teamID` and `provisioningProfil
 </dict>
 </plist>
 ```
+
+## When the project already has a `Makefile`
+
+Many indie repos ship a `Makefile` with entry points like `make build-ios`, `make build-watch`, `make archive-ios` that wrap the right `xcodebuild` invocation (with the right `-project` vs `-workspace`, the right destination, the right derived-data path, etc.).
+
+If a `Makefile` exists at the repo root and has the targets you need, **call them from CI instead of duplicating the xcodebuild flags.** Keeps the local-dev command and the CI command in lockstep — when one changes, both change.
+
+```yaml
+      - name: Build iOS (uses Makefile)
+        run: |
+          set -o pipefail
+          make build-ios 2>&1 | tee ios-build.log
+```
+
+Detection check: before adding raw `xcodebuild` steps, `grep -E '^[a-z-]+:' Makefile` to list available targets. Match the workflow's intent to the targets the developer already maintains.
+
+## Project vs workspace — pick the flag the project actually uses
+
+The template above uses `-workspace`. Many indie XcodeGen projects produce a `.xcodeproj` without a `.xcworkspace` — in that case use `-project` instead. If unsure: `ls *.xcworkspace *.xcodeproj 2>/dev/null` after generating; pick whichever exists.
 
 ## Workflow file conventions
 

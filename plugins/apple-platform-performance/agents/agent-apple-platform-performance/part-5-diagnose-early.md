@@ -58,16 +58,43 @@ Edit Scheme → Run → Diagnostics → **Thread Performance Checker**. Surfaces
 
 ```swift
 import MetricKit
+import os
 
+@MainActor
 final class PerfReporter: NSObject, MXMetricManagerSubscriber {
-    func didReceive(_ payloads: [MXMetricPayload]) {
+    static let shared = PerfReporter()
+
+    func start() { MXMetricManager.shared.add(self) }
+
+    // Apple's MXMetricManagerSubscriber doesn't carry MainActor isolation,
+    // so under Swift 6 strict concurrency the @MainActor singleton can't
+    // satisfy the protocol without these `nonisolated` overrides. The
+    // payloads themselves are sendable; the logger is created locally to
+    // avoid capturing self-isolated state.
+    nonisolated func didReceive(_ payloads: [MXMetricPayload]) {
+        let log = Logger(subsystem: "com.myapp", category: "metrics")
         for p in payloads {
             // p.animationMetrics — hitches
             // p.applicationLaunchMetrics — launch p99
             // p.applicationResponsivenessMetrics — hang time
+            log.notice("MXMetricPayload: \(p.jsonRepresentation(), privacy: .public)")
+        }
+    }
+
+    nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
+        let log = Logger(subsystem: "com.myapp", category: "metrics")
+        for p in payloads {
+            // Symbolicated crash, hang, CPU, disk-write exceptions.
+            log.error("MXDiagnosticPayload: \(p.jsonRepresentation(), privacy: .public)")
         }
     }
 }
 ```
 
-Wire `MXMetricManager.shared.add(reporter)` at app start. Pipe payloads to your analytics. This is how you find what real users see, on devices and OS versions you don't have.
+Wire `PerfReporter.shared.start()` from `AppDelegate.application(_:didFinishLaunchingWithOptions:)`. Apple delivers one payload per day per install — subscribe early or you miss the first one.
+
+**Swift 6 strict-concurrency gotcha.** A `static let shared` without an actor declaration trips the "not concurrency-safe because non-Sendable type may have shared mutable state" diagnostic. The standard fix for UIKit-touching singletons (TTSPlayer, NoteRepository, PerfReporter) is `@MainActor` on the class **plus** `nonisolated` on any protocol callback the framework delivers from a non-isolated context (MetricKit, WCSession, AVAudioPlayerNode completion handlers, NotificationCenter selectors are common cases). The macCatalyst build is strictest about this — if it builds clean, iOS will too.
+
+**Reading the unified log.** During development: `xcrun simctl spawn booted log stream --predicate 'subsystem == "com.myapp" && category == "metrics"'`. On a TestFlight build: Console.app → connected device → filter by subsystem.
+
+Pipe payloads to your crash reporter or analytics once you have one. Until then, the unified log is enough to spot regressions when you run a TestFlight build against your own device.

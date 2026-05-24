@@ -41,20 +41,38 @@ let engine = TTSEngine()   // synchronously inits MLModel — blocks the main th
 
 **Why it matters.** CoreML picks CPU, GPU, or ANE based on the model and the `MLModelConfiguration`. Without an explicit preference, large transformer-style models sometimes fall back to CPU on simulator builds or when Instruments is attached — giving you misleading benchmark numbers. ANE inference is typically 5–10× faster for supported ops and uses a fraction of the battery.
 
-**Do:**
+**Do (when you own the MLModel init):**
 
 ```swift
 let config = MLModelConfiguration()
 config.computeUnits = .all          // ANE preferred, GPU fallback, then CPU
 
-// Instrument the actual inference path
-let log = OSLog(subsystem: "com.myapp.tts", category: .pointsOfInterest)
+// Instrument the actual inference path. Prefer OSSignposter (modern) over
+// the C `os_signpost` macros — it threads through Swift concurrency cleanly.
+let signposter = OSSignposter(subsystem: "com.myapp.tts", category: "inference")
 
 func synthesize(_ text: String) async throws -> AVAudioPCMBuffer {
-    os_signpost(.begin, log: log, name: "CoreML inference")
-    defer { os_signpost(.end, log: log, name: "CoreML inference") }
+    let state = signposter.beginInterval("synthesize", id: signposter.makeSignpostID(),
+                                          "chars=\(text.count)")
+    defer { signposter.endInterval("synthesize", state) }
     return try model.synthesize(text)
 }
+```
+
+**When you DON'T own the MLModel init (using a 3rd-party wrapper):**
+
+Many CoreML wrappers (FluidAudio, llama.cpp Swift bindings, Whisper.swift) build the `MLModel` internally and don't expose an `MLModelConfiguration` parameter. In that case:
+
+1. **Don't fork the wrapper just to inject a config** — `MLModelConfiguration()`'s default is already `computeUnits = .all`, which is what you'd set anyway.
+2. **Document the assumption** in a comment where the wrapper is initialized — so the next reader knows the ANE choice is left to CoreML's default heuristic, not deliberately CPU-pinned.
+3. **Verify on a real device** with Instruments → Core ML (or Time Profiler looking for `ane_` symbols). If you find inference is falling back to CPU, *then* it's worth filing an upstream issue on the wrapper.
+
+```swift
+// Wrapper init — defaults to MLModelConfiguration() which is computeUnits=.all.
+// FluidAudio doesn't currently accept an external config; verify ANE selection
+// on real devices via Instruments → Core ML.
+let manager = KokoroAneManager(variant: .english)
+try await manager.initialize()
 ```
 
 **Don't:**
@@ -103,49 +121,63 @@ player.scheduleBuffer(buffer)          // races with the running engine
 
 ---
 
-## Item 27 — Handle AVAudioSession interruptions or the app goes silent after every phone call.
+## Item 27 — Handle AVAudioSession interruptions AND route changes, or audio breaks after every phone call or AirPods disconnect.
 
-**Why it matters.** iOS deactivates your AVAudioSession when a call, Siri, or another audio app takes over. If you don't observe `AVAudioSession.interruptionNotification` and restart the engine + player after the interruption ends, the user's next tap produces silence — forever, until they force-quit the app.
+**Why it matters.** Two notifications cover the cases that silently break audio playback:
 
-**Do:**
+- **`interruptionNotification`** — fires when a call, Siri, or another audio app takes over your session. If you don't observe it and reactivate, the user's next tap produces silence forever (until force-quit).
+- **`routeChangeNotification`** — fires when the output route changes (AirPods disconnect, Bluetooth headphones power off, headphones unplugged). Apple's recommended behavior on `.oldDeviceUnavailable` is to pause playback so audio doesn't suddenly blast through the speaker.
+
+Most apps remember to handle one but not the other. Handle both.
+
+**Do (UIKit / @MainActor singleton — the common indie pattern):**
 
 ```swift
+@MainActor
 final class TTSPlayer {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
-    private var cancellable: AnyCancellable?
 
     init() {
         setupAudio()
-        cancellable = NotificationCenter.default
-            .publisher(for: AVAudioSession.interruptionNotification)
-            .sink { [weak self] note in self?.handleInterruption(note) }
+        let center = NotificationCenter.default
+        center.addObserver(self,
+                           selector: #selector(handleInterruption(_:)),
+                           name: AVAudioSession.interruptionNotification,
+                           object: AVAudioSession.sharedInstance())
+        center.addObserver(self,
+                           selector: #selector(handleRouteChange(_:)),
+                           name: AVAudioSession.routeChangeNotification,
+                           object: AVAudioSession.sharedInstance())
     }
 
-    private func handleInterruption(_ note: Notification) {
-        guard let type = note.interruptionType else { return }
+    @objc private func handleInterruption(_ note: Notification) {
+        guard let info = note.userInfo,
+              let raw = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
         switch type {
         case .began:
             player.pause()
         case .ended:
-            guard note.interruptionShouldResume else { return }
+            let opts = AVAudioSession.InterruptionOptions(
+                rawValue: info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0)
+            guard opts.contains(.shouldResume) else { return }
             try? AVAudioSession.sharedInstance().setActive(true)
-            try? engine.start()
+            if !engine.isRunning { try? engine.start() }
             player.play()
-        default: break
+        @unknown default: break
         }
     }
-}
 
-private extension Notification {
-    var interruptionType: AVAudioSession.InterruptionType? {
-        (userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt)
-            .flatMap(AVAudioSession.InterruptionType.init)
-    }
-    var interruptionShouldResume: Bool {
-        (userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
-            .map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) }
-            ?? false
+    @objc private func handleRouteChange(_ note: Notification) {
+        guard let info = note.userInfo,
+              let raw = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
+        // Pause when the previous output disappears (headphones unplugged,
+        // BT device powered off) — otherwise audio blasts through the speaker.
+        if reason == .oldDeviceUnavailable {
+            player.pause()
+        }
     }
 }
 ```
@@ -153,10 +185,15 @@ private extension Notification {
 **Don't:**
 
 ```swift
-// No interruption handling — silent after a phone call, no crash, no log
+// No interruption handling, no route handling.
+// Silent failures after a phone call. Loud failures after an AirPods disconnect.
 ```
 
-**Measure:** On a real device, start playback, receive a call, decline it, then tap Play again. If audio is silent: interruption handling is missing. Attach Instruments → Time Profiler during the test to confirm the engine state.
+**Measure:** On a real device:
+1. Start playback → receive a phone call → decline → tap Play again. If silent → interruption handler missing.
+2. Plug in headphones → start playback → unplug. If audio continues out the speaker → route change handler missing.
+
+Attach Instruments → Time Profiler during both tests to confirm the engine state transitions.
 
 ---
 

@@ -62,6 +62,16 @@ If the developer is already in a build-tweak-build spiral, **stop them.** Ask wh
 - [ ] Three `#Preview` blocks: Light, Dark, XXL.
 - [ ] Body fits in one screen (extract subview if > ~30 lines).
 
+## Pre-ship audit checklist (run whenever you read a project's Info.plist)
+
+When you're reviewing an existing app — auditing it for launch, App Store submission, or general health — there are app-wide HIG items that don't show up while building a single screen. Walk this list once per audit; it takes 30 seconds and catches the things that don't surface during normal feature work:
+
+- [ ] **Launch screen is wired.** `UILaunchScreen` dict in `Info.plist` exists, `UIColorName` is **non-empty** and points to a color asset that defines **both** Light and Dark appearances. Empty `UIColorName: ""` is the silent failure mode — the app launches into undefined background. If the app has a nav bar or tab bar, the dict includes empty `UINavigationBar: {}` / `UITabBar: {}` so the chrome paints during launch. Open [`agent-apple-platform-ui/launch-screen.md`](agent-apple-platform-ui/launch-screen.md) if anything is missing — fixing it is one color asset + one Info.plist edit.
+- [ ] **No unused capabilities** in `UIBackgroundModes`, entitlements, or required device capabilities. A `remote-notification` mode with no push-registration code is a privacy red flag and an App Review snag.
+- [ ] **`PrivacyInfo.xcprivacy` exists** for iOS 17+ submissions. Declares `NSPrivacyTracking` + any required-reason APIs (UserDefaults, FileTimestamp, DiskSpace, SystemBootTime are the common ones).
+- [ ] **App icon assets are complete** — `Assets.xcassets/AppIcon.appiconset/` has at least the 1024×1024 marketing icon for App Store Connect.
+- [ ] **Singletons are concurrency-safe** under Swift 6 strict concurrency. UIKit-touching singletons need `@MainActor` + `nonisolated` overrides for any protocol callback the framework delivers from a non-isolated context (MetricKit, WCSession, NSObject KVO, AVAudio completion handlers). macCatalyst builds catch this first — if Catalyst builds clean, iOS will too.
+
 ---
 
 ## Implementation patterns (use these by default)

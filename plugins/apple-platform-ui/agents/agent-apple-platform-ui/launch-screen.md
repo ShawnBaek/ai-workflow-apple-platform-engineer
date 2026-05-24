@@ -43,6 +43,41 @@ Define `LaunchBackground` in your asset catalog with **Any Appearance + Dark App
 
 For SwiftUI multiplatform projects, the `UILaunchScreen` dict lives in target build settings under **Info → Custom iOS Target Properties**.
 
+### Optional: a single centered brand image (`UIImageName`)
+
+HIG-strict reading: don't. The launch screen should *feel like* the first frame, not a splash.
+
+Real-world: many shipped apps include a small centered logo via the `UIImageName` key, and App Review accepts it as long as it isn't a full-screen splash with text. The `UILaunchScreen` API supports exactly one image — no text, no animation.
+
+```xml
+<key>UILaunchScreen</key>
+<dict>
+    <key>UIColorName</key><string>LaunchBackground</string>
+    <key>UIImageName</key><string>LaunchLogo</string>
+    <key>UIImageRespectsSafeAreaInsets</key><true/>
+    <key>UINavigationBar</key><dict/>
+    <key>UITabBar</key><dict/>
+</dict>
+```
+
+The image asset lives in `Assets.xcassets/LaunchLogo.imageset/` with `@1x`, `@2x`, `@3x` PNGs. Typical centered-logo sizes: 120 / 240 / 360 px (≈ 120 pt square). Downscale from the existing 1024 marketing icon with `sips -Z 120 marketing/AppIcon-1024.png --out ...`. Use a flat PNG without iOS's rounded-corner mask — iOS does not apply the icon mask to launch images.
+
+When to use the image variant:
+- The developer asks for it explicitly ("isn't there usually a logo?").
+- The app's first real frame still takes > 200ms to be useful (download-gated apps, big ML model load) — the logo gives the user something to look at instead of a blank colored rectangle.
+
+When to skip it:
+- The app's first frame paints instantly (cached UI, no required network/ML on first frame). The HIG-strict version feels faster.
+
+### What you can't do with `UILaunchScreen`
+
+- Custom text labels.
+- Multiple images.
+- Vector / SVG sources (use PNG).
+- Any layout other than "image centered with safe-area respect."
+
+For any of those, you have to switch to a `LaunchScreen.storyboard` (older approach). Don't — the constraints above are the cost of the simpler API and almost every indie app accepts them.
+
 ## macOS / watchOS
 
 - **macOS:** no launch screen concept. The window appears when ready; keep `App.init()` fast (see the `apple-platform-performance` agent, Item 18).
