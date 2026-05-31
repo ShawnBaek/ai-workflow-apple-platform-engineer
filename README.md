@@ -4,20 +4,21 @@ Agent **skills** for indie developers shipping **Apple-platform native apps end-
 
 Distributed through the open [skills.sh](https://skills.sh) ecosystem, so one `npx skills add` installs them into **Claude Code, Codex, Cursor, Gemini CLI, Copilot, and 50+ other agents** — not just one tool.
 
-A **team lead** plus **nine specialist skills**, sharing one job: kill the time-sinks that make shipping native apps painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — pick the one that matches your situation:
+A **team lead** plus **ten specialist skills**, sharing one job: kill the time-sinks that make shipping native apps painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — pick the one that matches your situation:
 
 | Situation | UI path |
 |---|---|
 | Pure indie, no designer, no Figma file | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) directly — makes HIG-anchored decisions itself |
 | Designer hands you a Figma file (or you have your own Figma mockup) | [`figma-bridge`](skills/figma-bridge/SKILL.md) → [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) — Figma extraction, then HIG polish |
 
-## The team: a lead + nine specialists
+## The team: a lead + ten specialists
 
 | Skill | When it kicks in | What it owns |
 |-------|------------------|--------------|
-| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other nine: locates you on the pipeline, names the next move, hands off to the specialist that owns it |
+| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other ten: locates you on the pipeline, names the next move, hands off to the specialist that owns it |
 | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | "Build me a screen", "design this view", "SwiftUI / UIKit" | UI implementation in SwiftUI/UIKit, grounded in Apple HIG (pure-indie path) |
 | [`figma-bridge`](skills/figma-bridge/SKILL.md) | "Figma", "generate from this frame", "code connect", "review my figma file", "set up figma mcp" | Figma → SwiftUI handoff. MCP setup (Claude Code + Codex), formal Code Connect for SwiftUI, generate-from-frame, dev-friendliness file review, lightweight `// figma:` code-connect-map convention. Hands off to `apple-platform-ui` for HIG polish. |
+| [`core-data`](skills/core-data/SKILL.md) | "Core Data", "migration", "xcmappingmodel", "readonly database", "NSPersistentCloudKitContainer", "persistent history" | Core Data architecture, staged/manual/lightweight migration strategy, concurrency topology, store-load crash triage, and CloudKit mirroring decisions |
 | [`apple-platform-performance`](skills/apple-platform-performance/SKILL.md) | "App is janky", "scroll stutters", "launch is slow", "Instruments shows…" | Hangs / hitches / launch / body cost / ML inference / audio pipeline — 27 Effective-style items in 6 Parts |
 | [`xcodebuild`](skills/xcodebuild/SKILL.md) | "Build", "run on sim", "screenshot the screen", "attach debugger" | Xcode builds + simulator + UI automation via XcodeBuildMCP (XcodeGen-aware) |
 | [`screenshot`](skills/screenshot/SKILL.md) | "App Store screenshots", "capture and upload" | End-to-end App Store screenshot pipeline (capture → frame → upload) |
@@ -114,6 +115,7 @@ npx skills remove commit-message # uninstall one
 |-------|---------------------|--------------|
 | `apple-platform-ui` | none (uses Xcode itself) | — |
 | `figma-bridge` | **Figma MCP server** + (optional) **Code Connect Swift package** | `claude mcp add figma --url https://mcp.figma.com/v1 --transport http` (or the Codex equivalent); `.package(url: "https://github.com/figma/code-connect", from: "1.0.0")` in `Package.swift` |
+| `core-data` | none (Apple frameworks + Xcode model editor) | — |
 | `apple-platform-performance` | Instruments + XCTest (ship with Xcode) | — |
 | `xcodebuild` | **XcodeBuildMCP** ([xcodebuildmcp.com](https://www.xcodebuildmcp.com)) | `npx -y xcodebuildmcp@latest mcp` via your agent's MCP config |
 | `screenshot` | XcodeBuildMCP + asc CLI | both via the skills above |
@@ -130,7 +132,7 @@ Each skill walks you through its install on first run.
 indie-native-app/
 ├── README.md
 └── skills/
-    ├── native-app-lead/SKILL.md    # the team lead — coordinates the nine below
+    ├── native-app-lead/SKILL.md    # the team lead — coordinates the ten below
     ├── apple-platform-ui/
     │   ├── SKILL.md
     │   ├── keyboard.md
@@ -142,6 +144,10 @@ indie-native-app/
     │   ├── code-connect-map.md     # // figma: URL comment convention
     │   ├── figma-review.md         # developer-friendliness audit
     │   └── generate-from-frame.md  # generate_figma_design + avoid-large-frames
+    ├── core-data/
+    │   ├── SKILL.md
+    │   ├── migrations.md
+    │   └── concurrency.md
     ├── apple-platform-performance/
     │   ├── SKILL.md
     │   └── part-1…6.md             # body cost, hangs, hitches, launch, diagnose, ML/audio
@@ -151,6 +157,9 @@ indie-native-app/
     ├── app-website/
     │   ├── SKILL.md
     │   └── sections.md, responsive.md, 3d-devices.md, deploy.md, api-reference.md, playwright-verify.md
+    ├── cicd/
+    │   ├── SKILL.md
+    │   └── workflow-templates.md, self-hosted-runner.md, secrets-and-variables.md, act-local-testing.md, cleanup-and-debug.md
     └── commit-message/SKILL.md
 ```
 
@@ -163,6 +172,7 @@ Each skill saves the most expensive thing — the loop of *do it, realize you mi
 - **native-app-lead** kills the "what do I even do next" loop by sequencing the whole journey and handing each stage to the specialist that owns it.
 - **apple-platform-ui** kills the rebuild-tweak loop by reasoning through layout in-head before ⌘R.
 - **figma-bridge** kills the design-handoff-as-screenshot loop — wires the Figma MCP server, sets up Code Connect for SwiftUI, generates first-draft code from a chosen frame, then hands off to apple-platform-ui for the HIG polish. The Figma path complements (doesn't replace) the pure-indie path.
+- **core-data** kills the "works on clean install, crashes on upgrade" loop by defining migration strategy, store-load triage, and safe context boundaries.
 - **apple-platform-performance** kills the "ship → real users complain → reverse-engineer the regression" loop by gating it in CI with XCTMetric.
 - **xcodebuild** kills the "what's the destination flag again" loop.
 - **screenshot** kills the multi-hour manual screenshot ritual.
@@ -176,7 +186,7 @@ Default to system. Deviate only when there's a real reason.
 ## Naming conventions
 
 - **Skills** live in `skills/<short-name>/` (e.g. `xcodebuild`). The `name:` in each `SKILL.md` frontmatter matches the folder name.
-- **Sub-docs** for big skills live beside the `SKILL.md` in the same folder (e.g. `skills/cicd/workflow-templates.md`). The `SKILL.md` stays small (overview + quick-reference table) and tells the agent to `Read` the matching sub-doc when a topic comes up — progressive disclosure. Used today by `app-website` (6 sub-docs), `apple-platform-performance` (6 sub-docs: parts 1–6 including ML/audio), `cicd` (5 sub-docs), `figma-bridge` (5 sub-docs), and `apple-platform-ui` (2 sub-docs: keyboard, launch-screen).
+- **Sub-docs** for big skills live beside the `SKILL.md` in the same folder (e.g. `skills/cicd/workflow-templates.md`). The `SKILL.md` stays small (overview + quick-reference table) and tells the agent to `Read` the matching sub-doc when a topic comes up — progressive disclosure. Used today by `app-website` (6 sub-docs), `apple-platform-performance` (6 sub-docs: parts 1–6 including ML/audio), `cicd` (5 sub-docs), `figma-bridge` (5 sub-docs), `apple-platform-ui` (2 sub-docs: keyboard, launch-screen), and `core-data` (2 sub-docs: migrations, concurrency).
 
 ## Contribute
 
