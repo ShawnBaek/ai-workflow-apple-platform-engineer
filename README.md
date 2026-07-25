@@ -8,19 +8,19 @@ Agent skills for indie developers shipping Apple-platform native apps end-to-end
 
 Distributed through the open [skills.sh](https://skills.sh) ecosystem, so one `npx skills add` installs them into **Claude Code, Codex, Cursor, Gemini CLI, Copilot, and 50+ other agents** — not just one tool.
 
-A **team lead** plus **ten specialist skills**, sharing one job: kill the time-sinks that make shipping native apps painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — pick the one that matches your situation:
+A **team lead** plus **eleven specialist skills**, sharing one goal: make shipping native apps less painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — choose the one that matches your situation:
 
 | Situation | UI path |
 |---|---|
-| Pure indie, no designer, no Figma file | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) directly — makes HIG-anchored decisions itself |
-| Designer hands you a Figma file (or you have your own Figma mockup) | [`figma-bridge`](skills/figma-bridge/SKILL.md) → [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) — Figma extraction, then HIG polish |
+| Working without a designer or Figma file | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) directly — makes HIG-anchored decisions itself |
+| Working from a Figma design | [`figma-bridge`](skills/figma-bridge/SKILL.md) → [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) — extracts the design from Figma, then applies Apple HIG polish |
 
-## The team: a lead + ten specialists
+## The team: one lead and eleven specialists
 
 | Skill | When it kicks in | What it owns |
 |-------|------------------|--------------|
-| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other ten: locates you on the pipeline, names the next move, hands off to the specialist that owns it |
-| [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | "Build me a screen", "design this view", "SwiftUI / UIKit" | UI implementation in SwiftUI/UIKit, grounded in Apple HIG (pure-indie path) |
+| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other eleven: locates you on the pipeline, names the next move, and hands off to the specialist that owns it |
+| [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | "Build me a screen", "design this view", "SwiftUI / UIKit" | UI implementation in SwiftUI/UIKit, grounded in Apple HIG (no-designer path) |
 | [`figma-bridge`](skills/figma-bridge/SKILL.md) | "Figma", "generate from this frame", "code connect", "review my figma file", "set up figma mcp" | Figma → SwiftUI handoff. MCP setup (Claude Code + Codex), formal Code Connect for SwiftUI, generate-from-frame, dev-friendliness file review, lightweight `// figma:` code-connect-map convention. Hands off to `apple-platform-ui` for HIG polish. |
 | [`core-data`](skills/core-data/SKILL.md) | "Core Data", "migration", "xcmappingmodel", "readonly database", "NSPersistentCloudKitContainer", "persistent history" | Core Data architecture, staged/manual/lightweight migration strategy, concurrency topology, store-load crash triage, and CloudKit mirroring decisions |
 | [`apple-platform-performance`](skills/apple-platform-performance/SKILL.md) | "App is janky", "scroll stutters", "launch is slow", "Instruments shows…" | Hangs / hitches / launch / body cost / ML inference / audio pipeline — 27 Effective-style items in 6 Parts |
@@ -36,7 +36,7 @@ Each skill is a self-contained folder under `skills/<name>/` — a `SKILL.md` (t
 
 ## Install
 
-All install through the [`skills`](https://skills.sh) CLI — no global install needed, just `npx`.
+Install everything through the [`skills`](https://skills.sh) CLI — no global installation is needed; use `npx`.
 
 ### Everything, interactively (recommended)
 
@@ -129,7 +129,7 @@ npx skills remove commit-message # uninstall one
 | `cicd` | **`gh` CLI** + **`act`** + a Mac self-hosted runner | `brew install gh act` |
 | `commit-message` | `git` | already on your machine |
 
-Each skill walks you through its install on first run.
+Each skill explains any additional setup it needs when you first use it.
 
 ## Repo layout
 
@@ -137,7 +137,7 @@ Each skill walks you through its install on first run.
 iOS-experts/
 ├── README.md
 └── skills/
-    ├── native-app-lead/SKILL.md    # the team lead — coordinates the ten below
+    ├── native-app-lead/SKILL.md    # the team lead — coordinates the eleven below
     ├── apple-platform-ui/
     │   ├── SKILL.md
     │   ├── keyboard.md
@@ -176,7 +176,7 @@ Each skill saves the most expensive thing — the loop of *do it, realize you mi
 
 - **native-app-lead** kills the "what do I even do next" loop by sequencing the whole journey and handing each stage to the specialist that owns it.
 - **apple-platform-ui** kills the rebuild-tweak loop by reasoning through layout in-head before ⌘R.
-- **figma-bridge** kills the design-handoff-as-screenshot loop — wires the Figma MCP server, sets up Code Connect for SwiftUI, generates first-draft code from a chosen frame, then hands off to apple-platform-ui for the HIG polish. The Figma path complements (doesn't replace) the pure-indie path.
+- **figma-bridge** kills the design-handoff-as-screenshot loop — wires the Figma MCP server, sets up Code Connect for SwiftUI, generates first-draft code from a chosen frame, then hands off to apple-platform-ui for HIG polish. The Figma workflow complements the no-designer workflow.
 - **core-data** kills the "works on clean install, crashes on upgrade" loop by defining migration strategy, store-load triage, and safe context boundaries.
 - **apple-platform-performance** kills the "ship → real users complain → reverse-engineer the regression" loop by gating it in CI with XCTMetric.
 - **xcodebuild** kills the "what's the destination flag again" loop.

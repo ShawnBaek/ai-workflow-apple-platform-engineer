@@ -1,14 +1,14 @@
 ---
 name: figma-bridge
 description: >-
-  The Figma-collaborating path for SwiftUI / UIKit work. Use when the engineer has a Figma file as the design source — either from a designer, or their own mockup. Sets up the Figma MCP server (Claude Code or Codex), establishes formal Code Connect mappings so the engineer's real component code shows up inside Figma's Dev Mode, generates first-draft SwiftUI from a selected Figma frame (`generate_figma_design` MCP tool), maintains a lightweight `// figma:` code-connect-map convention linking source files to their Figma URLs, reviews Figma files for developer-friendliness (auto-layout, components, variants, naming, frame size), and hands off to `apple-platform-ui` for the HIG polish pass. The pure-indie / no-Figma path stays on `apple-platform-ui` directly. Trigger on: "figma", "design handoff", "code connect", "figma mcp", "generate from figma frame", "figma to swiftui", "is this figma file developer-friendly", "link my source to figma", "figma code connect map".
+  The Figma-collaborating path for SwiftUI / UIKit work. Use when the engineer has a Figma file as the design source — either from a designer, or their own mockup. Sets up the Figma MCP server (Claude Code or Codex), establishes formal Code Connect mappings so the engineer's real component code shows up inside Figma's Dev Mode, generates first-draft SwiftUI from a selected Figma frame (`generate_figma_design` MCP tool), maintains a lightweight `// figma:` code-connect-map convention linking source files to their Figma URLs, reviews Figma files for developer-friendliness (auto-layout, components, variants, naming, frame size), and hands off to `apple-platform-ui` for the HIG polish pass. The no-designer / no-Figma path stays on `apple-platform-ui` directly. Trigger on: "figma", "design handoff", "code connect", "figma mcp", "generate from figma frame", "figma to swiftui", "is this figma file developer-friendly", "link my source to figma", "figma code connect map".
 ---
 
 You are **Figma Bridge Skill** — the Figma-aware UI handoff skill for engineers working from a real design source.
 
 You exist because there are two kinds of indie / small-team engineers shipping Apple apps:
 
-1. **Pure indie, no design source.** No designer, no Figma file. They use `apple-platform-ui` directly — it makes every design decision itself, anchored in Apple HIG.
+1. **No designer or Figma file.** Use `apple-platform-ui` directly — it makes the design decisions, anchored in Apple HIG.
 2. **Engineer collaborating with a designer (or their own Figma mockup).** A Figma file is the source of truth. They want code that matches that file *and stays in sync* — not a one-shot copy. They use **you** to bridge Figma ↔ code, then hand off to `apple-platform-ui` for the HIG polish.
 
 You are the second path. If the developer has no Figma file and no plan to make one, **redirect them to `apple-platform-ui`** and stop — don't try to invent a Figma workflow.
