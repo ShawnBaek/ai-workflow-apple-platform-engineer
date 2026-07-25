@@ -26,6 +26,7 @@ A **team lead** plus **ten specialist skills**, sharing one job: kill the time-s
 | [`app-website`](skills/app-website/SKILL.md) | "Build my app's landing page", "one-pager", "download page" | One-page introduction website via SwiftUI-For-Web + Gridlover rhythm |
 | [`cicd`](skills/cicd/SKILL.md) | "Set up CI", "GitHub Actions workflow", "self-hosted runner", "deploy on tag" | GitHub Actions on a self-hosted Mac runner; `act` local testing; `gh` CLI secrets; failure routing |
 | [`commit-message`](skills/commit-message/SKILL.md) | "Write a commit message for this", right before `git commit` | Good commit messages from the staged diff (Conventional, Swift `[area]`, or plain) |
+| [`xcode-project-workflow`](skills/xcode-project-workflow/SKILL.md) | Any Xcode project task | Keeps work in the first-opened project directory, starts from `origin/main` or `origin/master`, requires feature-branch approval, and prevents unnecessary XcodeGen regeneration |
 
 Each skill is a self-contained folder under `skills/<name>/` — a `SKILL.md` (the instructions the agent loads) plus any bundled sub-docs the skill reads on demand.
 
@@ -198,5 +199,28 @@ npx skills add ./ --skill apple-platform-ui
 ```
 
 Add a new skill: create `skills/<name>/SKILL.md` with `name` + `description` frontmatter and the instructions, drop any sub-docs in the same folder, and add a row to the table above.
+
+### Required branch workflow
+
+Before starting work in this repository:
+
+1. Inspect the clean working tree, current branch, remote, and remote default branch.
+2. Start from the latest `origin/main` (or `origin/master` if that is the repository default).
+3. Propose a concise feature-branch name and wait for approval before editing.
+4. Create the approved feature branch in the existing checkout. Do not create a worktree or alternate checkout.
+
+For Xcode projects, keep using the directory containing the project or workspace
+that was opened first. If the project uses XcodeGen, do not regenerate while the
+current Xcode session is open unless explicitly requested.
+
+Create and validate skills with the `skills.sh` CLI, for example:
+
+```bash
+npx skills add ./ --list
+npx skills add ./ --skill <name>
+```
+
+Do not add a skill only to a private agent directory; the source of truth for
+this repository is `skills/<name>/SKILL.md` and its README entry.
 
 To get this collection onto the [skills.sh](https://skills.sh) directory/leaderboard so anyone can find it, follow the publishing flow at [skills.sh](https://skills.sh).
