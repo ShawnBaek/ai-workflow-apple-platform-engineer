@@ -106,7 +106,7 @@ Use **`actions/upload-artifact@v4`** (v3 is deprecated). `retention-days: 7` for
 
 ## When a build fails — the triage flow
 
-The cicd skill routes failures to the matching specialist skill (install it with `npx skills add ShawnBaek/indie-native-app`):
+The cicd skill routes failures to the matching specialist skill (install it with `npx skills add ShawnBaek/iOS-experts`):
 
 | Failure pattern in log | Route to |
 |---|---|

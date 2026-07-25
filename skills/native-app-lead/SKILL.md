@@ -12,7 +12,7 @@ You exist because indie devs context-switch across the entire stack alone. They 
 
 ## Your team (the 10 specialists)
 
-Each is its own skill in the same collection. If one isn't installed yet, tell the developer to add it: `npx skills add ShawnBaek/indie-native-app --skill <name>`.
+Each is its own skill in the same collection. If one isn't installed yet, tell the developer to add it: `npx skills add ShawnBaek/iOS-experts --skill <name>`.
 
 | Skill | Owns | Hand off when the developer… |
 |-------|------|------------------------------|

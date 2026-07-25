@@ -1,4 +1,4 @@
-# indie-native-app
+# iOS-experts
 
 **Version:** 1.0.0
 
@@ -43,32 +43,32 @@ All install through the [`skills`](https://skills.sh) CLI — no global install 
 Pick which skills and which agents you want:
 
 ```bash
-npx skills add ShawnBaek/indie-native-app
+npx skills add ShawnBaek/iOS-experts
 ```
 
 ### Specific skills
 
 ```bash
-npx skills add ShawnBaek/indie-native-app --skill apple-platform-ui --skill commit-message
+npx skills add ShawnBaek/iOS-experts --skill apple-platform-ui --skill commit-message
 ```
 
 ### Target specific agents
 
 ```bash
 # Install into Claude Code and Codex at once
-npx skills add ShawnBaek/indie-native-app -a claude-code -a codex
+npx skills add ShawnBaek/iOS-experts -a claude-code -a codex
 
 # Global (~/), Codex only, no prompts — CI-friendly
-npx skills add ShawnBaek/indie-native-app -g -a codex -y
+npx skills add ShawnBaek/iOS-experts -g -a codex -y
 
 # All skills into every detected agent
-npx skills add ShawnBaek/indie-native-app --all
+npx skills add ShawnBaek/iOS-experts --all
 ```
 
 ### Browse before installing
 
 ```bash
-npx skills add ShawnBaek/indie-native-app --list   # list the skills in this repo
+npx skills add ShawnBaek/iOS-experts --list   # list the skills in this repo
 npx skills find ios                                 # search skills.sh by keyword
 ```
 
@@ -134,7 +134,7 @@ Each skill walks you through its install on first run.
 ## Repo layout
 
 ```
-indie-native-app/
+iOS-experts/
 ├── README.md
 └── skills/
     ├── native-app-lead/SKILL.md    # the team lead — coordinates the ten below
