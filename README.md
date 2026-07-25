@@ -1,5 +1,9 @@
 # indie-native-app
 
+**Version:** 1.0.0
+
+This is the first stable release of the indie native app skills collection.
+
 Agent **skills** for indie developers shipping **Apple-platform native apps end-to-end** — from blank Xcode project to App Store submission, on your own (or with a designer), without a DevOps team.
 
 Distributed through the open [skills.sh](https://skills.sh) ecosystem, so one `npx skills add` installs them into **Claude Code, Codex, Cursor, Gemini CLI, Copilot, and 50+ other agents** — not just one tool.
