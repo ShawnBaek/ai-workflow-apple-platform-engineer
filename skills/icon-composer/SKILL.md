@@ -51,8 +51,7 @@ semantic cue, and a restrained product palette.
 
 ## Design rules
 
-- Prefer a short mnemonic such as `ST`, `CC`, `NM`, or `CV` over a full app
-  name.
+- Prefer a short two- or three-character mnemonic over a full app name.
 - Use one meaningful cue for the product domain. Avoid several tiny symbols
   competing for attention.
 - Read the app's theme, design tokens, asset catalog, and existing UI before
@@ -76,7 +75,8 @@ semantic cue, and a restrained product palette.
 5. Preview iOS/macOS and watchOS independently. Preview Default, Dark, and Mono;
    use Mono options to inspect Clear and Tinted results.
 6. Save the editable design source with its variant name, then save the approved
-   Xcode package as the canonical product name, for example `CityCommuter.icon`.
+   Xcode package with the canonical product name, using the `AppName.icon`
+   pattern.
 7. Export a 1024 px preview and a small-size contact sheet. Iterate until the
    icon reads clearly at every tested size.
 8. Read [`platform-handoff.md`](./platform-handoff.md), install the correct
