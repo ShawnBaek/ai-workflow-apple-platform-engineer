@@ -1,29 +1,30 @@
 # iOS-experts
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 
-This is the first stable release of the indie native app skills collection.
+This is the stable indie native app skills collection for shipping across Apple platforms.
 
 Agent skills for indie developers shipping Apple-platform native apps end-to-end — from a blank Xcode project to App Store submission.
 
 Distributed through the open [skills.sh](https://skills.sh) ecosystem, so one `npx skills add` installs them into **Claude Code, Codex, Cursor, Gemini CLI, Copilot, and 50+ other agents** — not just one tool.
 
-A **team lead** plus **eleven specialist skills**, sharing one goal: make shipping native apps less painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — choose the one that matches your situation:
+A **team lead** plus **twelve specialist skills**, sharing one goal: make shipping native apps less painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — choose the one that matches your situation:
 
 | Situation | UI path |
 |---|---|
 | Working without a designer or Figma file | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) directly — makes HIG-anchored decisions itself |
 | Working from a Figma design | [`figma-bridge`](skills/figma-bridge/SKILL.md) → [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) — extracts the design from Figma, then applies Apple HIG polish |
 
-## The team: one lead and eleven specialists
+## The team: one lead and twelve specialists
 
 | Skill | When it kicks in | What it owns |
 |-------|------------------|--------------|
-| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other eleven: locates you on the pipeline, names the next move, and hands off to the specialist that owns it |
+| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other twelve: locates you on the pipeline, names the next move, and hands off to the specialist that owns it |
 | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | "Build me a screen", "design this view", "SwiftUI / UIKit" | UI implementation in SwiftUI/UIKit, grounded in Apple HIG (no-designer path) |
 | [`figma-bridge`](skills/figma-bridge/SKILL.md) | "Figma", "generate from this frame", "code connect", "review my figma file", "set up figma mcp" | Figma → SwiftUI handoff. MCP setup (Claude Code + Codex), formal Code Connect for SwiftUI, generate-from-frame, dev-friendliness file review, lightweight `// figma:` code-connect-map convention. Hands off to `apple-platform-ui` for HIG polish. |
 | [`core-data`](skills/core-data/SKILL.md) | "Core Data", "migration", "xcmappingmodel", "readonly database", "NSPersistentCloudKitContainer", "persistent history" | Core Data architecture, staged/manual/lightweight migration strategy, concurrency topology, store-load crash triage, and CloudKit mirroring decisions |
 | [`apple-platform-performance`](skills/apple-platform-performance/SKILL.md) | "App is janky", "scroll stutters", "launch is slow", "Instruments shows…" | Hangs / hitches / launch / body cost / ML inference / audio pipeline — 27 Effective-style items in 6 Parts |
+| [`icon-composer`](skills/icon-composer/SKILL.md) | "Design an app icon", "Icon Composer", "replace the Xcode icon", "check icon sizes" | Layered iOS, iPadOS, macOS, and watchOS icons; Default/Dark/Clear/Tinted appearances; Xcode handoff; legacy `.icns` and asset-catalog verification |
 | [`xcodebuild`](skills/xcodebuild/SKILL.md) | "Build", "run on sim", "screenshot the screen", "attach debugger" | Xcode builds + simulator + UI automation via XcodeBuildMCP (XcodeGen-aware) |
 | [`screenshot`](skills/screenshot/SKILL.md) | "App Store screenshots", "capture and upload" | End-to-end App Store screenshot pipeline (capture → frame → upload) |
 | [`app-store-connect`](skills/app-store-connect/SKILL.md) | "TestFlight", "submit", "store metadata", "crash reports" | App Store Connect ops via the asc CLI (iOS / macOS / Mac Catalyst / watchOS / visionOS) |
@@ -49,7 +50,7 @@ npx skills add ShawnBaek/iOS-experts
 ### Specific skills
 
 ```bash
-npx skills add ShawnBaek/iOS-experts --skill apple-platform-ui --skill commit-message
+npx skills add ShawnBaek/iOS-experts --skill icon-composer
 ```
 
 ### Target specific agents
@@ -108,6 +109,9 @@ npx skills remove commit-message # uninstall one
    commit-message sits across all of them — invoked right before any `git commit`
    to turn the staged diff into a properly-formatted, useful message.
 
+   icon-composer creates the layered app icon before release, installs the canonical
+   AppName.icon package in Xcode, and hands target verification to xcodebuild.
+
    cicd wraps the whole loop — GitHub Actions on a self-hosted Mac runner
    builds + tests on every PR, archives + ships to TestFlight on tag push.
    Failures route back to xcodebuild / app-store-connect / apple-platform-performance
@@ -122,6 +126,7 @@ npx skills remove commit-message # uninstall one
 | `figma-bridge` | **Figma MCP server** + (optional) **Code Connect Swift package** | `claude mcp add figma --url https://mcp.figma.com/v1 --transport http` (or the Codex equivalent); `.package(url: "https://github.com/figma/code-connect", from: "1.0.0")` in `Package.swift` |
 | `core-data` | none (Apple frameworks + Xcode model editor) | — |
 | `apple-platform-performance` | Instruments + XCTest (ship with Xcode) | — |
+| `icon-composer` | **[Icon Composer](https://developer.apple.com/icon-composer/)** + optional **[SF Symbols](https://developer.apple.com/sf-symbols/)** | Download both from Apple; Icon Composer requires macOS Tahoe 26.4 or later |
 | `xcodebuild` | **XcodeBuildMCP** ([xcodebuildmcp.com](https://www.xcodebuildmcp.com)) | `npx -y xcodebuildmcp@latest mcp` via your agent's MCP config |
 | `screenshot` | XcodeBuildMCP + asc CLI | both via the skills above |
 | `app-store-connect` | **asc CLI** ([asccli.sh](https://asccli.sh)) | `brew install asc` |
@@ -137,7 +142,7 @@ Each skill explains any additional setup it needs when you first use it.
 iOS-experts/
 ├── README.md
 └── skills/
-    ├── native-app-lead/SKILL.md    # the team lead — coordinates the eleven below
+    ├── native-app-lead/SKILL.md    # the team lead — coordinates the twelve below
     ├── apple-platform-ui/
     │   ├── SKILL.md
     │   ├── keyboard.md
@@ -156,6 +161,9 @@ iOS-experts/
     ├── apple-platform-performance/
     │   ├── SKILL.md
     │   └── part-1…6.md             # body cost, hangs, hitches, launch, diagnose, ML/audio
+    ├── icon-composer/
+    │   ├── SKILL.md
+    │   └── platform-handoff.md      # platform sizes, Xcode integration, legacy fallbacks
     ├── xcodebuild/SKILL.md
     ├── screenshot/SKILL.md
     ├── app-store-connect/SKILL.md
@@ -179,6 +187,7 @@ Each skill saves the most expensive thing — the loop of *do it, realize you mi
 - **figma-bridge** kills the design-handoff-as-screenshot loop — wires the Figma MCP server, sets up Code Connect for SwiftUI, generates first-draft code from a chosen frame, then hands off to apple-platform-ui for HIG polish. The Figma workflow complements the no-designer workflow.
 - **core-data** kills the "works on clean install, crashes on upgrade" loop by defining migration strategy, store-load triage, and safe context boundaries.
 - **apple-platform-performance** kills the "ship → real users complain → reverse-engineer the regression" loop by gating it in CI with XCTMetric.
+- **icon-composer** kills the "looks right at 1024 px, ships wrong everywhere else" loop by making the layered source, Xcode handoff, platform sizing, and archive verification one workflow.
 - **xcodebuild** kills the "what's the destination flag again" loop.
 - **screenshot** kills the multi-hour manual screenshot ritual.
 - **app-store-connect** kills the App Store Connect web-UI loop (and the 24h rejection cycle by always pre-flighting).
@@ -191,7 +200,7 @@ Default to system. Deviate only when there's a real reason.
 ## Naming conventions
 
 - **Skills** live in `skills/<short-name>/` (e.g. `xcodebuild`). The `name:` in each `SKILL.md` frontmatter matches the folder name.
-- **Sub-docs** for big skills live beside the `SKILL.md` in the same folder (e.g. `skills/cicd/workflow-templates.md`). The `SKILL.md` stays small (overview + quick-reference table) and tells the agent to `Read` the matching sub-doc when a topic comes up — progressive disclosure. Used today by `app-website` (6 sub-docs), `apple-platform-performance` (6 sub-docs: parts 1–6 including ML/audio), `cicd` (5 sub-docs), `figma-bridge` (5 sub-docs), `apple-platform-ui` (2 sub-docs: keyboard, launch-screen), and `core-data` (2 sub-docs: migrations, concurrency).
+- **Sub-docs** for big skills live beside the `SKILL.md` in the same folder (e.g. `skills/cicd/workflow-templates.md`). The `SKILL.md` stays small (overview + quick-reference table) and tells the agent to `Read` the matching sub-doc when a topic comes up — progressive disclosure. Used today by `app-website` (6 sub-docs), `apple-platform-performance` (6 sub-docs: parts 1–6 including ML/audio), `cicd` (5 sub-docs), `figma-bridge` (5 sub-docs), `apple-platform-ui` (2 sub-docs: keyboard, launch-screen), `core-data` (2 sub-docs: migrations, concurrency), and `icon-composer` (1 sub-doc: platform handoff).
 
 ## Contribute
 
