@@ -18,8 +18,12 @@ Choose only the affected evidence:
 - iPad layout: relevant window size/size class/orientation;
 - watchOS: relevant watch destination and Crown/button interaction when changed;
 - macOS: native or Catalyst explicitly, plus relevant window size;
-- interaction/motion: a short video or UI-test recording, not many still images;
+- interaction/motion: a short, trimmed video or UI-test recording of the changed
+  interaction, not many still images;
 - localization: only affected locales plus a fallback-language check.
+
+Use a screenshot for a static visual criterion and a recording for sequence,
+gesture, or motion. Capture both only when they prove distinct criteria.
 
 For App Store assets, retrieve the current display types, resolutions, count,
 file types, and upload rules from Apple's live screenshot specification. Do not
@@ -43,15 +47,47 @@ For first-run downloads, wait on an observable app-ready signal or use an
 approved deterministic fixture. A loading screen is evidence only when loading
 is the acceptance criterion.
 
+## Record and trim the acceptance window
+
+Define the evidence window before recording: begin from the stable precondition
+immediately before the first relevant action and end after the observable result
+settles long enough to inspect. Prepare the app at that scenario state before
+recording. Unless app launch/startup is the acceptance criterion, exclude
+SpringBoard/Home, icon tap, app launch, the Launch Screen, login/setup, unrelated
+navigation, loading, and idle tail. When launch is the criterion, include the
+exact launch trigger and named ready milestone, but still remove unrelated
+lead-in and tail.
+
+Capture the raw recording once, then create a separate trimmed artifact. On
+macOS, the built-in media converter supports bounded trimming without adding a
+third-party dependency:
+
+```sh
+/usr/bin/avconvert --source <raw.mov> --preset PresetPassthrough \
+  --output <scenario-trimmed.mov> --start <seconds> --duration <seconds>
+```
+
+If passthrough cannot represent the cut, use the highest-quality compatible
+preset and record the re-encode. Never overwrite the raw recording. Do not cut
+inside the relevant interaction, speed it up, reorder it, or create a montage
+that can hide a failure. Use separate clips for disjoint flows. Publish the
+trimmed artifact, not the raw recording. Retain or delete the raw file only
+under the run's approved local retention policy after the trimmed result passes
+verification.
+
 ## Verify before publishing
 
 - Decode every image and verify dimensions against the current target slot.
-- Inspect the full video, codec/container, duration, and playback.
+- Inspect the full trimmed video, codec/container, dimensions, duration, and
+  playback; verify its first and last meaningful frames against the acceptance
+  window.
 - Check visual content against the acceptance criterion; file existence is not
   a pass.
 - Scan for tokens, accounts, email, location, notifications, user data, and
   personal status-bar information.
 - Confirm locale, ordering, appearance, and accessibility state.
+- Record the raw source hash, trim start/duration, final artifact hash, and any
+  re-encode; attach or publish only the sanitized trimmed result.
 
 ## PR evidence
 

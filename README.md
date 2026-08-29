@@ -25,6 +25,7 @@ Xcode skill bodies.
 - One append-only run ledger that yields execution, knowledge, and evidence
   graph views.
 - Bounded repair/review loops with explicit stop reasons and resumable evidence.
+- Phase-sized or stacked PRs with one reviewer outcome and checks per phase.
 - Local LLMs limited to RAG, reranking, entity extraction, and log clustering.
 - Apple Documentation Search, Apple-authored skills, and Xcode tools before
   repository or third-party substitutes.
@@ -250,7 +251,7 @@ coverage number.
 | bug | one regression reproducing the original failure |
 | logic | changed paths and material boundary/failure |
 | UI | affected build, critical flow, relevant visual evidence |
-| interaction/motion | affected flow plus video/UI recording |
+| interaction/motion | affected flow plus trimmed video/UI recording |
 | migration | representative old-to-new store and clean install |
 
 Do not test the same contract at every layer or build a test framework larger
@@ -345,7 +346,7 @@ stable-versus-beta comparison changes one toolchain at a time and records any
 runtime-version confounder before raising a regression hypothesis.
 
 - Small permanent UI images may be committed only when repository policy allows.
-- Human-facing screenshots/videos can use GitHub's documented browser attachment.
+- Human-facing screenshots/trimmed videos can use GitHub's documented browser attachment.
 - `.xcresult`, videos, and large logs can use Actions artifacts with digest,
   retention, and expiry shown.
 - `gh pr create` has no documented arbitrary local-file attachment option.

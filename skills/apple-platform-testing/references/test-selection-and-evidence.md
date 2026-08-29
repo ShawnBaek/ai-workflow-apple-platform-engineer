@@ -17,19 +17,26 @@ Before adding a test, record three fields: `observable_contract`,
 `prevented_failure`, and `unique_path`. If one is empty, or an existing test
 already protects the same contract/path at a cheaper layer, do not add it.
 
-For UI work, define the critical flow as the shortest deterministic launch-to-
-outcome sequence. Use an existing stable UI test when available. When creating a
-new UI-test harness would be materially larger than the change, a host-driven
-manual run is acceptable only with fixed inputs, recorded steps, hierarchy or
-accessibility checkpoints, and an independently observable final state. Record
-the missing automated regression and residual risk; screenshots/videos remain
-supporting visual evidence.
+For UI work, define the critical flow as the shortest deterministic
+prepared-state-to-outcome sequence. Include Home, icon tap, launch, or first-run
+setup only for a launch/startup acceptance criterion. Use an existing stable UI
+test when available. When creating a new UI-test harness would be materially
+larger than the change, a host-driven manual run is acceptable only with fixed
+inputs, recorded steps, hierarchy or accessibility checkpoints, and an
+independently observable final state. Record the missing automated regression
+and residual risk; screenshots/videos remain supporting visual evidence.
 
 ## Platform evidence
 
 Use the platform affected by the changed experience: iPhone for iOS, an iPad destination for iPadOS layout/multitasking behavior, a watch destination for watchOS interaction, and a macOS destination for window/menu/keyboard behavior. Name the exact destination and OS/runtime actually used; do not claim coverage for another platform from a nearby simulator run.
 
-For a visual PR artifact, preserve the captured file, its source command/test, and the flow it represents. Treat a screenshot as point-in-time UI evidence. A video can demonstrate a sequence but still needs deterministic steps and attached test result evidence.
+For a visual PR artifact, preserve the captured file, its source command/test,
+and the flow it represents. Treat a screenshot as point-in-time UI evidence. A
+video can demonstrate a sequence but still needs deterministic steps and
+attached test result evidence. Publish only the trimmed acceptance window: omit
+Home, launch, unrelated setup/navigation, and idle tail unless launch/startup is
+the changed contract. Preserve the raw hash, trim start/duration/tool, final
+duration and hash, full-playback result, and first and last frame verification.
 
 ## Handoff template
 

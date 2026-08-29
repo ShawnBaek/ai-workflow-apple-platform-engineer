@@ -23,6 +23,26 @@ Before any operation that writes Git metadata in a linked worktree, run the read
 
 When local state and remote tracking disagree after an otherwise confirmed push, verify the remote branch or pull request first. Then refresh from the normal host terminal with `git fetch origin`, inspect `git status -sb`, and inspect `git branch -vv` before changing tracking configuration.
 
+## Plan phase-sized pull requests
+
+Before implementation, derive an ordered phase map from the dependency graph.
+Each PR should answer one reviewer question, carry its own minimum-sufficient
+verification, and leave a coherent intermediate state. Split independent
+features, infrastructure, migrations, generated changes, and UI evidence work
+when they can be reviewed or reverted separately.
+
+Use the repository's size policy when it has one. Otherwise, 400 non-generated
+changed lines or 12 changed files is a review checkpoint, not a target: split at
+a real phase boundary or record why splitting would create an invalid
+intermediate. Never pad a stack with tiny mechanical PRs just to stay under a
+number.
+
+When phases depend on each other, use stacked PRs. Obtain approval for every
+branch name, base each branch and PR on its approved predecessor, and put the
+ordered stack map in every PR body. Each phase gets its own diff, checks,
+evidence, and review status. A stacked PR does not grant merge, force-push, or
+branch-retarget authority.
+
 ## Deliver a reviewable pull request
 
 Keep the PR sequence explicit: inspect scope and status, implement, select minimum-sufficient verification, review the staged diff, commit only after the gate, push only after the gate, open the PR, then verify remote SHA, CI/check status, and PR body/evidence links. Attach requested screenshots or video through a supported, verified evidence path; do not claim an attachment exists until its PR-visible location is checked.
