@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:health-report:1.0.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile",
+    "observed_at",
+    "authoritative_targets",
+    "selected_components",
+    "required_check_ids",
+    "checks"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "profile": {
+      "enum": [
+        "pr_ready",
+        "runtime_ui",
+        "testflight_uploaded",
+        "testflight_distributed",
+        "icon_upstream"
+      ]
+    },
+    "observed_at": {"type": "string", "format": "date-time"},
+    "authoritative_targets": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "selected_components": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["spec_kit", "xcode_mcp", "github_project", "local_llm"]
+      }
+    },
+    "required_check_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "required", "status", "summary", "evidence"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "category": {
+            "enum": [
+              "repository",
+              "agent",
+              "cli",
+              "mcp",
+              "github",
+              "spec_kit",
+              "xcode",
+              "simulator",
+              "apple_account",
+              "testflight",
+              "local_llm",
+              "companion_upstream"
+            ]
+          },
+          "required": {"type": "boolean"},
+          "status": {"enum": ["healthy", "degraded", "blocked", "not_applicable"]},
+          "summary": {"type": "string", "minLength": 1},
+          "evidence": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          },
+          "next_action": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

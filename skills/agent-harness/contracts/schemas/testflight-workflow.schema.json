@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:testflight-workflow:1.0.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "starts_after",
+    "nodes",
+    "delivery_targets",
+    "policy",
+    "cleanup"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "starts_after": {"const": "pr_ready"},
+    "nodes": {
+      "type": "array",
+      "minItems": 25,
+      "items": {
+        "type": "object",
+        "required": ["id", "requires"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "requires": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "resource": {
+            "enum": ["signing_or_app_store_connect", "github_external_mutation"]
+          },
+          "lease_action": {"enum": ["acquire", "release"]},
+          "grant_action": {"type": "string", "minLength": 1},
+          "timeout_from_authorization": {"const": "async_wait_minutes"},
+          "retry_bound_from_authorization": {"const": "max_transient_retries"},
+          "heartbeat_active_lease": {"const": true},
+          "terminal_for": {
+            "enum": ["testflight_uploaded", "testflight_distributed"]
+          }
+        },
+        "allOf": [
+          {
+            "if": {"required": ["resource"]},
+            "then": {"required": ["lease_action"]}
+          },
+          {
+            "if": {"required": ["lease_action"]},
+            "then": {"required": ["resource"]}
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "delivery_targets": {
+      "type": "object",
+      "required": ["testflight_uploaded", "testflight_distributed"],
+      "properties": {
+        "testflight_uploaded": {
+          "type": "object",
+          "required": ["terminal_node", "required_grants"],
+          "properties": {
+            "terminal_node": {"const": "testflight_uploaded"},
+            "required_grants": {
+              "const": [
+                "apple.testflight.upload",
+                "apple.testflight.processing.wait",
+                "apple.testflight.readback",
+                "github.evidence.publish"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "testflight_distributed": {
+          "type": "object",
+          "required": ["terminal_node", "required_grants"],
+          "properties": {
+            "terminal_node": {"const": "testflight_distributed"},
+            "required_grants": {
+              "const": [
+                "apple.testflight.upload",
+                "apple.testflight.processing.wait",
+                "apple.testflight.readback",
+                "github.evidence.publish",
+                "apple.testflight.distribute_internal",
+                "apple.testflight.readback",
+                "github.evidence.publish"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "processing_wait_is_bounded",
+        "distribution_is_internal_groups_only",
+        "read_back_required",
+        "evidence_publication_requires_github_lease",
+        "release_every_acquired_lease_on_blocked_or_terminal",
+        "forbidden_actions"
+      ],
+      "properties": {
+        "processing_wait_is_bounded": {"const": true},
+        "distribution_is_internal_groups_only": {"const": true},
+        "read_back_required": {"const": true},
+        "evidence_publication_requires_github_lease": {"const": true},
+        "release_every_acquired_lease_on_blocked_or_terminal": {"const": true},
+        "forbidden_actions": {
+          "const": [
+            "apple.app_review_submit",
+            "apple.production_release",
+            "apple.signing_resource_mutation",
+            "credential.scope_expansion",
+            "github.auto_merge"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "cleanup": {
+      "const": {
+        "mode": "finally",
+        "triggers": ["blocked", "failed_terminal", "cancelled", "success_terminal"],
+        "release_active_resources": [
+          "signing_or_app_store_connect",
+          "github_external_mutation"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

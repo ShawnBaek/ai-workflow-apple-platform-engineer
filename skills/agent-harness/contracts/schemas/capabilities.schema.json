@@ -11,6 +11,10 @@
     "authority_order",
     "knowledge_orders",
     "execution_order",
+    "delivery_profiles",
+    "health_policy",
+    "spec_kit_policy",
+    "companion_upstream_policy",
     "xcode_mcp_provider_policy",
     "resource_scopes",
     "resource_key_fields",
@@ -157,13 +161,59 @@
         "explicit_third_party_fallback"
       ]
     },
+    "delivery_profiles": {
+      "const": {
+        "pr_ready": {
+          "terminal": "pr_ready",
+          "continuation": null
+        },
+        "testflight_uploaded": {
+          "terminal": "testflight_uploaded",
+          "continuation": "testflight-workflow.json"
+        },
+        "testflight_distributed": {
+          "terminal": "testflight_distributed",
+          "continuation": "testflight-workflow.json"
+        }
+      }
+    },
+    "health_policy": {
+      "const": {
+        "statuses": ["healthy", "degraded", "blocked", "not_applicable"],
+        "required_profile_before_writes": true,
+        "read_only_observation": true,
+        "repair_or_install": false,
+        "account_or_scope_expansion": false,
+        "separate_app_and_infrastructure_results": true
+      }
+    },
+    "spec_kit_policy": {
+      "const": {
+        "pinned_release": "v1.0.1",
+        "artifact_hash_binding": true,
+        "feature_directory_and_git_branch_mapping_is_explicit": true,
+        "workflow_checkpoint_separate_from_authorization_hash": true,
+        "workflow_logs_are_subordinate_to_harness_ledger": true,
+        "managed_workflow_definitions_change_via_supported_overlays_only": true
+      }
+    },
+    "companion_upstream_policy": {
+      "const": {
+        "mode": "reference-only",
+        "public_metadata_read_only": true,
+        "execute_or_vendor": false,
+        "drift_action": "create_or_update_review_issue",
+        "auto_merge": false
+      }
+    },
     "xcode_mcp_provider_policy": {
       "const": {
         "state_dimensions": [
           "installation",
           "registration",
           "current_task_exposure",
-          "read_only_connectivity"
+          "read_only_connectivity",
+          "exact_workspace_binding"
         ],
         "record_install_provenance": [
           "config_scope",
@@ -173,6 +223,21 @@
           "resolved_version"
         ],
         "same_codex_host_clients_share_configuration": true,
+        "provider_injection_layers": [
+          "official_codex_mcpbridge",
+          "direct_codex_mcp",
+          "codex_plugin_mcp",
+          "xcode_agent_plugin"
+        ],
+        "capability_results": [
+          "workspace_discovery",
+          "interaction_session",
+          "workspace_bound_run",
+          "hierarchy_touch_capture",
+          "direct_apple_cli"
+        ],
+        "read_only_probe_timeout_seconds": 30,
+        "max_unchanged_read_only_retries": 1,
         "official_external_agent_route_first": true,
         "configuration_mutation_requires_explicit_approval": true,
         "max_active_simulator_capable_providers_during_incident": 1,
@@ -220,8 +285,8 @@
         },
         "simulator_or_device": {"const": ["platform", "udid", "paired_udids", "run_id", "bundle_id"]},
         "coresimulator_runtime_registry": {"const": ["host_id", "registry_scope"]},
-        "signing_or_app_store_connect": {"const": ["account_guard", "app_or_bundle_scope", "action"]},
-        "github_external_mutation": {"const": ["repository_fingerprint", "remote_repository", "action"]}
+        "signing_or_app_store_connect": {"const": ["account_guard", "app_or_bundle_scope"]},
+        "github_external_mutation": {"const": ["repository_fingerprint", "remote_repository"]}
       },
       "additionalProperties": false
     },

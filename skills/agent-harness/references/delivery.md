@@ -40,10 +40,26 @@ entire toolchain/destination/package/test-plan tuple matches.
 ## PR publication
 
 Separate `prepare evidence`, repository confirmation, writer claim/commit/release,
-GitHub claim/push/create PR/publish evidence/release, and `await checks`.
+GitHub claim/push/create PR/publish evidence/`await checks`/release. The bounded
+checks read-back uses the same active GitHub lease as its single-use grant;
+release only after the required state is observed or the run blocks.
 Reverify the current patch identity before repository confirmation and verify
 the remote SHA after publication. Do not treat one approval as permission to
 merge.
+
+When a valid one-shot run authorization is in use, its immutable hash may back
+the derived plan, branch, and phase-scoped external-write records where project
+policy permits. The later first-commit/push repository confirmation still binds
+the exact fingerprint, branch, and remote. Re-run the action checker immediately
+before each single-use grant; it must atomically reserve the structured
+operation descriptor while the canonical lease is active. Any repository, base,
+branch, live staged/outgoing path, Spec Kit snapshot/checkpoint, target,
+operation digest, expiry, lease, or idempotency drift blocks; do not rewrite the
+envelope.
+
+Create or resolve the feature Issue before the implementation writer begins,
+and move it to In Review only after the PR exists. A Project v2 permission
+failure is recorded independently and does not erase a valid Issue, push, or PR.
 
 `gh pr create` has no documented arbitrary local-attachment flag. Use:
 

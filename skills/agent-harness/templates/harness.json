@@ -5,9 +5,21 @@
   "selected_writer": "codex",
   "reviewer": null,
   "platforms": ["ios"],
+  "delivery_target": "pr_ready",
+  "health_profile": "pr_ready",
+  "health_components": [],
   "authoritative_root": "<absolute-path>",
   "xcode_container": "<absolute-project-or-workspace-path>",
   "private_policy_overlay": "<local-untracked-path>",
+  "run_authorization": "<local-untracked-path>",
+  "spec_kit": {
+    "enabled": false,
+    "release": "v1.0.1"
+  },
+  "github_tracking": {
+    "issues": true,
+    "project": null
+  },
   "max_active_repository_writers": 1,
   "max_implementation_attempts": 3,
   "max_review_cycles": 2

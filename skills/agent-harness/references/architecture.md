@@ -29,12 +29,32 @@ or `superseded`. Do not use an unqualified `done` state.
 
 ## Default task graph
 
-`intake -> guard -> discover -> plan -> approve plan -> approve branch -> claim
-implementation writer -> implement -> release writer -> verify -> freeze review
--> review -> converge -> reverify -> prepare evidence -> prepare PR -> repository
-confirmation -> claim delivery writer -> commit -> release writer -> claim
-GitHub mutation -> push -> verify remote SHA -> create PR -> publish evidence ->
-verify published evidence -> release GitHub mutation -> checks -> PR ready`
+```mermaid
+flowchart TB
+    A["Authority and health<br/>intake → guard → health → discover"]
+    S["Spec and approval<br/>discover Spec Kit → plan → plan approval → branch approval<br/>→ immutable Spec snapshot → run authorization"]
+    B["Approved branch<br/>claim writer → prepare and verify exact branch"]
+    T["Issue Ready<br/>claim GitHub → update → release"]
+    I["Implementation<br/>Issue In Progress → implement → release writer → verify"]
+    R["Convergence<br/>freeze → review → converge → reverify"]
+    D["Delivery preparation<br/>evidence → PR draft → repository confirmation<br/>→ claim writer → commit → release"]
+    G["GitHub delivery<br/>claim → push → remote SHA → PR → Issue In Review<br/>→ publish/verify evidence → checks → release → PR ready"]
+    A --> S --> B --> T --> I --> R --> D --> G
+```
+
+The exact 41-node control spine is:
+
+`intake → guard → health → discover → discover_spec_kit → plan → approve_plan
+→ branch_approval → bind_spec_kit_snapshot → bind_run_authorization →
+claim_implementation_writer → prepare_and_verify_branch →
+claim_github_tracking → ensure_issue_ready → release_github_tracking →
+claim_github_in_progress → mark_issue_in_progress →
+release_github_in_progress → implement → release_implementation_writer →
+verify → freeze_review → review → converge → reverify → prepare_evidence →
+prepare_pr → repository_confirmation → claim_delivery_writer → commit →
+release_delivery_writer → claim_github_mutation → push → verify_remote_sha →
+create_pr → mark_issue_in_review → publish_evidence →
+verify_published_evidence → checks → release_github_mutation → pr_ready`.
 
 `converge` is a decision node, not a hidden edit step. An accepted finding
 creates a new implementation attempt and supersedes the old downstream nodes.
@@ -81,7 +101,7 @@ depend on those releases. A planned Apple task may expand the default graph with
 build, device, project, runtime-registry, or signing lease pairs; it may not
 encode those resources as an undocumented global lock.
 
-The 29-node control spine stays ordered. A task-specific lease node declares
+The 41-node control spine stays ordered. A task-specific lease node declares
 `extension: true`, an approved resource, a deterministic `resource_key`, and an
 `acquire` or `release` action. Its acquire/release pair must balance, gate the
 relevant control-spine step, and remain on every path to `pr_ready`; unbalanced
@@ -126,16 +146,22 @@ mode, symlink, deletion, or path change invalidates affected evidence.
 
 All conditions are required:
 
-1. every required execution node is `passed` or explicitly approved `skipped`;
-2. the latest relevant build/test evidence passed for the current patch identity;
-3. convergence found no remaining accepted-spec gaps;
-4. no resource lease is active;
-5. the reviewed immutable patch identity still matches;
-6. each acceptance criterion has evidence or a recorded residual risk;
-7. the PR exists, its remote SHA matches the intended local commit, and required
-   checks reached their required state;
-8. required screenshot/video or artifact evidence was published and verified
-   from the intended viewer context.
+1. every required node passed in dependency order;
+2. the selected delivery-profile health report is fresh, target-bound, and
+   satisfied;
+3. the immutable run authorization is still current;
+4. the accepted Spec Kit snapshot is current, or Spec Kit is explicitly not
+   applicable;
+5. the latest build/test/runtime evidence matches the current patch identity;
+6. no resource lease remains active;
+7. the immutable review identity still matches the delivered commit;
+8. every acceptance criterion has current evidence or a recorded residual risk;
+9. required screenshot, video, or artifact evidence is published and viewable;
+10. the pull request exists;
+11. its remote SHA matches the intended local commit;
+12. required checks reached their required state; and
+13. Issue/Project tracking is reconciled, or a non-rollback partial failure is
+    explicitly recorded.
 
 Loop exhaustion, partial platform success, or an uploaded artifact is not a
 completion predicate.

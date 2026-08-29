@@ -7,7 +7,7 @@ description: >-
   App Store exports. Use for iOS, iPadOS, macOS, or watchOS icon concepts;
   typography or monogram icons; Default, Dark, Clear, or Tinted appearances;
   Xcode app-icon replacement; platform-size generation; or archive icon
-  verification.
+  verification; or reference-only review of IconGen companion-upstream drift.
 ---
 
 # Icon Composer
@@ -29,6 +29,10 @@ semantic cue, and a restrained product palette.
   layers, previews, contact sheets, fallback sizes, and opaque marketing PNGs.
 - Before editing an Xcode project, invoke `xcode-project-workflow`. Use
   `xcodebuild` for build, simulator, bundle, and archive verification.
+- For generalized workflow changes derived from the separate IconGen repository,
+  read [`references/companion-upstream.md`](references/companion-upstream.md).
+  Its public upstream is commit-pinned and reference-only; visibility does not
+  replace a license, and sync never copies or executes upstream material.
 
 ## Prepare the artwork
 
@@ -81,6 +85,9 @@ semantic cue, and a restrained product palette.
    icon reads clearly at every tested size.
 8. Read [`platform-handoff.md`](./platform-handoff.md), install the correct
    artifact in every applicable target, and verify the built product.
+9. If companion-upstream drift is reported, review its exact commit through the
+   normal Issue/branch/PR harness. Never auto-apply or auto-merge upstream
+   changes into this skill.
 
 ## Source layout
 

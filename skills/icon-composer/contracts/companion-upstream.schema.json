@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:companion-upstream:1.0.0",
+  "type": "object",
+  "required": ["schema_version", "upstream", "license", "integration", "sources"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "upstream": {
+      "type": "object",
+      "required": [
+        "repository",
+        "visibility",
+        "default_branch",
+        "reviewed_revision",
+        "reviewed_tree",
+        "observed_at"
+      ],
+      "properties": {
+        "repository": {"const": "ShawnBaek/IconGen"},
+        "visibility": {"const": "public"},
+        "default_branch": {"const": "main"},
+        "reviewed_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "reviewed_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "observed_at": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "license": {
+      "type": "object",
+      "required": ["spdx", "status"],
+      "properties": {
+        "spdx": {"type": ["string", "null"]},
+        "status": {"enum": ["absent", "declared"]}
+      },
+      "additionalProperties": false
+    },
+    "integration": {
+      "type": "object",
+      "required": [
+        "mode",
+        "execute_upstream",
+        "vendored_files",
+        "consumer_skill",
+        "consumer_repository",
+        "drift_action",
+        "auto_merge"
+      ],
+      "properties": {
+        "mode": {"const": "reference-only"},
+        "execute_upstream": {"const": false},
+        "vendored_files": {"const": []},
+        "consumer_skill": {"const": "icon-composer"},
+        "consumer_repository": {"const": "ShawnBaek/iOS-experts"},
+        "drift_action": {"const": "create_or_update_review_issue"},
+        "auto_merge": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "blob_sha", "purpose"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "blob_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "purpose": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

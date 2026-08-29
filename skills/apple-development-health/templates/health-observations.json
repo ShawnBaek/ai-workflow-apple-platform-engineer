@@ -1,0 +1,60 @@
+{
+  "$schema": "../contracts/health-report.schema.json",
+  "schema_version": "1.0.0",
+  "profile": "pr_ready",
+  "observed_at": "2098-01-01T00:00:00Z",
+  "authoritative_targets": {
+    "repository": "<absolute-path>",
+    "remote": "https://github.com/<owner>/<repository>.git",
+    "branch": "<approved-branch>"
+  },
+  "selected_components": [],
+  "required_check_ids": [
+    "repository.identity",
+    "agent.skills",
+    "cli.git",
+    "github.issue_pr"
+  ],
+  "checks": [
+    {
+      "id": "repository.identity",
+      "category": "repository",
+      "required": true,
+      "status": "healthy",
+      "summary": "Authoritative repository, remote, base, and branch match the run.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "agent.skills",
+      "category": "agent",
+      "required": true,
+      "status": "healthy",
+      "summary": "Required agent skills resolve from the authoritative installation.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "cli.git",
+      "category": "cli",
+      "required": true,
+      "status": "healthy",
+      "summary": "Git is available and bound to the authoritative checkout.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "github.issue_pr",
+      "category": "github",
+      "required": true,
+      "status": "healthy",
+      "summary": "Approved GitHub account can read the repository and required Issue/PR surfaces.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "simulator.runtime",
+      "category": "simulator",
+      "required": false,
+      "status": "not_applicable",
+      "summary": "This delivery profile does not require a Simulator.",
+      "evidence": []
+    }
+  ]
+}

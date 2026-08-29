@@ -16,11 +16,18 @@ visible. A fluent answer is not evidence.
    first-opened project or workspace directory and container.
 2. Load current user/project guards. Fail closed on account, repository,
    signing-team, branch, or project-root mismatch.
-3. Select exactly one mode: `codex`, `claude`, or `collaborative`.
-4. Freeze the task acceptance criteria and relevant tradeoffs.
-5. Build an acyclic execution plan. Rework creates a new bounded attempt; it is
+3. Run the selected `apple-development-health` profile before implementation
+   or an external delivery continuation. Health observes and classifies; it
+   never installs, repairs, cleans, or broadens credentials.
+4. Select exactly one mode: `codex`, `claude`, or `collaborative`.
+5. Freeze the task acceptance criteria and relevant tradeoffs.
+6. Build an acyclic execution plan. Rework creates a new bounded attempt; it is
    not a back-edge that erases the previous attempt.
-6. Acquire scoped leases only immediately before the protected action.
+7. Bind an exact run authorization for every delivery run. Interactive runs
+   may create a short-lived envelope from the latest explicit action approval;
+   unattended runs may reuse one unchanged finite envelope across its granted
+   green-path actions. Validate it immediately before every granted action.
+8. Acquire scoped leases only immediately before the protected action.
 
 Read [architecture.md](references/architecture.md) for graph, loop, leases, and
 completion rules. Use the machine-readable contracts in `contracts/` when a
@@ -34,6 +41,11 @@ remain human-approved, tested, reviewable, and reversible.
 If the project already uses GitHub Spec Kit, read
 [spec-kit-adapter.md](references/spec-kit-adapter.md). Spec Kit may drive the
 lifecycle, but it is not treated as a general DAG scheduler or test proof.
+
+For one explicit approval followed by bounded delivery, read
+[run-authorization.md](references/run-authorization.md). The default target is
+`pr_ready`; TestFlight upload or exact internal-group distribution is a separate
+pre-authorized continuation. Merge and App Review remain excluded.
 
 ## Keep three precedence axes separate
 
@@ -106,6 +118,7 @@ evidence publication.
 | Xcode/Simulator disk audit | `xcode-storage` |
 | Core Data, SwiftData, CloudKit | `apple-data` / `core-data` |
 | Issues and GitHub Projects | `github-projects` |
+| setup/MCP/CLI/account readiness | `apple-development-health` |
 | Store screenshots | `screenshot` |
 | TestFlight/App Store actions | `app-store-connect` |
 

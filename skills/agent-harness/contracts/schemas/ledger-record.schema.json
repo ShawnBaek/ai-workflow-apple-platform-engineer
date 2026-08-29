@@ -12,8 +12,10 @@
       "enum": [
         "node",
         "attempt",
+        "time_interval",
         "lease",
         "approval",
+        "grant_reservation",
         "knowledge",
         "evidence",
         "external_write",
@@ -61,9 +63,18 @@
         "record_type": {"const": "attempt"},
         "payload": {
           "type": "object",
-          "required": ["attempt_id", "ordinal", "input_hash", "outcome"],
+          "required": [
+            "attempt_id",
+            "authorization_hash",
+            "phase",
+            "ordinal",
+            "input_hash",
+            "outcome"
+          ],
           "properties": {
             "attempt_id": {"type": "string", "minLength": 1},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "phase": {"enum": ["implementation", "review", "tool"]},
             "ordinal": {"type": "integer", "minimum": 1},
             "attempt_of": {"type": ["string", "null"]},
             "supersedes": {"type": ["string", "null"]},
@@ -72,6 +83,29 @@
             "outcome": {
               "enum": ["passed", "failed_retryable", "failed_terminal", "blocked", "superseded"]
             }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "time_interval"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "authorization_hash",
+            "kind",
+            "started_at",
+            "ended_at",
+            "reason"
+          ],
+          "properties": {
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "kind": {"enum": ["active", "async_wait"]},
+            "started_at": {"type": "string", "format": "date-time"},
+            "ended_at": {"type": "string", "format": "date-time"},
+            "reason": {"type": "string", "minLength": 1}
           },
           "additionalProperties": false
         }
@@ -157,7 +191,8 @@
                 "xcodegen",
                 "external_write",
                 "destructive_action",
-                "improvement"
+                "improvement",
+                "run_authorization"
               ]
             },
             "actor": {"type": "string", "minLength": 1},
@@ -167,7 +202,131 @@
             "resource_key": {"type": "string", "minLength": 1},
             "action": {"type": "string", "minLength": 1},
             "target": {"type": "string", "minLength": 1},
-            "single_use": {"type": "boolean"}
+            "single_use": {"type": "boolean"},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "delivery_target": {
+              "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+            },
+            "issued_at": {"type": "string", "format": "date-time"},
+            "expires_at": {"type": "string", "format": "date-time"},
+            "action_grants": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "grant_id",
+                  "system",
+                  "action",
+                  "operation",
+                  "operation_input",
+                  "constraint_sha256",
+                  "resource_key",
+                  "phase",
+                  "single_use",
+                  "idempotency_key"
+                ],
+                "properties": {
+                  "grant_id": {"type": "string", "minLength": 1},
+                  "system": {"enum": ["git", "github", "apple"]},
+                  "action": {"type": "string", "minLength": 1},
+                  "operation": {"type": "string", "minLength": 1},
+                  "operation_input": {"type": "object", "minProperties": 1},
+                  "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                  "resource_key": {"type": "string", "minLength": 1},
+                  "phase": {"enum": ["pr_delivery", "testflight_upload", "testflight_distribution"]},
+                  "target": {"type": "string", "minLength": 1},
+                  "target_from_grant_id": {"type": "string", "minLength": 1},
+                  "produces_target_kind": {"enum": ["github_issue", "github_pr"]},
+                  "single_use": {"const": true},
+                  "idempotency_key": {"type": "string", "minLength": 1}
+                },
+                "oneOf": [
+                  {
+                    "required": ["target"],
+                    "not": {"required": ["target_from_grant_id"]}
+                  },
+                  {
+                    "required": ["target_from_grant_id"],
+                    "not": {"required": ["target"]}
+                  }
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"kind": {"const": "run_authorization"}}},
+              "then": {
+                "required": [
+                  "authorization_hash",
+                  "delivery_target",
+                  "issued_at",
+                  "expires_at",
+                  "action_grants"
+                ]
+              }
+            }
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "grant_reservation"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "reservation_id",
+            "authorization_hash",
+            "grant_id",
+            "idempotency_key",
+            "system",
+            "action",
+            "operation",
+            "operation_input",
+            "constraint_sha256",
+            "phase",
+            "target",
+            "lease_id",
+            "lease_owner",
+            "resource",
+            "resource_key",
+            "spec_checkpoint_sha256",
+            "apple_observation_sha256"
+          ],
+          "properties": {
+            "reservation_id": {"type": "string", "minLength": 1},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "grant_id": {"type": "string", "minLength": 1},
+            "idempotency_key": {"type": "string", "minLength": 1},
+            "system": {"enum": ["git", "github", "apple"]},
+            "action": {"type": "string", "minLength": 1},
+            "operation": {"type": "string", "minLength": 1},
+            "operation_input": {"type": "object", "minProperties": 1},
+            "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "phase": {"enum": ["pr_delivery", "testflight_upload", "testflight_distribution"]},
+            "target": {"type": "string", "minLength": 1},
+            "lease_id": {"type": "string", "minLength": 1},
+            "lease_owner": {"type": "string", "minLength": 1},
+            "resource": {
+              "enum": [
+                "source_checkout_writer",
+                "github_external_mutation",
+                "signing_or_app_store_connect"
+              ]
+            },
+            "resource_key": {"type": "string", "minLength": 1},
+            "spec_checkpoint_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "apple_observation_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            }
           },
           "additionalProperties": false
         }
@@ -215,7 +374,14 @@
             "observed_result": {"type": "string", "minLength": 1},
             "outcome": {"enum": ["passed", "failed", "blocked"]},
             "artifact_path": {"type": "string", "minLength": 1},
-            "artifact_sha256": {"type": "string", "minLength": 1}
+            "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            ,"evidence_kind": {"enum": ["acceptance", "review", "commit_equivalence", "spec_kit_checkpoint", "testflight_artifact", "publication"]}
+            ,"repository_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+            ,"local_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
+            ,"remote_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
+            ,"artifact_source_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
+            ,"version": {"type": "string", "minLength": 1}
+            ,"build": {"type": "string", "minLength": 1}
           },
           "additionalProperties": false
         }
@@ -226,14 +392,67 @@
         "record_type": {"const": "external_write"},
         "payload": {
           "type": "object",
-          "required": ["system", "action", "target", "outcome"],
+          "required": [
+            "system",
+            "action",
+            "operation",
+            "operation_input",
+            "constraint_sha256",
+            "phase",
+            "resource_key",
+            "lease_id",
+            "lease_owner",
+            "resource",
+            "target",
+            "outcome",
+            "authorization_hash",
+            "grant_id",
+            "idempotency_key"
+            ,"reservation_id",
+            "spec_checkpoint_sha256",
+            "apple_observation_sha256"
+          ],
           "properties": {
-            "system": {"enum": ["github", "apple", "other"]},
+            "system": {"enum": ["git", "github", "apple", "other"]},
             "action": {"type": "string", "minLength": 1},
+            "operation": {"type": "string", "minLength": 1},
+            "operation_input": {"type": "object", "minProperties": 1},
+            "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "phase": {"enum": ["pr_delivery", "testflight_upload", "testflight_distribution"]},
+            "resource_key": {"type": "string", "minLength": 1},
+            "lease_id": {"type": "string", "minLength": 1},
+            "lease_owner": {"type": "string", "minLength": 1},
+            "resource": {
+              "enum": [
+                "source_checkout_writer",
+                "github_external_mutation",
+                "signing_or_app_store_connect"
+              ]
+            },
             "target": {"type": "string", "minLength": 1},
             "outcome": {"enum": ["succeeded", "failed", "blocked"]},
-            "local_sha": {"type": "string", "minLength": 1},
-            "remote_sha": {"type": "string", "minLength": 1}
+            "local_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+            "remote_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "grant_id": {"type": "string", "minLength": 1},
+            "idempotency_key": {"type": "string", "minLength": 1},
+            "reservation_id": {"type": "string", "minLength": 1},
+            "spec_checkpoint_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "apple_observation_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "output_target": {"type": "string", "minLength": 1},
+            "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "artifact_source_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+            "version": {"type": "string", "minLength": 1},
+            "build": {"type": "string", "minLength": 1},
+            "external_state": {
+              "enum": ["accepted", "pending", "processing", "completed"]
+            }
           },
           "additionalProperties": false
         }

@@ -11,6 +11,7 @@ Use this skill for repository setup, branch work, linked worktrees, Git-index re
 
 - Use the exact repository and Xcode project directory the user identified. Inspect its top level, redacted remote, current branch, working state, and remote default branch before implementation.
 - A normal feature starts in that same checkout. Propose a concise branch name and obtain approval before creating or switching branches. `codex/<type>/<slug>` is a useful example, not a replacement for a repository's own naming policy.
+- Apply the detailed [branch policy](references/branch-policy.md) before creating or switching a branch.
 - Update safely from the remote default branch only when the checkout is clean and the repository policy permits it. Do not use `--force`, reset, automatic pruning, or a replacement clone to work around a problem.
 - Before the first commit or push, show the repository name, absolute path, branch, and a credential-redacted remote, then obtain the repository-confirmation gate required by project policy.
 

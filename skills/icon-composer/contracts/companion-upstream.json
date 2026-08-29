@@ -1,0 +1,37 @@
+{
+  "$schema": "./companion-upstream.schema.json",
+  "schema_version": "1.0.0",
+  "upstream": {
+    "repository": "ShawnBaek/IconGen",
+    "visibility": "public",
+    "default_branch": "main",
+    "reviewed_revision": "d87b20e274889f8d099aa31bdbf3c25adafb6825",
+    "reviewed_tree": "355455a9370479125a748c2b654478533ac77ea1",
+    "observed_at": "2026-08-29T00:00:00Z"
+  },
+  "license": {
+    "spdx": null,
+    "status": "absent"
+  },
+  "integration": {
+    "mode": "reference-only",
+    "execute_upstream": false,
+    "vendored_files": [],
+    "consumer_skill": "icon-composer",
+    "consumer_repository": "ShawnBaek/iOS-experts",
+    "drift_action": "create_or_update_review_issue",
+    "auto_merge": false
+  },
+  "sources": [
+    {
+      "path": "README.md",
+      "blob_sha": "45754fae70aced0c8f05680ef450bdba4c302b37",
+      "purpose": "workflow overview"
+    },
+    {
+      "path": "Agent.md",
+      "blob_sha": "ceb1adccf433ad9f4ac91570fcdde36b5931f395",
+      "purpose": "design and handoff contract"
+    }
+  ]
+}

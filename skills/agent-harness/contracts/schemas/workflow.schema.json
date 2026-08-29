@@ -9,13 +9,14 @@
     "runtime_edge_types",
     "terminal_outcomes",
     "identity_policy",
-    "completion_requires"
+    "completion_requires",
+    "cleanup"
   ],
   "properties": {
     "schema_version": {"const": "1.0.0"},
     "nodes": {
       "type": "array",
-      "minItems": 29,
+      "minItems": 41,
       "items": {
         "type": "object",
         "required": ["id", "requires"],
@@ -90,7 +91,11 @@
         "validates",
         "invalidates",
         "feedback_on",
-        "promoted_to"
+        "promoted_to",
+        "authorized_by",
+        "tracks",
+        "continues_from",
+        "derived_from"
       ]
     },
     "terminal_outcomes": {
@@ -129,6 +134,9 @@
     "completion_requires": {
       "const": [
         "required_nodes_passed",
+        "required_health_profile_satisfied",
+        "run_authorization_current",
+        "spec_kit_snapshot_current_or_not_applicable",
         "latest_evidence_matches_patch_identity",
         "no_active_resource_lease",
         "review_patch_identity_current",
@@ -136,8 +144,31 @@
         "evidence_published_and_viewable",
         "pull_request_exists",
         "remote_sha_matches_local_commit",
-        "required_checks_satisfied"
+        "required_checks_satisfied",
+        "issue_tracking_reconciled_or_recorded_partial"
       ]
+    },
+    "cleanup": {
+      "type": "object",
+      "required": ["mode", "triggers", "release_active_resources"],
+      "properties": {
+        "mode": {"const": "finally"},
+        "triggers": {
+          "const": ["blocked", "failed_terminal", "cancelled", "success_terminal"]
+        },
+        "release_active_resources": {
+          "const": [
+            "source_checkout_writer",
+            "xcode_project_mutation",
+            "build_tuple",
+            "simulator_or_device",
+            "coresimulator_runtime_registry",
+            "signing_or_app_store_connect",
+            "github_external_mutation"
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false
