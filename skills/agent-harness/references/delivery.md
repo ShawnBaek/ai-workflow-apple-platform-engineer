@@ -95,5 +95,10 @@ and playback; then verify the PR preview/link from the intended viewer context.
 
 The PR body must include summary, acceptance criteria, checks with results,
 evidence links/digests, omitted checks and risk, platform/toolchain matrix, and
-known limitations. A failed Project-board update is partial success and must not
-roll back a valid PR.
+known limitations. Add the completion report's resource-usage summary: models,
+collection scope, provider/client-reported input/output/cached/reasoning tokens,
+informational cross-provider total, missing sources, and whether any cost is a
+client estimate. Never infer tokens from text or turn an estimate into billing
+truth. Use [cost-and-usage.md](cost-and-usage.md) and
+`../templates/completion-report.json`. A failed Project-board update is partial
+success and must not roll back a valid PR.

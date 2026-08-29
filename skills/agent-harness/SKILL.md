@@ -20,7 +20,9 @@ visible. A fluent answer is not evidence.
    or an external delivery continuation. Health observes and classifies; it
    never installs, repairs, cleans, or broadens credentials.
 4. Select exactly one mode: `codex`, `claude`, or `collaborative`.
-5. Freeze the task acceptance criteria and relevant tradeoffs.
+5. Freeze the task acceptance criteria and relevant tradeoffs. Select a
+   cost/capability class for each graph node without overriding an explicit
+   user model choice.
 6. Build an acyclic execution plan. Rework creates a new bounded attempt; it is
    not a back-edge that erases the previous attempt.
 7. Bind an exact run authorization for every delivery run. Interactive runs
@@ -76,7 +78,8 @@ contract or the repository's actual architecture.
   It is never a writer, reviewer of record, approver, or fourth owner.
 
 Read [collaboration.md](references/collaboration.md) before invoking a second
-model or a local model.
+model or a local model. Read [cost and usage](references/cost-and-usage.md) when
+choosing models or preparing the completion report.
 
 ## Retrieval and knowledge graph
 
@@ -105,7 +108,8 @@ matches the current patch identity, no resource lease remains active, every acce
 criterion is linked to an observation, the intended remote commit backs the PR,
 and required evidence is viewable. Retry caps are stop conditions, never
 success. Read [delivery.md](references/delivery.md) before commit, push, PR, or
-evidence publication.
+evidence publication. Finish with one completion report whose usage values come
+only from provider/client records; unavailable totals remain explicit unknowns.
 
 ## Route focused work
 

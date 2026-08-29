@@ -55,6 +55,30 @@ default. Require structured output containing known source or log-line IDs.
 All three modes use the same account/project guards, Apple official-first
 routing, test rubric, and PR completion predicate.
 
+## Cost-aware model routing
+
+An explicit user-selected model or repository policy wins. Otherwise classify
+each graph node before dispatch and resolve a currently available model at run
+time:
+
+| Class | Use when | Current family examples, not permanent aliases |
+|---|---|---|
+| `simple` | deterministic lookup, formatting, small fixtures, bounded mechanical edits | Codex Luna; Claude `haiku` |
+| `standard` | routine feature work, scoped bug fixes, tests, and ordinary review | Codex Terra; Claude `sonnet` |
+| `deep` | planning, architecture, ambiguity, cross-cutting/high-risk changes, complex diagnosis, or final high-risk review | Codex Sol; Claude `opus` |
+
+Keep planning, authority decisions, ambiguity resolution, and final synthesis on
+the lead's capable model. Delegate only when the subtask is independently
+bounded and the expected saving exceeds coordination/context cost. Record the
+provider, resolved model/alias, effort, class, reason, and task boundary.
+
+Escalate one class only when evidence shows a capability, context, tool-use, or
+verification gap. A retry without changed input is not escalation evidence.
+Changing model never transfers writer ownership, changes approval, or expands
+tools. Do not run duplicate expensive reviews merely to compare providers.
+Refresh current provider documentation before relying on family names, prices,
+defaults, or availability.
+
 ## At-desk and unattended permissions
 
 An agent running inside Xcode already receives Xcode's supported tool path; do
@@ -72,6 +96,8 @@ action boundaries.
 References:
 
 - [Codex as a platform](https://developers.openai.com/blog/codex-as-a-platform)
+- [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model)
+- [Claude Code model configuration](https://code.claude.com/docs/en/model-config)
 - [Claude Code headless mode](https://code.claude.com/docs/en/headless)
 - [Claude Agent SDK permissions](https://code.claude.com/docs/en/agent-sdk/permissions)
 - [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
