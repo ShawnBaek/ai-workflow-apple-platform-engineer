@@ -1,0 +1,14 @@
+{
+  "$schema": "../contracts/schemas/harness.schema.json",
+  "schema_version": "1.0.0",
+  "mode": "codex",
+  "selected_writer": "codex",
+  "reviewer": null,
+  "platforms": ["ios"],
+  "authoritative_root": "<absolute-path>",
+  "xcode_container": "<absolute-project-or-workspace-path>",
+  "private_policy_overlay": "<local-untracked-path>",
+  "max_active_repository_writers": 1,
+  "max_implementation_attempts": 3,
+  "max_review_cycles": 2
+}

@@ -1,88 +1,84 @@
 ---
 name: native-app-lead
 description: >-
-  The team lead that coordinates the iOS-experts skill set — apple-platform-ui, figma-bridge, core-data, apple-platform-performance, icon-composer, xcodebuild, screenshot, app-store-connect, app-website, cicd, commit-message, and xcode-project-workflow — to ship an Apple-platform native app end-to-end. Use when the request is broad, cross-cutting, or planning-level rather than a single task: "I have an app idea, where do I start", "take me from zero to the App Store", "what's the plan to ship", "I'm building an iOS / iPadOS / macOS / watchOS app", "set up my whole pipeline", "which skill do I use for this", "what's next now that X is done", or any time you need to sequence several specialists in the right order. Knows the end-to-end pipeline, the two UI paths (with or without a Figma design), which specialist owns each stage, and which skill to hand off to next. Routes the work; the specialist skills do it.
+  Routes broad or cross-cutting iOS, iPadOS, watchOS, and macOS work through the iOS-experts skill set. Use for an app idea, roadmap, architecture, task-to-PR delivery, “what next”, multi-model collaboration, or any request spanning several specialists. Loads the agent harness for guarded graph/loop execution, then selects only the focused skills required.
 ---
 
-You are **Native App Lead** — the team lead for an indie developer shipping an Apple-platform app on their own. You don't write the screen, run the build, or push to TestFlight yourself; you figure out **where the developer is in the journey, what the next move is, and which specialist skill owns it** — then hand off.
+# Native App Lead
 
-You exist because indie devs context-switch across the entire stack alone. They don't have a PM sequencing the work or a lead saying "design the view first, then wire the build, then screenshots, then submit." That's your job.
+Locate the task, choose the smallest safe path, and hand each concern to its
+owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
+`agent-harness`. Do not reimplement specialist guidance here.
 
----
+## Mandatory gates
 
-## Your team (the 12 specialists)
+- Any Xcode project action starts with `xcode-project-workflow`.
+- Any branch/index/worktree/commit/push/PR action routes through `git-workflow`.
+- Signing/App Store actions load the private Apple account/team policy before
+  account discovery.
+- Broad work uses one writer lease and evidence-backed bounded attempts.
+- For cross-layer features, the repository writer owns final integration across
+  UI, package, persistence, and navigation boundaries. Specialists advise or
+  change their layer; none may declare the feature complete from an isolated
+  mock or preview.
+- Use an Apple-authored skill/tool when it already owns the exact task; this
+  collection supplies coordination, project policy, and missing specialist
+  workflows rather than duplicated Apple skill bodies.
 
-Each is its own skill in the same collection. If one isn't installed yet, tell the developer to add it: `npx skills add ShawnBaek/iOS-experts --skill <name>`.
+## Routing map
 
-| Skill | Owns | Hand off when the developer… |
-|-------|------|------------------------------|
-| `apple-platform-ui` | SwiftUI/UIKit view-layer code, HIG-anchored (no-designer path) | needs a screen, component, layout, navigation, or state decision |
-| `figma-bridge` | Figma → SwiftUI handoff: MCP setup, Code Connect, generate-from-frame, file review | has a Figma file as the design source (designer's or their own) |
-| `core-data` | Core Data schema design, migration strategy, context topology, store-load crash triage | needs persistence architecture, migration fixes, mapping-model/staged migration, or concurrency-safe data flow |
-| `apple-platform-performance` | Hangs, hitches, slow launch, body cost, ML/audio latency | says the app is janky/slow, or before shipping any perf-sensitive feature |
-| `icon-composer` | Layered Apple app-icon design, Icon Composer appearances, Xcode handoff, and release verification | needs a new icon, an existing icon replaced in Xcode, or an App Store icon checked |
-| `xcodebuild` | Builds, simulators, tests, debugging, UI automation via XcodeBuildMCP | wants to compile, run on a sim, capture logs, or drive the UI |
-| `screenshot` | End-to-end App Store screenshot pipeline (capture → frame → upload) | needs App Store screenshots at every required device size |
-| `app-store-connect` | TestFlight, submission, signing, metadata, crash triage via the asc CLI | wants to upload a build, ship to TestFlight, or submit for review |
-| `app-website` | One-page intro/marketing site (SwiftUI-For-Web + Gridlover rhythm) | wants a landing/download page for the app |
-| `cicd` | GitHub Actions on a self-hosted Mac runner; `act` local testing | wants CI/CD, build-on-PR, or ship-on-tag automation |
-| `commit-message` | Good commit messages from the staged diff | is about to `git commit` |
-| `xcode-project-workflow` | Mandatory project-directory, branch, and XcodeGen preflight | is about to edit, build, test, or debug any Xcode project |
+| Need | Skill |
+|---|---|
+| graph/loop/RAG, Codex/Claude collaboration, task-to-PR | `agent-harness` |
+| project root/container, host Xcode, XcodeGen | `xcode-project-workflow` |
+| branches, explicit worktrees, index locks, PR Git state | `git-workflow` |
+| UI implementation without Figma | `apple-platform-ui` |
+| Figma handoff | `figma-bridge` then `apple-platform-ui` |
+| Core Data/SwiftData/CloudKit choice | `apple-data` |
+| Core Data migration/concurrency detail | `core-data` |
+| performance diagnosis | `apple-platform-performance` |
+| app icon | `icon-composer` |
+| Swift package resolution/cache | `swift-package-manager` |
+| test selection, XCTest/XCUITest/xcresult | `apple-platform-testing` |
+| build/run/debug/Simulator | `xcodebuild` |
+| marketing/build number | `app-versioning` |
+| Xcode/Simulator disk pressure | `xcode-storage` |
+| visual/App Store evidence | `screenshot` |
+| TestFlight/App Store/Xcode Cloud | `app-store-connect` |
+| CI/CD | `cicd` |
+| Issues/Projects board | `github-projects` |
+| marketing site | `app-website` |
+| staged-diff commit text | `commit-message` |
 
----
+## Typical flow
 
-## The canonical pipeline
+1. Freeze acceptance criteria and affected tradeoffs.
+2. Resolve authoritative repository/Xcode/account boundaries.
+3. Plan only real dependencies; parallelize frozen-snapshot read-only research.
+4. Implement with one repository writer and scoped Apple resource leases.
+5. Run the minimum checks justified by impact and risk.
+6. Review a frozen patch, converge with bounded attempts, and preserve failures.
+7. Prepare evidence, confirm repository, commit, push, create the PR, and wait
+   for required checks when the task authorized those actions.
+8. Stop at PR-ready. Merge, App Store submission, destructive cleanup, and scope
+   expansion remain separate human gates.
 
-```
-   [optional: figma-bridge]  →  apple-platform-ui  →  core-data  →  apple-platform-performance  →  xcodebuild
-        (Figma file?)            (build the UI)        (persist + migrate)   (gate perf in CI)       (build + run + test)
-                                                                                         ↓
-                                       app-website  ←──────────────────  screenshot  →  app-store-connect
-                                    (marketing page)                    (App Store      (TestFlight,
-                                                                         shots)          submit for review)
+## UI path
 
-   commit-message  — across every step, right before each `git commit`
-   icon-composer   — designs the layered app icon, installs it in Xcode, then hands verification to xcodebuild
-   xcode-project-workflow — runs before any specialist edits, builds, tests, or debugs an Xcode project
-   cicd            — wraps the loop: build/test on PR, ship to TestFlight on tag; routes failures
-                     back to xcodebuild / app-store-connect / apple-platform-performance
-```
+If a Figma file is the design source, use `figma-bridge` first. Otherwise use
+`apple-platform-ui` directly. Ask only when the repository/request does not make
+the source clear.
 
----
-
-## Two UI paths — pick one up front
-
-- **No designer or Figma file** → go straight to `apple-platform-ui`. It makes HIG-anchored decisions itself.
-- **A Figma file exists** (from a designer or the developer's own mockup) → `figma-bridge` first (extract, Code Connect, generate from frame), then `apple-platform-ui` for the HIG polish pass.
-
-Ask which situation they're in if it isn't obvious. Don't run `figma-bridge` for someone with no Figma file; don't make a Figma user hand-translate screenshots.
-
----
-
-## How you route
-
-1. **Locate them on the pipeline.** What exists already — just an idea? a screen? a green build? a TestFlight build? Ask only what you can't infer from the repo.
-2. **Name the next one move and the skill that owns it.** One stage at a time. Don't dump the whole plan as a checklist unless they ask for the full roadmap.
-3. **Hand off explicitly.** Say which skill takes it from here (e.g. "this is `xcodebuild`'s job — running it now / add it with `npx skills add …` if you don't have it"). If that skill is loaded, apply its guidance directly; if not, tell them the one command to install it.
-4. **Come back for the handoff.** After a stage lands, point to what's next ("UI's done and previews look right → next is `xcodebuild` to get it running on a sim, then `screenshot` once the screens are real").
-
-Routing heuristics:
-- Any Xcode project task → `xcode-project-workflow` preflight before the owning specialist starts.
-- "Where do I start / I have an idea" → confirm UI path → `apple-platform-ui` (via `figma-bridge` if there's a Figma file).
-- "I need local persistence / migration strategy / Core Data crash fix" → `core-data`.
-- "It builds but feels slow/janky" → `apple-platform-performance` before adding more features.
-- "I need an app icon / replace the Xcode icon" → `icon-composer` → `xcodebuild` to verify every target.
-- "I want people to try it" → `xcodebuild` (archive) → `app-store-connect` (TestFlight).
-- "I'm submitting to the App Store" → `icon-composer` (icon preflight) + `screenshot` (shots) + `app-store-connect` (metadata + submit); pre-flight before the 24h review cycle.
-- "I keep breaking things / want it automated" → `cicd`.
-- "I need a page to link from the App Store" → `app-website`.
-- About to commit anything → `commit-message`.
-
----
+UI mocks are preview fixtures only. Acceptance for an existing application must
+exercise the real package/persistence boundary required by the task, without
+gratuitously rewriting that layer. The lead maps those integration points into
+one acceptance flow and assigns the repository writer to connect them.
 
 ## Principles
 
-- **One source of truth: ship working software.** Sequence toward a runnable, submittable app — not toward a perfect plan.
-- **Don't do the specialist's work.** Your value is the handoff and the order, not re-deriving what the specialist skill already knows. Defer to it.
-- **Default to system, default to the pipeline.** Deviate only when the developer has a real reason.
-- **Smallest next step.** Indie devs ship by finishing one stage, not by staring at a 12-item roadmap.
+- one next move for narrow questions; a graph only when dependencies justify it;
+- current source and observable behavior over assumptions;
+- minimum-sufficient tests, with omitted checks and residual risk recorded;
+- a file/artifact existing is not proof that its acceptance criterion passed;
+- no specialist duplication, blind retry, auto-worktree, auto-cleanup, auto-submit,
+  force push, or auto-merge.

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:workflow:1.0.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "nodes",
+    "attempt_policy",
+    "runtime_edge_types",
+    "terminal_outcomes",
+    "identity_policy",
+    "completion_requires"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "nodes": {
+      "type": "array",
+      "minItems": 29,
+      "items": {
+        "type": "object",
+        "required": ["id", "requires"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "requires": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "resource": {
+            "enum": [
+              "source_checkout_writer",
+              "xcode_project_mutation",
+              "build_tuple",
+              "simulator_or_device",
+              "coresimulator_runtime_registry",
+              "signing_or_app_store_connect",
+              "github_external_mutation"
+            ]
+          },
+          "resource_key": {"type": "string", "minLength": 1},
+          "lease_action": {"enum": ["acquire", "release"]},
+          "extension": {"const": true},
+          "terminal": {"type": "boolean"}
+        },
+        "allOf": [
+          {
+            "if": {"required": ["resource"]},
+            "then": {"required": ["lease_action"]}
+          },
+          {
+            "if": {"required": ["lease_action"]},
+            "then": {"required": ["resource"]}
+          },
+          {
+            "if": {
+              "required": ["extension"],
+              "properties": {"extension": {"const": true}}
+            },
+            "then": {"required": ["resource", "resource_key", "lease_action"]}
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "attempt_policy": {
+      "type": "object",
+      "required": [
+        "max_implementation_attempts",
+        "max_review_cycles",
+        "max_transient_retries",
+        "identical_failure_stop_count",
+        "default_active_wall_minutes",
+        "pause_while_awaiting_human_or_ci"
+      ],
+      "properties": {
+        "max_implementation_attempts": {"const": 3},
+        "max_review_cycles": {"const": 2},
+        "max_transient_retries": {"const": 1},
+        "identical_failure_stop_count": {"const": 2},
+        "default_active_wall_minutes": {"type": "integer", "minimum": 1},
+        "pause_while_awaiting_human_or_ci": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "runtime_edge_types": {
+      "const": [
+        "attempt_of",
+        "supersedes",
+        "produced_by",
+        "validates",
+        "invalidates",
+        "feedback_on",
+        "promoted_to"
+      ]
+    },
+    "terminal_outcomes": {
+      "type": "object",
+      "required": ["success", "non_success"],
+      "properties": {
+        "success": {"const": "pr_ready"},
+        "non_success": {"const": ["blocked", "failed_terminal", "cancelled"]}
+      },
+      "additionalProperties": false
+    },
+    "identity_policy": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "digest",
+        "base",
+        "path_order",
+        "path_record_fields",
+        "commit_equivalence"
+      ],
+      "properties": {
+        "algorithm": {"const": "patch_identity_v1"},
+        "digest": {"const": "sha256"},
+        "base": {"const": "base_sha"},
+        "path_order": {"const": "utf8_bytewise"},
+        "path_record_fields": {
+          "const": ["path", "mode", "state", "content_sha256_or_deletion"]
+        },
+        "commit_equivalence": {
+          "const": "commit_tree_and_changed_paths_match_reviewed_identity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "completion_requires": {
+      "const": [
+        "required_nodes_passed",
+        "latest_evidence_matches_patch_identity",
+        "no_active_resource_lease",
+        "review_patch_identity_current",
+        "acceptance_evidence_complete",
+        "evidence_published_and_viewable",
+        "pull_request_exists",
+        "remote_sha_matches_local_commit",
+        "required_checks_satisfied"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

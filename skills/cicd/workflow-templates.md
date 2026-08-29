@@ -1,301 +1,142 @@
-# GitHub Actions workflow templates (macOS self-hosted)
+# Safe workflow templates
 
-The canonical `.github/workflows/*.yml` files for an indie iOS / macOS / watchOS app. Built for a self-hosted Mac runner labeled `[self-hosted, macOS, arm64, xcode]`. Installs missing packages via **Homebrew** (Mac-first audience). Always cleans up after itself.
+These are starting points, not paste-and-run promises. Resolve the project's
+authoritative workspace/project, scheme, test plan, package lockfile, runner
+labels, Xcode build, and private account policy before use. Do not regenerate
+XcodeGen or change package versions inside a build job.
 
-## File 1 — `build-and-test.yml`
-
-Runs on every PR and on push to main. Fails the PR if the project doesn't build or tests don't pass.
+## Build and minimum-sufficient test
 
 ```yaml
-name: Build and Test
+name: Build and test
 
 on:
   pull_request:
-  push:
-    branches: [main]
+
+permissions:
+  contents: read
 
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: [self-hosted, macOS, arm64, xcode]
+    # Untrusted pull-request code runs only on an ephemeral GitHub-hosted Mac.
+    # If this image lacks the required Xcode, use the separately gated trusted
+    # workflow described below; never fall through to a persistent runner.
+    runs-on: macos-latest
     timeout-minutes: 30
-
     env:
-      SCHEME: ${{ vars.APP_SCHEME }}           # e.g. MyApp
-      WORKSPACE: ${{ vars.APP_WORKSPACE }}     # e.g. MyApp.xcworkspace
-      DEVICE: ${{ vars.SIMULATOR_NAME }}       # e.g. iPhone 16
-
+      WORKSPACE: App.xcworkspace
+      SCHEME: App
+      DESTINATION: platform=iOS Simulator,name=<approved-device>,OS=<approved-os>
+      BUILD_RESULT_BUNDLE: BuildResults.xcresult
+      TEST_RESULT_BUNDLE: TestResults.xcresult
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Show environment
+      - name: Record toolchain and package input
         run: |
           xcodebuild -version
-          xcrun simctl list devices booted
-          brew --version
+          swift --version
+          shasum -a 256 <path-to-Package.resolved>
 
-      - name: Generate Xcode project (XcodeGen projects only)
-        run: |
-          if [ -f project.yml ] || [ -f project.yaml ]; then
-            brew list xcodegen 2>/dev/null || brew install xcodegen
-            xcodegen generate
-          fi
-
-      - name: Resolve SPM dependencies
-        run: xcodebuild -resolvePackageDependencies -workspace "$WORKSPACE" -scheme "$SCHEME"
-
-      - name: Build
+      - name: Build for testing without dependency updates
         run: |
           set -o pipefail
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
-            -destination "platform=iOS Simulator,name=$DEVICE" \
-            -configuration Debug \
-            | tee build.log
+            -destination "$DESTINATION" \
+            -disableAutomaticPackageResolution \
+            -resultBundlePath "$BUILD_RESULT_BUNDLE"
 
-      - name: Test
+      - name: Run the selected tests without rebuilding
         run: |
           set -o pipefail
-          xcodebuild test \
+          xcodebuild test-without-building \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
-            -destination "platform=iOS Simulator,name=$DEVICE" \
-            -resultBundlePath TestResults.xcresult \
-            | tee test.log
+            -destination "$DESTINATION" \
+            -disableAutomaticPackageResolution \
+            -resultBundlePath "$TEST_RESULT_BUNDLE" \
+            -only-testing:<affected-test-identifier>
 
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
+      - name: Preserve verification evidence
+        # Opt in only after repository policy defines a privacy scan for the
+        # result bundles. Do not upload raw personal-host logs or environment.
+        if: always() && vars.PUBLISH_XCRESULT == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: build-logs-${{ github.run_id }}
+          name: verification-${{ github.run_id }}
           path: |
-            build.log
-            test.log
+            BuildResults.xcresult
             TestResults.xcresult
-          retention-days: 7
-
-      - name: Cleanup (always runs)
-        if: always()
-        run: |
-          rm -rf ~/Library/Developer/Xcode/DerivedData/*
-          rm -f build.log test.log
-          rm -rf TestResults.xcresult
-          xcrun simctl shutdown all || true
-          xcrun simctl delete unavailable || true
-```
-
-## File 2 — `release-testflight.yml`
-
-Manual trigger (`workflow_dispatch`). Archives, exports the IPA, uploads to TestFlight via `asc`.
-
-```yaml
-name: Release to TestFlight
-
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Marketing version (e.g. 1.2.3)'
-        required: true
-      build:
-        description: 'Build number (CFBundleVersion)'
-        required: true
-
-jobs:
-  release:
-    runs-on: [self-hosted, macOS, arm64, xcode]
-    timeout-minutes: 45
-
-    env:
-      SCHEME: ${{ vars.APP_SCHEME }}
-      WORKSPACE: ${{ vars.APP_WORKSPACE }}
-      APP_ID: ${{ vars.ASC_APP_ID }}           # numeric App Store Connect app ID
-      ASC_KEY_ID: ${{ vars.ASC_KEY_ID }}       # public — env var
-      ASC_ISSUER_ID: ${{ vars.ASC_ISSUER_ID }} # public — env var
-      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }} # secret — full .p8 contents
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Ensure asc is installed
-        run: |
-          if ! command -v asc >/dev/null 2>&1; then
-            brew install asc
-          fi
-          asc --version
-
-      - name: Generate Xcode project (XcodeGen projects only)
-        run: |
-          if [ -f project.yml ] || [ -f project.yaml ]; then
-            brew list xcodegen 2>/dev/null || brew install xcodegen
-            xcodegen generate
-          fi
-
-      - name: Set version
-        # If the project uses .xcodeproj directly: use agvtool.
-        # If the project uses XcodeGen (project.yml is the source of truth):
-        # patch project.yml + regenerate the .xcodeproj. agvtool would write
-        # into the generated file and the next `xcodegen generate` would
-        # overwrite it.
-        run: |
-          if [ -f project.yml ] || [ -f project.yaml ]; then
-            YAML=$([ -f project.yml ] && echo project.yml || echo project.yaml)
-            sed -i '' "s/MARKETING_VERSION: \"[^\"]*\"/MARKETING_VERSION: \"${{ inputs.version }}\"/g" "$YAML"
-            sed -i '' "s/CURRENT_PROJECT_VERSION: \"[^\"]*\"/CURRENT_PROJECT_VERSION: \"${{ inputs.build }}\"/g" "$YAML"
-            xcodegen generate
-          else
-            agvtool new-marketing-version "${{ inputs.version }}"
-            agvtool new-version -all "${{ inputs.build }}"
-          fi
-
-      - name: Archive
-        run: |
-          set -o pipefail
-          xcodebuild archive \
-            -workspace "$WORKSPACE" \
-            -scheme "$SCHEME" \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath ./build/MyApp.xcarchive \
-            | tee archive.log
-
-      - name: Export IPA
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath ./build/MyApp.xcarchive \
-            -exportPath ./build \
-            -exportOptionsPlist .github/ExportOptions.plist
-
-      - name: Upload to TestFlight via asc
-        run: |
-          asc auth login --key-id "$ASC_KEY_ID" --issuer-id "$ASC_ISSUER_ID" \
-            --private-key <(echo "$ASC_PRIVATE_KEY")
-          asc builds upload --app "$APP_ID" --ipa ./build/MyApp.ipa
-
-      - name: Upload archive on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-logs-${{ github.run_id }}
-          path: |
-            archive.log
-            ./build/*.ipa
           retention-days: 14
-
-      - name: Cleanup
-        if: always()
-        run: |
-          rm -rf ./build
-          rm -f archive.log
-          rm -rf ~/Library/Developer/Xcode/DerivedData/*
-          xcrun simctl shutdown all || true
+          if-no-files-found: warn
 ```
 
-## File 3 — `weekly-cleanup.yml` (highly recommended on long-lived runners)
+The package lockfile path differs between Swift packages and Xcode projects.
+Resolve it with `swift-package-manager`. If a clean runner lacks dependency
+checkouts, add one explicit resolution/check-out step using the committed
+`Package.resolved`; do not update versions and do not repeat resolution before
+each build/test action.
 
-Disk fills up fast on a runner. Run this every Sunday at 3am:
+Use `-project` instead of `-workspace` only when the authoritative container is
+the project. Replace the single affected test with the risk-derived selection
+from `apple-platform-testing`. Build-product reuse is valid only for an
+identical Xcode/SDK/scheme/configuration/destination/architecture/package/test
+tuple.
+
+Do not change `runs-on` in the pull-request job to a self-hosted label. When a
+required Xcode build exists only on a persistent Mac, create a separate
+`workflow_dispatch` job protected by a trusted environment, verify the exact
+head SHA and actor before checkout, and run it only after a maintainer approves
+that code for the isolated runner. Fork/outside-contributor code never reaches
+that runner merely by opening or updating a pull request.
+
+## Read-only runner disk report
 
 ```yaml
-name: Weekly Runner Cleanup
+name: Runner disk report
 
 on:
-  schedule:
-    - cron: '0 10 * * SUN'    # 10:00 UTC Sun = 3am PT / 6am ET
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  cleanup:
-    runs-on: [self-hosted, macOS, arm64]
+  audit:
+    runs-on: ${{ vars.MACOS_RUNNER }}
+    timeout-minutes: 5
     steps:
-      - name: Disk before
-        run: df -h /
-
-      - name: Purge DerivedData
-        run: rm -rf ~/Library/Developer/Xcode/DerivedData/*
-
-      - name: Purge Xcode caches
+      - name: Capacity
+        run: df -h
+      - name: Xcode and Simulator inventory
         run: |
-          rm -rf ~/Library/Caches/com.apple.dt.Xcode/*
-          rm -rf ~/Library/Developer/CoreSimulator/Caches/*
-
-      - name: Delete unavailable simulators
-        run: xcrun simctl delete unavailable
-
-      - name: Erase booted simulators (resets them clean)
-        run: xcrun simctl erase all
-
-      - name: Prune Homebrew cache
-        run: brew cleanup -s --prune=all
-
-      - name: Prune SPM cache
-        run: rm -rf ~/Library/Caches/org.swift.swiftpm
-
-      - name: Prune CocoaPods cache (if used)
-        run: |
-          if command -v pod >/dev/null 2>&1; then
-            pod cache clean --all
-          fi
-
-      - name: Prune runner work directory
-        run: rm -rf ~/actions-runner/_work/*/  # keeps the folder, drops contents
-
-      - name: Disk after
-        run: df -h /
+          du -sh "$HOME/Library/Developer/Xcode/DerivedData" 2>/dev/null || true
+          du -sh "$HOME/Library/Developer/Xcode/Archives" 2>/dev/null || true
+          du -sh "$HOME/Library/Developer/CoreSimulator" 2>/dev/null || true
+          xcrun simctl list runtimes
 ```
 
-## File 4 — `ExportOptions.plist` (commit alongside the workflow)
+This workflow reports only. Cleanup is a separate, itemized, approved operation.
 
-Path referenced by the release workflow. Adjust `teamID` and `provisioningProfiles` to your app:
+## Release boundary
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>app-store</string>
-    <key>teamID</key>
-    <string>YOUR_TEAM_ID</string>
-    <key>signingStyle</key>
-    <string>automatic</string>
-    <key>uploadSymbols</key>
-    <true/>
-    <key>uploadBitcode</key>
-    <false/>
-    <key>destination</key>
-    <string>export</string>
-</dict>
-</plist>
-```
+A release workflow should be manual or protected-environment gated, verify the
+private Apple account/team before reading or changing account data, build/archive
+from an approved version/commit, and stop before upload/submission unless those
+external writes were explicitly authorized. Route the concrete implementation
+through `app-versioning`, `xcodebuild`, and `app-store-connect`.
 
-## When the project already has a `Makefile`
+Never put an App Store submission, certificate rotation, broad cache cleanup, or
+Project/branch-rule mutation into an ordinary PR build job.
 
-Many indie repos ship a `Makefile` with entry points like `make build-ios`, `make build-watch`, `make archive-ios` that wrap the right `xcodebuild` invocation (with the right `-project` vs `-workspace`, the right destination, the right derived-data path, etc.).
+References:
 
-If a `Makefile` exists at the repo root and has the targets you need, **call them from CI instead of duplicating the xcodebuild flags.** Keeps the local-dev command and the CI command in lockstep — when one changes, both change.
-
-```yaml
-      - name: Build iOS (uses Makefile)
-        run: |
-          set -o pipefail
-          make build-ios 2>&1 | tee ios-build.log
-```
-
-Detection check: before adding raw `xcodebuild` steps, `grep -E '^[a-z-]+:' Makefile` to list available targets. Match the workflow's intent to the targets the developer already maintains.
-
-## Project vs workspace — pick the flag the project actually uses
-
-The template above uses `-workspace`. Many indie XcodeGen projects produce a `.xcodeproj` without a `.xcworkspace` — in that case use `-project` instead. If unsure: `ls *.xcworkspace *.xcodeproj 2>/dev/null` after generating; pick whichever exists.
-
-## Workflow file conventions
-
-- **One file per pipeline.** `build-and-test.yml`, `release-testflight.yml`, `weekly-cleanup.yml`. Don't merge unrelated triggers into one file.
-- **`concurrency` block on PR builds.** Cancels the in-flight build when the developer pushes again — saves runner time.
-- **`timeout-minutes`** on every job. A hung build holds the runner forever.
-- **`set -o pipefail` + `tee`** on every long-running command. Lets you upload the log as an artifact on failure.
-- **`if: always()`** on the cleanup step. Cleanup must run whether the build passed, failed, or timed out.
-- **`actions/upload-artifact@v4` with `retention-days`.** Don't keep logs forever — 7–14 days is plenty.
+- [GitHub workflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
+- [Apple Swift package CI guidance](https://developer.apple.com/documentation/xcode/building-swift-packages-or-apps-that-use-them-in-continuous-integration-workflows)
+- [Xcode command-line tools](https://developer.apple.com/documentation/xcode/xcode-command-line-tools)

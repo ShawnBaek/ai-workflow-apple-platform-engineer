@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:harness:1.0.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "mode",
+    "selected_writer",
+    "reviewer",
+    "platforms",
+    "authoritative_root",
+    "xcode_container",
+    "private_policy_overlay",
+    "max_active_repository_writers",
+    "max_implementation_attempts",
+    "max_review_cycles"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "mode": {"enum": ["codex", "claude", "collaborative"]},
+    "selected_writer": {"enum": ["codex", "claude"]},
+    "reviewer": {"type": ["string", "null"]},
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["ios", "ipados", "watchos", "macos"]}
+    },
+    "authoritative_root": {"type": "string", "minLength": 1},
+    "xcode_container": {"type": "string", "minLength": 1},
+    "private_policy_overlay": {"type": "string", "minLength": 1},
+    "max_active_repository_writers": {"const": 1},
+    "max_implementation_attempts": {"const": 3},
+    "max_review_cycles": {"const": 2}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "codex"}}},
+      "then": {
+        "properties": {
+          "selected_writer": {"const": "codex"},
+          "reviewer": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"mode": {"const": "claude"}}},
+      "then": {
+        "properties": {
+          "selected_writer": {"const": "claude"},
+          "reviewer": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"mode": {"const": "collaborative"}}},
+      "then": {
+        "oneOf": [
+          {
+            "properties": {
+              "selected_writer": {"const": "codex"},
+              "reviewer": {"const": "claude"}
+            }
+          },
+          {
+            "properties": {
+              "selected_writer": {"const": "claude"},
+              "reviewer": {"const": "codex"}
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

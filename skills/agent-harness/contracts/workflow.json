@@ -1,0 +1,75 @@
+{
+  "$schema": "./schemas/workflow.schema.json",
+  "schema_version": "1.0.0",
+  "nodes": [
+    {"id": "intake", "requires": []},
+    {"id": "guard", "requires": ["intake"]},
+    {"id": "discover", "requires": ["guard"]},
+    {"id": "plan", "requires": ["discover"]},
+    {"id": "approve_plan", "requires": ["plan"]},
+    {"id": "branch_approval", "requires": ["approve_plan"]},
+    {"id": "claim_implementation_writer", "requires": ["branch_approval"], "resource": "source_checkout_writer", "lease_action": "acquire"},
+    {"id": "implement", "requires": ["claim_implementation_writer"]},
+    {"id": "release_implementation_writer", "requires": ["implement"], "resource": "source_checkout_writer", "lease_action": "release"},
+    {"id": "verify", "requires": ["release_implementation_writer"]},
+    {"id": "freeze_review", "requires": ["verify"]},
+    {"id": "review", "requires": ["freeze_review"]},
+    {"id": "converge", "requires": ["review"]},
+    {"id": "reverify", "requires": ["converge"]},
+    {"id": "prepare_evidence", "requires": ["reverify"]},
+    {"id": "prepare_pr", "requires": ["prepare_evidence"]},
+    {"id": "repository_confirmation", "requires": ["prepare_pr"]},
+    {"id": "claim_delivery_writer", "requires": ["repository_confirmation"], "resource": "source_checkout_writer", "lease_action": "acquire"},
+    {"id": "commit", "requires": ["claim_delivery_writer"]},
+    {"id": "release_delivery_writer", "requires": ["commit"], "resource": "source_checkout_writer", "lease_action": "release"},
+    {"id": "claim_github_mutation", "requires": ["release_delivery_writer"], "resource": "github_external_mutation", "lease_action": "acquire"},
+    {"id": "push", "requires": ["claim_github_mutation"]},
+    {"id": "verify_remote_sha", "requires": ["push"]},
+    {"id": "create_pr", "requires": ["verify_remote_sha"]},
+    {"id": "publish_evidence", "requires": ["create_pr"]},
+    {"id": "verify_published_evidence", "requires": ["publish_evidence"]},
+    {"id": "release_github_mutation", "requires": ["verify_published_evidence"], "resource": "github_external_mutation", "lease_action": "release"},
+    {"id": "checks", "requires": ["release_github_mutation"]},
+    {"id": "pr_ready", "requires": ["checks"], "terminal": true}
+  ],
+  "attempt_policy": {
+    "max_implementation_attempts": 3,
+    "max_review_cycles": 2,
+    "max_transient_retries": 1,
+    "identical_failure_stop_count": 2,
+    "default_active_wall_minutes": 45,
+    "pause_while_awaiting_human_or_ci": true
+  },
+  "runtime_edge_types": [
+    "attempt_of",
+    "supersedes",
+    "produced_by",
+    "validates",
+    "invalidates",
+    "feedback_on",
+    "promoted_to"
+  ],
+  "terminal_outcomes": {
+    "success": "pr_ready",
+    "non_success": ["blocked", "failed_terminal", "cancelled"]
+  },
+  "identity_policy": {
+    "algorithm": "patch_identity_v1",
+    "digest": "sha256",
+    "base": "base_sha",
+    "path_order": "utf8_bytewise",
+    "path_record_fields": ["path", "mode", "state", "content_sha256_or_deletion"],
+    "commit_equivalence": "commit_tree_and_changed_paths_match_reviewed_identity"
+  },
+  "completion_requires": [
+    "required_nodes_passed",
+    "latest_evidence_matches_patch_identity",
+    "no_active_resource_lease",
+    "review_patch_identity_current",
+    "acceptance_evidence_complete",
+    "evidence_published_and_viewable",
+    "pull_request_exists",
+    "remote_sha_matches_local_commit",
+    "required_checks_satisfied"
+  ]
+}

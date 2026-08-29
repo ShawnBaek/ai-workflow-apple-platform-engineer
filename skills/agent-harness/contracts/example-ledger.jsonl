@@ -1,0 +1,4 @@
+{"schema_version":"1.0.0","run_id":"example-run","sequence":1,"recorded_at":"2026-01-01T00:00:00Z","record_type":"node","payload":{"node_id":"intake","status":"passed"}}
+{"schema_version":"1.0.0","run_id":"example-run","sequence":2,"recorded_at":"2026-01-01T00:00:01Z","record_type":"knowledge","payload":{"source_id":"repo-spec","authority":"accepted_spec","content_hash":"example","provenance":"spec.md@base-sha"}}
+{"schema_version":"1.0.0","run_id":"example-run","sequence":3,"recorded_at":"2026-01-01T00:00:02Z","record_type":"feedback","payload":{"feedback_id":"feedback-1","actor":"user","scope":"current_run","target":"plan","summary":"Keep verification minimal and risk-derived","disposition":"accepted","invalidates":["plan-1"]}}
+{"schema_version":"1.0.0","run_id":"example-run","sequence":4,"recorded_at":"2026-01-01T00:00:03Z","record_type":"stop","payload":{"reason":"example_only","outcome":"blocked"}}

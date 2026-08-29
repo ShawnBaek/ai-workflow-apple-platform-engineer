@@ -83,6 +83,7 @@ When the developer reports startup failure:
 
 ## When to route to other skills
 
+- `apple-data`: choose between Core Data, SwiftData, CloudKit sync/sharing, and CloudKit Web Services. Keep Core Data model, migration, context, and mirroring implementation here.
 - `xcodebuild`: build/run/test automation, simulator UI drive, runtime logs.
 - `apple-platform-ui`: fetched results rendering, edit flows, controls.
 - `apple-platform-performance`: post-fix startup/IO perf hardening.

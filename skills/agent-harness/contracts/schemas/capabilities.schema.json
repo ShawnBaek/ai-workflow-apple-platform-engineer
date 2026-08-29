@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:capabilities:1.0.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "modes",
+    "platforms",
+    "local_llm",
+    "feedback_policy",
+    "authority_order",
+    "knowledge_orders",
+    "execution_order",
+    "xcode_mcp_provider_policy",
+    "resource_scopes",
+    "resource_key_fields",
+    "runtime_registry_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "modes": {
+      "type": "object",
+      "required": ["codex", "claude", "collaborative"],
+      "properties": {
+        "codex": {
+          "type": "object",
+          "required": ["writer_candidates", "max_active_writers"],
+          "properties": {
+            "writer_candidates": {"const": ["codex"]},
+            "max_active_writers": {"const": 1}
+          },
+          "additionalProperties": false
+        },
+        "claude": {
+          "type": "object",
+          "required": ["writer_candidates", "max_active_writers"],
+          "properties": {
+            "writer_candidates": {"const": ["claude"]},
+            "max_active_writers": {"const": 1}
+          },
+          "additionalProperties": false
+        },
+        "collaborative": {
+          "type": "object",
+          "required": [
+            "writer_candidates",
+            "max_active_writers",
+            "review_requires_immutable_patch",
+            "writer_selection",
+            "transfer_policy"
+          ],
+          "properties": {
+            "writer_candidates": {"const": ["codex", "claude"]},
+            "max_active_writers": {"const": 1},
+            "review_requires_immutable_patch": {"const": true},
+            "writer_selection": {
+              "type": "object",
+              "required": ["required_before_claim", "authority", "reviewer_must_differ"],
+              "properties": {
+                "required_before_claim": {"const": true},
+                "authority": {"const": "explicit_user_or_accepted_plan"},
+                "reviewer_must_differ": {"const": true}
+              },
+              "additionalProperties": false
+            },
+            "transfer_policy": {
+              "type": "object",
+              "required": [
+                "release_before_acquire",
+                "revoke_previous_writer_capabilities",
+                "matching_state_hash_required",
+                "fresh_capability_snapshot_required"
+              ],
+              "properties": {
+                "release_before_acquire": {"const": true},
+                "revoke_previous_writer_capabilities": {"const": true},
+                "matching_state_hash_required": {"const": true},
+                "fresh_capability_snapshot_required": {"const": true}
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "platforms": {"const": ["ios", "ipados", "watchos", "macos"]},
+    "local_llm": {
+      "type": "object",
+      "required": ["allowed_roles", "forbidden_roles"],
+      "properties": {
+        "allowed_roles": {"const": ["retrieve", "rerank", "extract_entities", "cluster_logs"]},
+        "forbidden_roles": {"const": ["writer", "approver", "reviewer_of_record"]}
+      },
+      "additionalProperties": false
+    },
+    "feedback_policy": {
+      "type": "object",
+      "required": [
+        "record_in_ledger",
+        "current_run_feedback_is_authoritative",
+        "silent_durable_policy_mutation",
+        "durable_promotion_requires",
+        "local_llm_role",
+        "rollback_required"
+      ],
+      "properties": {
+        "record_in_ledger": {"const": true},
+        "current_run_feedback_is_authoritative": {"const": true},
+        "silent_durable_policy_mutation": {"const": false},
+        "durable_promotion_requires": {
+          "const": "explicit_human_approval_or_repeated_evidence"
+        },
+        "local_llm_role": {"const": "cluster_and_propose_only"},
+        "rollback_required": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "authority_order": {
+      "const": [
+        "system_and_current_user",
+        "hard_account_and_repository_guards",
+        "accepted_spec_and_decisions",
+        "repository_defaults"
+      ]
+    },
+    "knowledge_orders": {
+      "type": "object",
+      "required": ["product_truth", "apple_api_truth"],
+      "properties": {
+        "product_truth": {
+          "const": [
+            "accepted_spec_and_decisions",
+            "repository_source_at_frozen_head",
+            "commit_pinned_dependency_source",
+            "approved_project_analysis"
+          ]
+        },
+        "apple_api_truth": {
+          "const": [
+            "live_apple_documentation_for_selected_toolchain",
+            "one_apple_authored_skill_exposure",
+            "commit_pinned_apple_sample",
+            "ios_experts",
+            "external_retrieved_material"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "execution_order": {
+      "const": [
+        "xcode_official_tools",
+        "apple_supported_external_agent_bridge",
+        "host_apple_cli",
+        "explicit_third_party_fallback"
+      ]
+    },
+    "xcode_mcp_provider_policy": {
+      "const": {
+        "state_dimensions": [
+          "installation",
+          "registration",
+          "current_task_exposure",
+          "read_only_connectivity"
+        ],
+        "record_install_provenance": [
+          "config_scope",
+          "configured_command_and_args",
+          "resolved_executable",
+          "package_manager_owner",
+          "resolved_version"
+        ],
+        "same_codex_host_clients_share_configuration": true,
+        "official_external_agent_route_first": true,
+        "configuration_mutation_requires_explicit_approval": true,
+        "max_active_simulator_capable_providers_during_incident": 1,
+        "verification_order": [
+          "configured_and_enabled",
+          "fresh_client_or_task_exposes_tools",
+          "read_only_workspace_response",
+          "exact_workspace_identifier_selected"
+        ],
+        "forbidden_security_mode": "blanket_unsafe_allow_all_agents",
+        "forbidden_automatic_actions": [
+          "provider_install_update_uninstall_or_config_mutation",
+          "provider_process_force_termination",
+          "build_or_destination_inventory_as_connectivity_probe"
+        ]
+      }
+    },
+    "resource_scopes": {
+      "const": [
+        "source_checkout_writer",
+        "xcode_project_mutation",
+        "build_tuple",
+        "simulator_or_device",
+        "coresimulator_runtime_registry",
+        "signing_or_app_store_connect",
+        "github_external_mutation"
+      ]
+    },
+    "resource_key_fields": {
+      "type": "object",
+      "required": [
+        "source_checkout_writer",
+        "xcode_project_mutation",
+        "build_tuple",
+        "simulator_or_device",
+        "coresimulator_runtime_registry",
+        "signing_or_app_store_connect",
+        "github_external_mutation"
+      ],
+      "properties": {
+        "source_checkout_writer": {"const": ["repository_fingerprint", "canonical_root"]},
+        "xcode_project_mutation": {"const": ["repository_fingerprint", "container_path"]},
+        "build_tuple": {
+          "const": ["repository_fingerprint", "container_path", "xcode_build", "sdk", "scheme", "configuration", "architecture", "package_fingerprint", "cache_paths"]
+        },
+        "simulator_or_device": {"const": ["platform", "udid", "paired_udids", "run_id", "bundle_id"]},
+        "coresimulator_runtime_registry": {"const": ["host_id", "registry_scope"]},
+        "signing_or_app_store_connect": {"const": ["account_guard", "app_or_bundle_scope", "action"]},
+        "github_external_mutation": {"const": ["repository_fingerprint", "remote_repository", "action"]}
+      },
+      "additionalProperties": false
+    },
+    "runtime_registry_policy": {
+      "const": {
+        "failure_class": "coresimulator_runtime_disk_registration",
+        "normalized_signatures": ["unable to get a dev_t for store <store-id>"],
+        "minimum_repeat_observations": 2,
+        "supporting_enumeration_gap_seconds": 30,
+        "supporting_evidence_not_causal_proof": [
+          "simdiskimaged_process_continuity",
+          "mixed_build_or_image_kind_inventory",
+          "large_runtime_count",
+          "low_free_storage"
+        ],
+        "restart_resets_processes_not_persisted_registry": true,
+        "max_active_simulator_tool_providers_during_diagnosis": 1,
+        "max_new_bounded_discovery_probes": 1,
+        "recovery_resource": "coresimulator_runtime_registry",
+        "conflicts_with": ["simulator_or_device"],
+        "mutation_requires_matching_approval": true,
+        "mutating_approval_binding": [
+          "approval_id",
+          "resource_key",
+          "allowed_action",
+          "runtime_identifier"
+        ],
+        "mutating_approval_single_use": true,
+        "privileged_diagnostics_require_explicit_approval": true,
+        "release_note_precedent_is_not_defect_equivalence": true,
+        "verification_order": [
+          "one_bounded_runtime_inventory",
+          "release_runtime_registry_lease",
+          "acquire_control_destination_lease",
+          "one_designated_control_destination"
+        ],
+        "verification_repetitions": {
+          "default": 1,
+          "stability_acceptance": 3
+        },
+        "toolchain_comparison": "sequential_one_provider_fixed_non_toolchain_inputs_record_runtime_confounders",
+        "forbidden_automatic_actions": [
+          "direct_registry_runtime_or_mount_mutation",
+          "daemon_or_service_force_termination",
+          "global_device_or_runtime_removal",
+          "derived_data_deletion"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

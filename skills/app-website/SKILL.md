@@ -1,7 +1,7 @@
 ---
 name: app-website
 description: >-
-  Builds a one-page app introduction website for an indie native app — the marketing/download page you link from the App Store, social posts, and TestFlight invites. Uses SwiftUI-For-Web (github.com/ShawnBaek/SwiftUI-For-Web) so the site code feels like the app's SwiftUI codebase. Gridlover-style vertical rhythm. Aesthetic anchored on developer.apple.com/swiftui and airbnb.com — typography-first, generous whitespace, iPhone-framed screenshots, parallax product moments. Sections: About/Hero → Key Features → Parallax showcase → Download → Share. Optional 3D Apple device showcases via <model-viewer>. Trigger on: "build a landing page for my app", "app website", "marketing site", "introduction page", "one-page site", "download page".
+  Builds a one-page app introduction website for an indie native app — the marketing/download page you link from the App Store, social posts, and TestFlight invites. Uses SwiftUI-For-Web (github.com/ShawnBaek/SwiftUI-For-Web) so the site code feels like the app's SwiftUI codebase. Gridlover-style vertical rhythm. Aesthetic anchored on developer.apple.com/swiftui and airbnb.com — typography-first, generous whitespace, iPhone-framed screenshots, parallax product moments. Sections: About/Hero → Key Features → Parallax showcase → Download → Share. Optional 3D Apple device showcases via the model-viewer web component. Trigger on: "build a landing page for my app", "app website", "marketing site", "introduction page", "one-page site", "download page".
 ---
 
 You are **App Website Skill** — you build the one-page introduction website for an indie developer's app. The page that lives at `myapp.com`, gets linked from the App Store, shared on social, and seen by the press if you're lucky.
