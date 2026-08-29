@@ -10,9 +10,13 @@ that the app ran.
 
 Before a long-running step, record its phase, tool/provider, start time,
 destination UDID and runtime, app bundle path and hash, bundle identifier, and a
-phase-specific timeout. The project may override the budget; otherwise five
-minutes is a conservative ceiling for a first install or launch on a newly
-booted Simulator. Waiting without a deadline is not verification.
+phase-specific timeout. The project may override the budget. After a successful
+build, cancel an install, launch, console, or hierarchy request that produces
+no new state for 30 seconds only when the selected phase deadline has expired or
+there is positive evidence that its provider has stalled. Otherwise, treat 30
+seconds as an inactivity checkpoint: inspect the exact request/provider once
+and continue under the recorded phase budget. Waiting without a deadline is not
+verification.
 
 When the deadline expires:
 
@@ -28,6 +32,30 @@ When the deadline expires:
 Never kill unrelated Xcode/Git processes, erase a device, delete DerivedData,
 remove a runtime, or reset app data as a first response.
 
+## Identify the visible state before recovery
+
+Do not conflate these states:
+
+- SpringBoard/Home, proved by the frontmost hierarchy/application identity;
+- an app Launch Screen, where the process launched but no app-owned screen is
+  observable yet;
+- an install or launch request that is still active;
+- a completed launch whose UI-inspection provider is the stalled layer.
+
+If the user asks for Home, use the supported hardware Home interaction
+immediately and recapture the hierarchy. Returning Home is navigation evidence,
+not install, uninstall, or startup evidence. Do not wait on an app Launch Screen
+before performing the requested Home action.
+
+Before retrying Simulator work, compare command-line and GUI provenance: the
+selected developer directory, resolved `simctl`, open Xcode container/session,
+and the executable path of the running Simulator or Device Hub UI. A GUI from a
+different Xcode installation can hold the same device while the selected
+toolchain's operations queue. After confirming that mismatch, close only the
+exact mismatched UI with the user's authority, then retry one read-only
+inventory or exact bundle-container lookup. Never broadly terminate
+CoreSimulator services.
+
 ## Split the pipeline without rebuilding
 
 Use the selected official Xcode tool's separate actions when available; the
@@ -40,6 +68,14 @@ Apply a bounded timeout to each call.
 4. Launch the installed bundle and record the process/launch result.
 5. Only after launch succeeds, start UI hierarchy/screenshot/interaction
    verification.
+
+When an explicitly requested app-only reinstall is the smallest remaining
+check, keep it serial and exact: container lookup, terminate, uninstall,
+then install the already-built absolute `.app`. Require an absence read-back
+after uninstall and a new-container read-back after install. Finish with direct
+launch and PID read-back. Do not overlap commands or erase the device. An empty
+successful install/uninstall output is not enough without the corresponding
+state read-back.
 
 Do not switch to a combined build-and-run operation after the build already
 passed. Rebuild only if the source/package/toolchain tuple or app product is
@@ -77,7 +113,9 @@ MCP, or Device Hub requests can amplify the queue.
 Prefer a normal user-visible recovery: stop the affected run, quit Simulator or
 Device Hub and Xcode normally, reopen the same Xcode version and authoritative
 container, then retry one separated install/launch sequence. Ask before closing
-the developer's active apps or restarting the Mac. Do not use force-kill,
+the developer's active apps or restarting the Mac. Do not silently open a
+Simulator UI from another installed Xcode merely because its legacy path exists.
+Do not use force-kill,
 CoreSimulator-service reset, device erase, runtime removal, DerivedData deletion,
 or a different checkout as a generic cure.
 
