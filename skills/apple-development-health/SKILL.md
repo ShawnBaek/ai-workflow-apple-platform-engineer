@@ -4,8 +4,9 @@ description: >-
   Read-only health check for an Apple development task before implementation or
   delivery. Verifies required CLIs, Codex/Claude skills, MCP provenance and
   current-task connectivity, GitHub/Spec Kit state, Xcode/CoreSimulator layers,
-  App Store Connect readiness, optional local LLMs, and companion upstreams
-  without installing, repairing, cleaning, or broadening credentials.
+  App Store Connect readiness, optional AppleSampleCode MCP and local LLMs, and
+  companion upstreams without installing, repairing, cleaning, or broadening
+  credentials.
 ---
 
 # Apple Development Health
@@ -25,9 +26,9 @@ right now?** It does not repair the machine.
 | `testflight_distributed` | uploaded profile plus exact pre-authorized internal TestFlight group IDs |
 | `icon_upstream` | `pr_ready` plus public companion-upstream provenance and Icon Composer handoff tools that the task actually needs |
 
-Do not require every tool for every run. Missing optional Local LLM, Project v2,
-Simulator, Icon Composer, or TestFlight support is `not_applicable` when the
-selected profile does not use it.
+Do not require every tool for every run. Missing optional AppleSampleCode MCP,
+Local LLM, Project v2, Simulator, Icon Composer, or TestFlight support is
+`not_applicable` when the selected profile does not use it.
 
 ## Rules
 
@@ -57,6 +58,13 @@ The evaluator performs no probe or repair. It validates classification,
 derives task-selected Spec Kit/MCP/Project/Local-LLM requirements from the
 trusted harness, redacts common credential/email patterns, and returns nonzero
 for an invalid report or a blocked overall status.
+
+When `apple_sample_code_mcp` is selected, require the exact
+`mcp.apple_sample_code` check. For each client selected by the harness, observe
+that client's registration separately from current-task tool exposure. Require
+both Codex and Claude observations only when both clients consume the MCP. Make
+one bounded read-only corpus-status call. Health never registers the server or
+refreshes its corpus.
 
 ## No-repair boundary
 

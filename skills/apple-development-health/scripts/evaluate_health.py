@@ -70,6 +70,7 @@ PROFILE_REQUIREMENTS = {
 COMPONENT_REQUIREMENTS = {
     "spec_kit": "spec_kit.snapshot",
     "xcode_mcp": "mcp.xcode",
+    "apple_sample_code_mcp": "mcp.apple_sample_code",
     "github_project": "github.project",
     "local_llm": "local_llm",
 }

@@ -32,7 +32,7 @@
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "enum": ["spec_kit", "xcode_mcp", "github_project", "local_llm"]
+        "enum": ["spec_kit", "xcode_mcp", "apple_sample_code_mcp", "github_project", "local_llm"]
       }
     },
     "required_check_ids": {

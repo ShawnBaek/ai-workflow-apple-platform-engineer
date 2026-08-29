@@ -49,6 +49,14 @@
       "evidence": ["<sanitized-read-only-observation>"]
     },
     {
+      "id": "mcp.apple_sample_code",
+      "category": "mcp",
+      "required": false,
+      "status": "not_applicable",
+      "summary": "This run did not select AppleSampleCode MCP retrieval.",
+      "evidence": []
+    },
+    {
       "id": "simulator.runtime",
       "category": "simulator",
       "required": false,
