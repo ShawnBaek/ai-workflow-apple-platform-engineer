@@ -161,7 +161,10 @@ build/test evidence separately from infrastructure evidence.
 
 Before labeling an interaction failure as an app bug, use hierarchy-derived
 coordinates and the actual gesture semantics. A continuous drag is one
-down-hold-move-up gesture; a sequence of taps is not equivalent.
+down-hold-move-up gesture; a sequence of taps is not equivalent. If the active
+interaction grammar has no pinch command, use an enabled XCUITest target and
+`XCUIElement.pinch(withScale:velocity:)`; do not guess syntax or claim runtime
+pinch evidence from compilation alone.
 
 ## Companion upstream
 

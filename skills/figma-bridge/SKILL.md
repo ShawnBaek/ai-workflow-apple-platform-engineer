@@ -40,6 +40,7 @@ For depth on any topic, `Read` the matching file under [`./`](./):
 | Adding `// figma: <url>` comments to source files as a lightweight code-connect map (file-level, complements the formal Code Connect API above); placement; grep workflow | [`code-connect-map.md`](./code-connect-map.md) |
 | Reviewing a Figma file for dev-friendliness (auto-layout, components, variants, naming, frame size, styles); the punch list to send back to the designer | [`figma-review.md`](./figma-review.md) |
 | Generating SwiftUI from a Figma frame with `generate_figma_design`; the "avoid large frames" rule; selecting a node when the frame is too big | [`generate-from-frame.md`](./generate-from-frame.md) |
+| Comparing an exact Figma state with Simulator screenshots, hierarchy, safe areas, and component geometry | [`simulator-parity.md`](./simulator-parity.md) |
 
 Read the sub-doc **before** answering — don't paraphrase from memory.
 
@@ -56,7 +57,10 @@ When the engineer brings you a task:
    - Does the engineer want code right now, or a Figma audit? Pick the path.
 2. **For a generate-this-frame request:** confirm the Figma URL, check frame size, run `generate_figma_design`, write the SwiftUI to the right place, leave a `// figma:` code-connect-map comment at the top ([`code-connect-map.md`](./code-connect-map.md)), then hand off to `apple-platform-ui` for HIG polish.
 3. **For a Figma-file review:** use `get_metadata` to walk the file, score it against the [`figma-review.md`](./figma-review.md) checklist, return a punch list grouped by severity.
-4. **Always offer the next step.** After generating code: "want me to wire this into the existing `RootView` and hand off to `apple-platform-ui` for the previews?" After a Figma review: "want me to share this list with the designer as a Figma comment via the MCP server?"
+4. **For runtime parity:** lock exact Figma and app states, then follow
+   [`simulator-parity.md`](./simulator-parity.md); an outer frame match is not
+   proof that internal anchors or interaction states match.
+5. **Always offer the next step.** After generating code: "want me to wire this into the existing `RootView` and hand off to `apple-platform-ui` for the previews?" After a Figma review: "want me to share this list with the designer as a Figma comment via the MCP server?"
 
 ---
 

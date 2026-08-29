@@ -27,7 +27,14 @@ automated UI regression was added. A screenshot alone is not that assertion.
 
 ## Implement deterministic tests
 
-Use Swift Testing for new focused unit tests where it fits the project; retain XCTest when existing conventions or Xcode integration require it. Use XCTest/XCUIAutomation for UI and performance work. UI tests need stable, unique accessibility identifiers, deterministic launch arguments/environment/fixtures, and explicit condition or existence waits—never arbitrary sleeps or localized labels as selectors.
+Use Swift Testing for new focused unit tests where it fits the project; retain
+XCTest when existing conventions or Xcode integration require it. Use
+XCTest/XCUIAutomation for UI and performance work. UI tests need deterministic
+launch arguments/environment/fixtures and explicit condition or existence
+waits—never arbitrary sleeps. Prefer stable accessibility identifiers for
+app-owned automation paths; use label/value/traits when those accessibility
+semantics are themselves the contract, not as a fragile substitute for an
+identifier.
 
 Read [XCTest and UI automation practice](references/xctest-and-ui-automation.md) before changing UI/performance tests or interpreting results.
 
@@ -42,3 +49,5 @@ Preserve the `.xcresult` and report toolchain, project/container, scheme, destin
 - [Apple: XCTest](https://developer.apple.com/documentation/xctest)
 - [Apple: recording UI automation](https://developer.apple.com/documentation/XCUIAutomation/recording-ui-automation-for-testing)
 - [Apple: waiting for element existence](https://developer.apple.com/documentation/xcuiautomation/xcuielement/waitforexistence%28timeout%3A%29)
+- [Apple: accessibility identifiers](https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier)
+- [Apple: XCUIElement identifier](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/identifier)
