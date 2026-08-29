@@ -1,49 +1,82 @@
 ---
 name: xcode-project-workflow
-description: Enforce the required Xcode project directory, Git feature-branch, and XcodeGen workflow for Apple-platform tasks. Use before any Xcode project edit, build, test, debugging, or XcodeGen operation.
+description: >-
+  Mandatory Xcode project-root, container, branch, host-execution, and XcodeGen preflight for iOS, iPadOS, watchOS, macOS, tvOS, and visionOS tasks. Use before any Xcode project edit, build, test, Simulator, debugging, signing, archive, or project-generation operation.
 ---
 
 # Xcode Project Workflow
 
-Use this skill as a mandatory preflight for every Apple/Xcode project task.
+Run this preflight before every Apple/Xcode task. It defines where work may
+happen; `xcodebuild` and other specialists define what to run there.
 
-## Mandatory preflight
+## Authoritative project gate
 
-1. Identify the exact existing directory containing the `.xcodeproj` or
-   `.xcworkspace` that the developer opened first. Use that directory for all
-   edits, builds, tests, debugging, and generated files.
-2. If that project root is unknown, stop and ask the developer. Never guess,
-   search for another checkout, copy the project, or create a sandbox/worktree.
-3. Inspect the repository path, current branch, remote, and working tree.
-4. Do not continue on the currently checked-out branch. Identify `origin/main`
-   or `origin/master` as the remote default starting point.
-5. Propose one concise feature-branch name and ask the developer to approve it.
-   Do not edit files, implement changes, or perform substantive validation
-   before approval.
-6. After approval, create the feature branch from the remote default branch in
-   the same existing checkout. Never use a Git worktree or alternate checkout.
-7. Verify the final project root and branch before implementation.
+1. Resolve the exact existing directory and `.xcworkspace` or `.xcodeproj` the
+   developer opened first. The opened container type is authoritative.
+2. If unknown, stop and ask. Do not search for a convenient checkout, substitute
+   a project for a workspace, copy the project, or create a worktree.
+3. Record the real path, repository root, branch, HEAD, remote, dirty state,
+   selected Xcode build, and opened container.
+4. Return to that directory before every Xcode-related operation.
 
-If the working tree has uncommitted changes or the remote default branch cannot
-be safely identified, stop and ask how to proceed.
+If an Xcode provider returns the same container path for multiple windows or
+tabs, record each session/workspace identifier. Do not choose the first result
+arbitrarily; bind work to the developer's authoritative window or ask which
+window to use when the identity cannot be established read-only.
 
-## Xcode and XcodeGen rules
+Use `git-workflow` for remote-default discovery, branch-name approval, Git
+metadata preflight, and PR state. A worktree remains forbidden unless the user
+explicitly opts in for this exact task; if approved, it must become a separate
+authoritative Xcode session rather than borrowing the original open window.
 
-- Keep the project in the directory already opened in Xcode so the developer
-  can manually build and debug the same Xcode window and checkout.
-- Never create, switch to, or use a worktree, copied repository, temporary
-  project directory, or alternate sandbox location for an Xcode task.
-- If XcodeGen is used, do not run `xcodegen generate` while the current Xcode
-  session is open. Do not infer that regeneration is needed because files were
-  added, removed, or edited.
-- Run XcodeGen only when the developer explicitly requests it or when a
-  genuinely new Xcode session must be opened after project-spec changes.
-- Before permitted regeneration, announce it, confirm the project root, and
-  run it there. Never generate into another directory.
+## Host execution gate
+
+Xcode, `xcodebuild`, Simulator, signing, archive, export, and Apple CLI commands
+must run in the logged-in host environment. Never try them in a sandbox first.
+CoreSimulator permission errors are environment failures, not app/test results.
+Stop when host execution is unavailable or requires approval.
+
+Before signing or an Apple account operation, resolve the account/team required
+by the current private project policy. Cached Xcode state, environment variables,
+profiles, or CI secrets never imply an override.
+
+## XcodeGen gate
+
+- Detect whether XcodeGen is the declared source of truth, but do not regenerate
+  merely because source files changed or a generated project looks stale.
+- Before adding a project-referenced file, determine whether the existing
+  container already discovers it through a synchronized group or whether the
+  XcodeGen spec and regeneration are required. Do not create an orphan source
+  file or edit generated project metadata as a shortcut.
+- Do not run generation while the current Xcode session is open unless the user
+  explicitly requests it.
+- If a new file requires regeneration, stop before that file/project mutation.
+  Propose the spec change and controlled transition: obtain explicit approval,
+  close the current Xcode session, update the spec at the authoritative root,
+  generate once, then verify the same intended container in a new session. If
+  that transition is not approved or Xcode remains open, report a blocker.
+- If the generated container is absent after a fresh clone, explain the blocker
+  and obtain permission for a new session/generation at the authoritative root.
+- Before permitted generation, record the spec diff and expected project diff,
+  run once at that root, then verify the same intended container opens.
+
+This policy overrides any execution adapter that suggests automatic generation.
+
+## Apple official-first routing
+
+For the selected Xcode version, use one Apple-authored skill exposure (built-in
+inside Xcode or exported for the external agent) and Xcode's official tools when
+available. Use Apple's supported external-agent bridge for an outside agent.
+Third-party build tooling is an explicit fallback, not a prerequisite.
 
 ## Stop conditions
 
-Stop and ask the developer if the first-opened project directory is unknown,
-the checkout is not clean, the remote default branch cannot be resolved, the
-branch name is not approved, or XcodeGen seems useful without explicit
-permission or a new Xcode session.
+Stop without edits/builds when the root/container is unknown, the working tree
+has unexplained changes, the remote default or approved branch is unresolved,
+the Apple account boundary is unverified for an account action, Git metadata is
+not writable from the current environment, or XcodeGen requires new authority.
+
+References:
+
+- [Giving external agents access to Xcode](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode)
+- [Extending and customizing agents](https://developer.apple.com/documentation/xcode/extending-and-customizing-agents)

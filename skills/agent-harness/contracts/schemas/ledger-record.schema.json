@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:ledger-record:1.0.0",
+  "type": "object",
+  "required": ["schema_version", "run_id", "sequence", "recorded_at", "record_type", "payload"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "sequence": {"type": "integer", "minimum": 1},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "record_type": {
+      "enum": [
+        "node",
+        "attempt",
+        "lease",
+        "approval",
+        "knowledge",
+        "evidence",
+        "external_write",
+        "feedback",
+        "improvement",
+        "stop"
+      ]
+    },
+    "payload": {"type": "object"}
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "record_type": {"const": "node"},
+        "payload": {
+          "type": "object",
+          "required": ["node_id", "status"],
+          "properties": {
+            "node_id": {"type": "string", "minLength": 1},
+            "status": {
+              "enum": [
+                "pending",
+                "ready",
+                "leased",
+                "acting",
+                "verifying",
+                "passed",
+                "failed_retryable",
+                "failed_terminal",
+                "awaiting_approval",
+                "blocked",
+                "skipped",
+                "superseded"
+              ]
+            },
+            "patch_identity": {"type": "string", "minLength": 1},
+            "reason": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "attempt"},
+        "payload": {
+          "type": "object",
+          "required": ["attempt_id", "ordinal", "input_hash", "outcome"],
+          "properties": {
+            "attempt_id": {"type": "string", "minLength": 1},
+            "ordinal": {"type": "integer", "minimum": 1},
+            "attempt_of": {"type": ["string", "null"]},
+            "supersedes": {"type": ["string", "null"]},
+            "input_hash": {"type": "string", "minLength": 1},
+            "failure_hash": {"type": "string", "minLength": 1},
+            "outcome": {
+              "enum": ["passed", "failed_retryable", "failed_terminal", "blocked", "superseded"]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "lease"},
+        "payload": {
+          "type": "object",
+          "required": ["lease_id", "action", "owner", "resource", "resource_key"],
+          "properties": {
+            "lease_id": {"type": "string", "minLength": 1},
+            "action": {"enum": ["acquire", "heartbeat", "release"]},
+            "owner": {"type": "string", "minLength": 1},
+            "resource": {
+              "enum": [
+                "source_checkout_writer",
+                "xcode_project_mutation",
+                "build_tuple",
+                "simulator_or_device",
+                "coresimulator_runtime_registry",
+                "signing_or_app_store_connect",
+                "github_external_mutation"
+              ]
+            },
+            "resource_key": {"type": "string", "minLength": 1},
+            "branch": {"type": "string", "minLength": 1},
+            "base_sha": {"type": "string", "minLength": 1},
+            "pre_state_hash": {"type": "string", "minLength": 1},
+            "post_state_hash": {"type": "string", "minLength": 1},
+            "allowed_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "allowed_actions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "approval_id": {"type": "string", "minLength": 1},
+            "mutation_target": {"type": "string", "minLength": 1},
+            "acquired_at": {"type": "string", "format": "date-time"},
+            "heartbeat_at": {"type": "string", "format": "date-time"},
+            "released_at": {"type": "string", "format": "date-time"},
+            "expires_at": {"type": "string", "format": "date-time"}
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"action": {"const": "acquire"}}},
+              "then": {
+                "required": [
+                  "branch",
+                  "base_sha",
+                  "pre_state_hash",
+                  "allowed_paths",
+                  "allowed_actions",
+                  "acquired_at",
+                  "expires_at"
+                ]
+              }
+            },
+            {
+              "if": {"properties": {"action": {"const": "heartbeat"}}},
+              "then": {"required": ["heartbeat_at", "expires_at"]}
+            },
+            {
+              "if": {"properties": {"action": {"const": "release"}}},
+              "then": {"required": ["released_at", "post_state_hash"]}
+            }
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "approval"},
+        "payload": {
+          "type": "object",
+          "required": ["approval_id", "kind", "actor", "decision", "scope"],
+          "properties": {
+            "approval_id": {"type": "string", "minLength": 1},
+            "kind": {
+              "enum": [
+                "acceptance",
+                "plan",
+                "branch",
+                "repository",
+                "xcodegen",
+                "external_write",
+                "destructive_action",
+                "improvement"
+              ]
+            },
+            "actor": {"type": "string", "minLength": 1},
+            "decision": {"enum": ["approved", "rejected"]},
+            "scope": {"type": "string", "minLength": 1},
+            "resource": {"type": "string", "minLength": 1},
+            "resource_key": {"type": "string", "minLength": 1},
+            "action": {"type": "string", "minLength": 1},
+            "target": {"type": "string", "minLength": 1},
+            "single_use": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "knowledge"},
+        "payload": {
+          "type": "object",
+          "required": ["source_id", "authority", "content_hash", "provenance"],
+          "properties": {
+            "source_id": {"type": "string", "minLength": 1},
+            "authority": {"type": "string", "minLength": 1},
+            "content_hash": {"type": "string", "minLength": 1},
+            "provenance": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "evidence"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "evidence_id",
+            "acceptance_ids",
+            "patch_identity",
+            "tool_tuple",
+            "observed_result",
+            "outcome"
+          ],
+          "properties": {
+            "evidence_id": {"type": "string", "minLength": 1},
+            "acceptance_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "patch_identity": {"type": "string", "minLength": 1},
+            "tool_tuple": {"type": "object"},
+            "observed_result": {"type": "string", "minLength": 1},
+            "outcome": {"enum": ["passed", "failed", "blocked"]},
+            "artifact_path": {"type": "string", "minLength": 1},
+            "artifact_sha256": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "external_write"},
+        "payload": {
+          "type": "object",
+          "required": ["system", "action", "target", "outcome"],
+          "properties": {
+            "system": {"enum": ["github", "apple", "other"]},
+            "action": {"type": "string", "minLength": 1},
+            "target": {"type": "string", "minLength": 1},
+            "outcome": {"enum": ["succeeded", "failed", "blocked"]},
+            "local_sha": {"type": "string", "minLength": 1},
+            "remote_sha": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "feedback"},
+        "payload": {
+          "type": "object",
+          "required": ["feedback_id", "actor", "scope", "target", "summary", "disposition"],
+          "properties": {
+            "feedback_id": {"type": "string", "minLength": 1},
+            "actor": {"type": "string", "minLength": 1},
+            "scope": {"enum": ["current_run", "project_candidate", "repository_candidate"]},
+            "target": {"type": "string", "minLength": 1},
+            "summary": {"type": "string", "minLength": 1},
+            "disposition": {"enum": ["accepted", "rejected", "needs_clarification"]},
+            "invalidates": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "improvement"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "candidate_id",
+            "derived_from_feedback_ids",
+            "scope",
+            "proposal_hash",
+            "status",
+            "validation_evidence_ids"
+          ],
+          "properties": {
+            "candidate_id": {"type": "string", "minLength": 1},
+            "derived_from_feedback_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "scope": {"enum": ["private_project_overlay", "ios_experts_repository"]},
+            "proposal_hash": {"type": "string", "minLength": 1},
+            "status": {"enum": ["proposed", "approved", "rejected", "applied", "rolled_back"]},
+            "validation_evidence_ids": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "rollback_ref": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "stop"},
+        "payload": {
+          "type": "object",
+          "required": ["reason", "outcome"],
+          "properties": {
+            "reason": {"type": "string", "minLength": 1},
+            "outcome": {"enum": ["blocked", "failed_terminal", "cancelled"]}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

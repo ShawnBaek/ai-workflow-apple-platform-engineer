@@ -1,239 +1,346 @@
 # iOS-experts
 
-**Version:** 1.1.0
+**Version:** 2.0.0-beta.1
 
-This is the stable indie native app skills collection for shipping across Apple platforms.
+Agent-neutral skills and a guarded task-to-pull-request harness for iOS, iPadOS,
+watchOS, and macOS development.
 
-Agent skills for indie developers shipping Apple-platform native apps end-to-end — from a blank Xcode project to App Store submission.
+The collection works with Codex, Claude Code, and other Agent Skills-compatible
+tools. Version 2 adds graph/loop execution, evidence, local project RAG,
+Apple-official-first routing, minimum-sufficient testing, safer Git/Xcode
+operations, and GitHub Issues/Projects integration without copying Apple's own
+Xcode skill bodies.
 
-Distributed through the open [skills.sh](https://skills.sh) ecosystem, so one `npx skills add` installs them into **Claude Code, Codex, Cursor, Gemini CLI, Copilot, and 50+ other agents** — not just one tool.
+> Xcode 27 is still evolving. Resolve the current Xcode build, SDK, Apple skills,
+> release notes, Simulator availability, and App Store requirements at run time.
+> A beta-specific workaround belongs to evidence for that build, not permanent
+> policy.
 
-A **team lead** plus **twelve specialist skills**, sharing one goal: make shipping native apps less painful. Start with [`native-app-lead`](skills/native-app-lead/SKILL.md) when you're not sure what's next — it sequences the work and hands off to the right specialist. **Two paths for the UI layer** — choose the one that matches your situation:
+## What changed in 2.0
 
-| Situation | UI path |
+- An installable [agent harness](skills/agent-harness/SKILL.md), not merely a
+  root instruction file.
+- Codex-primary, Claude-primary, and Codex-plus-Claude collaboration with one
+  repository writer at a time.
+- One append-only run ledger that yields execution, knowledge, and evidence
+  graph views.
+- Bounded repair/review loops with explicit stop reasons and resumable evidence.
+- Local LLMs limited to RAG, reranking, entity extraction, and log clustering.
+- Apple Documentation Search, Apple-authored skills, and Xcode tools before
+  repository or third-party substitutes.
+- Focused SPM, XCTest/XCUITest, Git/worktree/index, version, storage, data, and
+  GitHub Projects skills.
+- PR-ready delivery with risk-derived checks and verified screenshots/videos or
+  artifact links; merge and App Store submission remain separate gates.
+
+## Architecture
+
+```mermaid
+flowchart TB
+    U[User goal and project guards] --> A[Authority gate]
+    A --> H[Agent harness]
+    H --> C[Context and exact repo lookup]
+    H --> X[Execution graph]
+    H --> L[Append-only run ledger]
+    C --> K[Knowledge graph / local RAG]
+    X --> E[Evidence graph]
+    K --> L
+    E --> L
+    F[Human feedback] --> L
+    L --> IC[Redacted improvement candidate]
+    IC -->|human approval + focused probe| SP
+
+    subgraph Modes
+      CX[Codex primary]
+      CL[Claude primary]
+      CO[Collaborative: one writer + one reviewer]
+    end
+
+    CX --> H
+    CL --> H
+    CO --> H
+    O[Local LLM: read-only retrieval] -. source IDs .-> K
+
+    AP[Apple docs, skills, Xcode tools] --> C
+    SP[Focused iOS-experts skills] --> H
+```
+
+The harness keeps three precedence questions separate:
+
+| Question | Order |
 |---|---|
-| Working without a designer or Figma file | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) directly — makes HIG-anchored decisions itself |
-| Working from a Figma design | [`figma-bridge`](skills/figma-bridge/SKILL.md) → [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) — extracts the design from Figma, then applies Apple HIG polish |
+| Who has authority? | system/current user → hard account/repository guards → accepted spec/decisions → repo defaults |
+| What defines product behavior? | accepted spec/decisions → repository source at frozen HEAD → pinned dependency source → approved project analysis |
+| What defines Apple API truth? | live Apple docs for selected toolchain → one Apple-authored skill exposure → pinned Apple sample → iOS-experts → external sources |
+| What executes the task? | Xcode official tools → Apple's external-agent bridge → host Apple CLI → explicit third-party fallback |
 
-## The team: one lead and twelve specialists
+Apple built-in and Apple-exported skills are alternative exposure paths. When
+one owns the exact task, use it and record its provider/version; do not load a
+duplicate repository specialist.
 
-| Skill | When it kicks in | What it owns |
-|-------|------------------|--------------|
-| [`native-app-lead`](skills/native-app-lead/SKILL.md) | "Where do I start", "take me from zero to the App Store", "what's next", "which skill do I use" | Coordinates the other twelve: locates you on the pipeline, names the next move, and hands off to the specialist that owns it |
-| [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | "Build me a screen", "design this view", "SwiftUI / UIKit" | UI implementation in SwiftUI/UIKit, grounded in Apple HIG (no-designer path) |
-| [`figma-bridge`](skills/figma-bridge/SKILL.md) | "Figma", "generate from this frame", "code connect", "review my figma file", "set up figma mcp" | Figma → SwiftUI handoff. MCP setup (Claude Code + Codex), formal Code Connect for SwiftUI, generate-from-frame, dev-friendliness file review, lightweight `// figma:` code-connect-map convention. Hands off to `apple-platform-ui` for HIG polish. |
-| [`core-data`](skills/core-data/SKILL.md) | "Core Data", "migration", "xcmappingmodel", "readonly database", "NSPersistentCloudKitContainer", "persistent history" | Core Data architecture, staged/manual/lightweight migration strategy, concurrency topology, store-load crash triage, and CloudKit mirroring decisions |
-| [`apple-platform-performance`](skills/apple-platform-performance/SKILL.md) | "App is janky", "scroll stutters", "launch is slow", "Instruments shows…" | Hangs / hitches / launch / body cost / ML inference / audio pipeline — 27 Effective-style items in 6 Parts |
-| [`icon-composer`](skills/icon-composer/SKILL.md) | "Design an app icon", "Icon Composer", "replace the Xcode icon", "check icon sizes" | Layered iOS, iPadOS, macOS, and watchOS icons; Default/Dark/Clear/Tinted appearances; Xcode handoff; legacy `.icns` and asset-catalog verification |
-| [`xcodebuild`](skills/xcodebuild/SKILL.md) | "Build", "run on sim", "screenshot the screen", "attach debugger" | Xcode builds + simulator + UI automation via XcodeBuildMCP (XcodeGen-aware) |
-| [`screenshot`](skills/screenshot/SKILL.md) | "App Store screenshots", "capture and upload" | End-to-end App Store screenshot pipeline (capture → frame → upload) |
-| [`app-store-connect`](skills/app-store-connect/SKILL.md) | "TestFlight", "submit", "store metadata", "crash reports" | App Store Connect ops via the asc CLI (iOS / macOS / Mac Catalyst / watchOS / visionOS) |
-| [`app-website`](skills/app-website/SKILL.md) | "Build my app's landing page", "one-pager", "download page" | One-page introduction website via SwiftUI-For-Web + Gridlover rhythm |
-| [`cicd`](skills/cicd/SKILL.md) | "Set up CI", "GitHub Actions workflow", "self-hosted runner", "deploy on tag" | GitHub Actions on a self-hosted Mac runner; `act` local testing; `gh` CLI secrets; failure routing |
-| [`commit-message`](skills/commit-message/SKILL.md) | "Write a commit message for this", right before `git commit` | Good commit messages from the staged diff (Conventional, Swift `[area]`, or plain) |
-| [`xcode-project-workflow`](skills/xcode-project-workflow/SKILL.md) | Any Xcode project task | Keeps work in the first-opened project directory, starts from `origin/main` or `origin/master`, requires feature-branch approval, and prevents unnecessary XcodeGen regeneration |
+For Xcode MCP, the harness proves four states separately: executable provenance,
+client registration, exposure in the current task, and one read-only response
+from the exact Xcode workspace session. A Homebrew tap, global npm package,
+`npx @latest` process, or enabled config entry proves only its own layer. Codex
+uses Apple's `xcrun mcpbridge` route first; third-party providers remain pinned,
+explicit fallbacks and are not run beside it against the same Simulator incident.
 
-Each skill is a self-contained folder under `skills/<name>/` — a `SKILL.md` (the instructions the agent loads) plus any bundled sub-docs the skill reads on demand.
+## Bounded task-to-PR flow
+
+```mermaid
+flowchart TB
+    P1["1 · Intake and authority<br/>guard → discover → approve plan and branch"]
+    P2["2 · Bounded implementation<br/>claim writer → implement → release → verify"]
+    N["New attempt n+1<br/>new patch identity; preserve failed evidence"]
+    P3["3 · Immutable convergence<br/>freeze → read-only review → converge → reverify"]
+    P4["4 · Guarded Git delivery<br/>prepare evidence → repository confirmation → commit → push → verify remote SHA → PR"]
+    P5["5 · Published proof<br/>publish and view evidence → release lease → required checks → PR ready"]
+
+    P1 --> P2
+    P2 -->|passed| P3
+    P2 -->|changed input or code| N
+    N --> P3
+    P3 --> P4 --> P5
+```
+
+The execution graph stays acyclic. A retry creates a new attempt linked to the
+old one, preserving the failed evidence. Default bounds are three implementation
+attempts, two review cycles, one transient retry, and stop after the same
+normalized failure appears twice. Reaching a cap is never success.
+
+Mid-run human feedback is appended to the ledger and linked to what it changes;
+affected plans, reviews, and evidence are invalidated rather than silently
+rewritten. A correction applies to the current run immediately within its
+authority. Durable self-improvement is a separate redacted proposal with a
+focused before/after probe, explicit approval or repeated evidence, normal PR
+review, and a rollback reference. Local LLMs may cluster feedback but cannot
+approve or apply policy.
+
+Resource leases are scoped: repository writer, Xcode project mutation, build
+tuple, Simulator/device, host CoreSimulator runtime registry, signing/App Store
+Connect, and GitHub external writes. This permits safe read-only parallelism
+without pretending one global lock can protect every Apple resource.
+
+On a Mac running several Xcode projects, every run is namespaced by repository,
+container, build/cache tuple, bundle ID, tool session, and exact destination
+UDID. Concurrent projects never share a mutable Simulator or UI session through
+a device name or `booted`; a paired watch/iPhone is one lease. Service-wide
+Simulator recovery waits until all active project leases are inventoried and
+quiesced, then uses one host-wide runtime-registry lease and requires explicit
+approval. Because that registry can be shared across stable and beta Xcode
+installs, its key is the host scope rather than the selected Xcode build.
+
+## Three collaboration cases
+
+| Case | Writer | Review | Local LLM |
+|---|---|---|---|
+| Codex primary | Codex | optional read-only review | retrieval only |
+| Claude primary | Claude | optional read-only review | retrieval only |
+| Collaborative | one of Codex/Claude | the other reviews a frozen patch identity | retrieval only |
+
+A collaborative review is bound to `patch_identity_v1 + exact paths + review diff`.
+The selected writer is fixed by the user or accepted plan before the claim; the
+reviewer has no mutation tools, and a stale diff is rejected. Writer transfer
+requires capability revocation, release, a fresh capability snapshot, and a
+matching repository state hash. The local model is never a fourth owner,
+approver, writer, or reviewer of record.
+
+## RAG and knowledge graph
+
+Project RAG is useful for source, specs, accepted decisions, issue/PR history,
+and approved AppleSampleCode.com analysis. Exact path/commit lookup comes before
+embeddings. Every retrieved chunk carries source ID, authority tier, path/URL,
+commit or Xcode build, timestamp, line span where applicable, and content hash.
+
+Do not mirror the Apple documentation corpus. Query Xcode Documentation Search
+for current API truth and preserve provenance. AppleSampleCode.com is analysis,
+not normative Apple documentation; tie important claims back to an official
+document or commit-pinned Apple sample. Index only approved sample records and
+their source maps, separating source-visible observations from interpretation;
+do not crawl or mirror the entire site.
+
+Policy/account/lease documents are immutable input, never vector-retrieved
+overrides. Retrieved text is untrusted data: embedded instructions cause zero
+tool calls. Local embedding servers stay loopback-only and receive no Apple or
+GitHub credentials.
+
+## Skill catalog
+
+### Coordination and project delivery
+
+| Skill | Owns |
+|---|---|
+| [native-app-lead](skills/native-app-lead/SKILL.md) | routes broad Apple work to the smallest specialist set |
+| [agent-harness](skills/agent-harness/SKILL.md) | graph/loop/RAG, three model modes, leases, evidence, task-to-PR |
+| [xcode-project-workflow](skills/xcode-project-workflow/SKILL.md) | authoritative Xcode root/container, host execution, XcodeGen gate |
+| [git-workflow](skills/git-workflow/SKILL.md) | branch approval/naming, explicit worktrees, index-lock/AD recovery, PR Git state |
+| [github-projects](skills/github-projects/SKILL.md) | Issues and Projects v2 planning/status linkage |
+| [commit-message](skills/commit-message/SKILL.md) | staged-diff commit message only |
+
+### Build, packages, testing, and operations
+
+| Skill | Owns |
+|---|---|
+| [swift-package-manager](skills/swift-package-manager/SKILL.md) | manifest/lockfile, resolve/update/build separation, cache/failure layers |
+| [apple-platform-testing](skills/apple-platform-testing/SKILL.md) | minimum-sufficient Swift Testing, XCTest/XCUITest, xcresult evidence |
+| [xcodebuild](skills/xcodebuild/SKILL.md) | official-tools-first build/run/debug/Simulator and runtime-registry recovery |
+| [apple-platform-performance](skills/apple-platform-performance/SKILL.md) | hangs, hitches, launch, view/body and media performance |
+| [cicd](skills/cicd/SKILL.md) | least-privilege GitHub Actions and runner evidence |
+| [xcode-storage](skills/xcode-storage/SKILL.md) | read-only disk audit and itemized, approved cleanup |
+| [app-versioning](skills/app-versioning/SKILL.md) | marketing/build version source of truth and bundle verification |
+
+### Product, UI, data, and release
+
+| Skill | Owns |
+|---|---|
+| [apple-platform-ui](skills/apple-platform-ui/SKILL.md) | SwiftUI/UIKit UI and HIG decisions |
+| [figma-bridge](skills/figma-bridge/SKILL.md) | Figma-to-Apple UI handoff |
+| [apple-data](skills/apple-data/SKILL.md) | Core Data/SwiftData/CloudKit/CloudKit Web Services routing |
+| [core-data](skills/core-data/SKILL.md) | Core Data models, migration, concurrency, CloudKit mirroring |
+| [icon-composer](skills/icon-composer/SKILL.md) | Apple icon design and Xcode handoff |
+| [screenshot](skills/screenshot/SKILL.md) | deterministic visual/video and App Store evidence |
+| [app-store-connect](skills/app-store-connect/SKILL.md) | guarded TestFlight/App Store/Xcode Cloud operations |
+| [app-website](skills/app-website/SKILL.md) | one-page app introduction site |
+
+## Minimum-sufficient verification
+
+Tests protect observable contracts and material safety boundaries, not a blanket
+coverage number.
+
+| Change | Default evidence |
+|---|---|
+| docs/format | schema, skill, and relative-link validation |
+| routing/metadata | one positive and nearest-collision negative route |
+| graph/schema | valid, malformed, and terminal-state contract |
+| bug | one regression reproducing the original failure |
+| logic | changed paths and material boundary/failure |
+| UI | affected build, critical flow, relevant visual evidence |
+| interaction/motion | affected flow plus video/UI recording |
+| migration | representative old-to-new store and clean install |
+
+Do not test the same contract at every layer or build a test framework larger
+than the change without risk justification. Each new test names its observable
+contract, prevented failure, and unique path. The PR states omitted checks and
+residual risk. Full suites/matrices are for shared core, release, explicit user
+requests, or impact graphs that justify them.
+
+## Git sandbox and linked-worktree recovery
+
+The [git-workflow guide](skills/git-workflow/SKILL.md) treats working-tree,
+index, local branch, and remote state separately. If a linked worktree's resolved
+Git metadata is outside the sandbox, a permission failure creating its resolved
+`index.lock` is an environment boundary, not a stale lock.
+
+For the general `AD` state—Added in the index and Deleted in the worktree—the
+agent generates a path-safe host Terminal command using the exact path reported
+by Git:
+
+```sh
+git restore --staged -- '<exact-path-from-status>'
+```
+
+It then verifies index, worktree, local tracking, and remote SHA independently.
+It does not retry in the sandbox, delete `index.lock`, chmod/chown Git metadata,
+create an alternate index, or clone/move the repository.
+
+## PR evidence
+
+A PR body contains the acceptance mapping, checks/results, platform/toolchain,
+evidence hashes/links, omitted checks, and known limitations.
+
+If Simulator installation or launch stops responding after a successful build,
+the runtime guide preserves that build, cancels only the stuck operation, splits
+boot/install/launch/UI inspection, and allows one bounded same-runtime control
+device. Two destinations—or even read-only Xcode/Simulator queries—hanging turns
+the runtime portion into an infrastructure blocker; it does not trigger repeated
+builds, device erasure, DerivedData deletion, or a false UI-verification claim.
+
+A repeated `unable to get a dev_t for store <store-id>` before destination
+selection, a live-but-stalled `simdiskimaged`, or a timed pause while mixed-build
+Cryptex/runtime images are enumerated is a separate runtime-disk registry
+hypothesis. The harness stops query fan-out, maps the exact store/runtime/build,
+and treats process continuity, runtime count, and mixed builds only as supporting
+evidence. Runtime removal is itemized and approved through Xcode Components;
+agents never delete registry/Cryptex/mount state directly.
+
+A reboot clears stuck process state but not installed runtime registration or
+multi-provider fan-out, so recovery resumes with one official-first Simulator
+provider and one bounded inventory. The host registry lease is released before
+the exact control-UDID lease is acquired; the two never overlap. Low free space
+is recorded as separate pressure evidence, not declared the sole cause. The
+default control check is one install/launch/screenshot pass; three identical
+consecutive passes are required only when intermittent stability is itself an
+acceptance criterion. A later
+stable-versus-beta comparison changes one toolchain at a time and records any
+runtime-version confounder before raising a regression hypothesis.
+
+- Small permanent UI images may be committed only when repository policy allows.
+- Human-facing screenshots/videos can use GitHub's documented browser attachment.
+- `.xcresult`, videos, and large logs can use Actions artifacts with digest,
+  retention, and expiry shown.
+- `gh pr create` has no documented arbitrary local-file attachment option.
+- Artifact existence is not acceptance; preview/playback and viewer access are
+  verified after publication.
+- Merge and App Store submission are never implied by PR creation.
 
 ## Install
 
-Install everything through the [`skills`](https://skills.sh) CLI — no global installation is needed; use `npx`.
+Browse or install through the Agent Skills-compatible `skills` CLI:
 
-### Everything, interactively (recommended)
-
-Pick which skills and which agents you want:
-
-```bash
+```sh
+npx skills add ShawnBaek/iOS-experts --list
 npx skills add ShawnBaek/iOS-experts
+npx skills add ShawnBaek/iOS-experts -a codex -a claude-code
 ```
 
-### Specific skills
+Installing a skill copies its folder; it does not automatically install this
+repository's root `AGENTS.md` into an app project. To enable the downstream
+harness, install the full collection so its routed specialists are present,
+then copy and customize these files from the installed `agent-harness` folder:
 
-```bash
-npx skills add ShawnBaek/iOS-experts --skill icon-composer
+```text
+templates/AGENTS.md   -> <app-repository>/AGENTS.md
+templates/harness.json -> <app-repository>/.iosx/harness.json
 ```
 
-### Target specific agents
+Keep account/team identifiers in a private, untracked overlay referenced by the
+project harness. Do not commit credentials or personal policy into this public
+collection.
 
-```bash
-# Install into Claude Code and Codex at once
-npx skills add ShawnBaek/iOS-experts -a claude-code -a codex
+## Repository contracts
 
-# Global (~/), Codex only, no prompts — CI-friendly
-npx skills add ShawnBaek/iOS-experts -g -a codex -y
+Machine-readable capability, workflow, and ledger schemas live under
+[agent-harness/contracts](skills/agent-harness/contracts/). The root
+`AGENTS.md` and `CLAUDE.md` govern maintenance of this repository; the
+installable template governs downstream projects.
 
-# All skills into every detected agent
-npx skills add ShawnBaek/iOS-experts --all
+Validate this documentation repository without running Xcode:
+
+```sh
+python3 scripts/validate_repository.py
+python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
-### Browse before installing
+For each changed skill, also run the Agent Skills validator and list/install
+smoke test available in your environment. A docs-only change does not justify an
+Xcode build or four-platform matrix.
 
-```bash
-npx skills add ShawnBaek/iOS-experts --list   # list the skills in this repo
-npx skills find ios                                 # search skills.sh by keyword
-```
+## Contributing
 
-### Manage installed skills
+1. Work from the authoritative clean checkout and remote default branch.
+2. Propose and obtain approval for a concise feature branch before editing.
+3. Preserve existing skill IDs; a new skill needs a distinct trigger and owner.
+4. Keep Apple-authored skill content external and use live official references.
+5. Update the catalog, contracts, version, and Mermaid source together.
+6. Run the minimum validators above.
+7. Honor the active repository-confirmation gate before the first commit/push.
+8. Open an evidence-backed PR; do not auto-merge.
 
-```bash
-npx skills list                  # what's installed (project + global)
-npx skills update                # pull latest
-npx skills remove commit-message # uninstall one
-```
+Primary references:
 
-> Installs into **Project** scope (`./<agent>/skills/`) by default — committed with your repo, shared with your team. Add `-g` for **Global** scope (`~/<agent>/skills/`), available across all your projects.
-
-## The end-to-end flow
-
-```
-   [optional: figma-bridge]  →   apple-platform-ui        apple-platform-performance        xcodebuild
-        ↓                              ↓                         ↓                       ↓
-   Figma MCP setup,              SwiftUI code              Hangs / hitches /        Build + run on
-   Code Connect for SwiftUI,     with mocks,               launch / body cost /     simulator;
-   generate from frame,    →     Light/Dark/XXL    →       ML inference / audio →   capture logs;
-   // figma: code-connect map    previews,                 — 27 Effective items     UI tests
-   (skip if no Figma file)       HIG polish                + XCTMetric tests
-                                                          ↓
-                            screenshot                app-store-connect
-                                 ↓                         ↓
-                        Capture App Store           Upload IPA,
-                        shots; frame;          →    TestFlight,
-                        upload via asc              submit for review
-                                 ↓                         ↓
-                                 └─── app-website ────────┘
-                                       (screenshots feed the
-                                        Features section;
-                                        App Store URL feeds
-                                        the Download badge)
-
-   commit-message sits across all of them — invoked right before any `git commit`
-   to turn the staged diff into a properly-formatted, useful message.
-
-   icon-composer creates the layered app icon before release, installs the canonical
-   AppName.icon package in Xcode, and hands target verification to xcodebuild.
-
-   cicd wraps the whole loop — GitHub Actions on a self-hosted Mac runner
-   builds + tests on every PR, archives + ships to TestFlight on tag push.
-   Failures route back to xcodebuild / app-store-connect / apple-platform-performance
-   for diagnosis.
-```
-
-## External tools (some skills wrap third-party CLIs / MCP servers)
-
-| Skill | External dependency | Install once |
-|-------|---------------------|--------------|
-| `apple-platform-ui` | none (uses Xcode itself) | — |
-| `figma-bridge` | **Figma MCP server** + (optional) **Code Connect Swift package** | `claude mcp add figma --url https://mcp.figma.com/v1 --transport http` (or the Codex equivalent); `.package(url: "https://github.com/figma/code-connect", from: "1.0.0")` in `Package.swift` |
-| `core-data` | none (Apple frameworks + Xcode model editor) | — |
-| `apple-platform-performance` | Instruments + XCTest (ship with Xcode) | — |
-| `icon-composer` | **[Icon Composer](https://developer.apple.com/icon-composer/)** + optional **[SF Symbols](https://developer.apple.com/sf-symbols/)** | Download both from Apple; Icon Composer requires macOS Tahoe 26.4 or later |
-| `xcodebuild` | **XcodeBuildMCP** ([xcodebuildmcp.com](https://www.xcodebuildmcp.com)) | `npx -y xcodebuildmcp@latest mcp` via your agent's MCP config |
-| `screenshot` | XcodeBuildMCP + asc CLI | both via the skills above |
-| `app-store-connect` | **asc CLI** ([asccli.sh](https://asccli.sh)) | `brew install asc` |
-| `app-website` | **SwiftUI-For-Web** ([repo](https://github.com/ShawnBaek/SwiftUI-For-Web)) | `npm install swiftui-for-web` |
-| `cicd` | **`gh` CLI** + **`act`** + a Mac self-hosted runner | `brew install gh act` |
-| `commit-message` | `git` | already on your machine |
-
-Each skill explains any additional setup it needs when you first use it.
-
-## Repo layout
-
-```
-iOS-experts/
-├── README.md
-└── skills/
-    ├── native-app-lead/SKILL.md    # the team lead — coordinates the twelve below
-    ├── apple-platform-ui/
-    │   ├── SKILL.md
-    │   ├── keyboard.md
-    │   └── launch-screen.md
-    ├── figma-bridge/
-    │   ├── SKILL.md
-    │   ├── mcp-setup.md            # Claude Code + Codex MCP install
-    │   ├── code-connect.md         # SwiftUI Code Connect (CLI + GitHub UI)
-    │   ├── code-connect-map.md     # // figma: URL comment convention
-    │   ├── figma-review.md         # developer-friendliness audit
-    │   └── generate-from-frame.md  # generate_figma_design + avoid-large-frames
-    ├── core-data/
-    │   ├── SKILL.md
-    │   ├── migrations.md
-    │   └── concurrency.md
-    ├── apple-platform-performance/
-    │   ├── SKILL.md
-    │   └── part-1…6.md             # body cost, hangs, hitches, launch, diagnose, ML/audio
-    ├── icon-composer/
-    │   ├── SKILL.md
-    │   └── platform-handoff.md      # platform sizes, Xcode integration, legacy fallbacks
-    ├── xcodebuild/SKILL.md
-    ├── screenshot/SKILL.md
-    ├── app-store-connect/SKILL.md
-    ├── app-website/
-    │   ├── SKILL.md
-    │   └── sections.md, responsive.md, 3d-devices.md, deploy.md, api-reference.md, playwright-verify.md
-    ├── cicd/
-    │   ├── SKILL.md
-    │   └── workflow-templates.md, self-hosted-runner.md, secrets-and-variables.md, act-local-testing.md, cleanup-and-debug.md
-    └── commit-message/SKILL.md
-```
-
-## Philosophy
-
-Indie developers ship. They don't theme, don't have a release engineer, don't have a perf team, and don't have time to read every doc.
-
-Each skill saves the most expensive thing — the loop of *do it, realize you missed a step, do it again*:
-
-- **native-app-lead** kills the "what do I even do next" loop by sequencing the whole journey and handing each stage to the specialist that owns it.
-- **apple-platform-ui** kills the rebuild-tweak loop by reasoning through layout in-head before ⌘R.
-- **figma-bridge** kills the design-handoff-as-screenshot loop — wires the Figma MCP server, sets up Code Connect for SwiftUI, generates first-draft code from a chosen frame, then hands off to apple-platform-ui for HIG polish. The Figma workflow complements the no-designer workflow.
-- **core-data** kills the "works on clean install, crashes on upgrade" loop by defining migration strategy, store-load triage, and safe context boundaries.
-- **apple-platform-performance** kills the "ship → real users complain → reverse-engineer the regression" loop by gating it in CI with XCTMetric.
-- **icon-composer** kills the "looks right at 1024 px, ships wrong everywhere else" loop by making the layered source, Xcode handoff, platform sizing, and archive verification one workflow.
-- **xcodebuild** kills the "what's the destination flag again" loop.
-- **screenshot** kills the multi-hour manual screenshot ritual.
-- **app-store-connect** kills the App Store Connect web-UI loop (and the 24h rejection cycle by always pre-flighting).
-- **app-website** kills the "I'll just put a `<div>About</div>` page up" loop by giving you a typography-first one-pager in the same SwiftUI style as the app.
-- **cicd** kills the "commit, push, wait 8 minutes, fail" loop by running workflows locally with `act` first, then deploying via `gh` CLI + a self-hosted Mac.
-- **commit-message** kills the `git log | grep wip` loop.
-
-Default to system. Deviate only when there's a real reason.
-
-## Naming conventions
-
-- **Skills** live in `skills/<short-name>/` (e.g. `xcodebuild`). The `name:` in each `SKILL.md` frontmatter matches the folder name.
-- **Sub-docs** for big skills live beside the `SKILL.md` in the same folder (e.g. `skills/cicd/workflow-templates.md`). The `SKILL.md` stays small (overview + quick-reference table) and tells the agent to `Read` the matching sub-doc when a topic comes up — progressive disclosure. Used today by `app-website` (6 sub-docs), `apple-platform-performance` (6 sub-docs: parts 1–6 including ML/audio), `cicd` (5 sub-docs), `figma-bridge` (5 sub-docs), `apple-platform-ui` (2 sub-docs: keyboard, launch-screen), `core-data` (2 sub-docs: migrations, concurrency), and `icon-composer` (1 sub-doc: platform handoff).
-
-## Contribute
-
-Validate locally before pushing — point `skills add` at the working copy:
-
-```bash
-npx skills add ./ --list
-npx skills add ./ --skill apple-platform-ui
-```
-
-Add a new skill: create `skills/<name>/SKILL.md` with `name` + `description` frontmatter and the instructions, drop any sub-docs in the same folder, and add a row to the table above.
-
-### Required branch workflow
-
-Before starting work in this repository:
-
-1. Inspect the clean working tree, current branch, remote, and remote default branch.
-2. Start from the latest `origin/main` (or `origin/master` if that is the repository default).
-3. Propose a concise feature-branch name and wait for approval before editing.
-4. Create the approved feature branch in the existing checkout. Do not create a worktree or alternate checkout.
-
-For Xcode projects, keep using the directory containing the project or workspace
-that was opened first. If the project uses XcodeGen, do not regenerate while the
-current Xcode session is open unless explicitly requested.
-
-Create and validate skills with the `skills.sh` CLI, for example:
-
-```bash
-npx skills add ./ --list
-npx skills add ./ --skill <name>
-```
-
-Do not add a skill only to a private agent directory; the source of truth for
-this repository is `skills/<name>/SKILL.md` and its README entry.
-
-To get this collection onto the [skills.sh](https://skills.sh) directory/leaderboard so anyone can find it, follow the publishing flow at [skills.sh](https://skills.sh).
+- [Apple: Extending and customizing agents](https://developer.apple.com/documentation/xcode/extending-and-customizing-agents)
+- [Apple: Giving external agents access to Xcode](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode)
+- [OpenAI: Codex as a platform](https://developers.openai.com/blog/codex-as-a-platform)
+- [Anthropic: Knowledge graph guide](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide)
+- [GitHub Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
+- [Agent Skills specification](https://agentskills.io/specification)
