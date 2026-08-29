@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:private-policy-overlay:1.0.0",
+  "type": "object",
+  "required": ["schema_version", "decision", "github", "apple"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "decision": {"const": "approved"},
+    "github": {
+      "type": "object",
+      "required": ["owner"],
+      "properties": {
+        "owner": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "apple": {
+      "type": ["object", "null"],
+      "required": ["account_guard_ref", "team_id"],
+      "properties": {
+        "account_guard_ref": {"type": "string", "minLength": 1},
+        "team_id": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

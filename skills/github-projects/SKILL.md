@@ -36,13 +36,23 @@ necessary behavior and smallest useful verification. Link the feature branch
 and PR through the issue number; use GitHub's closing keywords only when the
 PR is intended to close the issue on merge.
 
+When Spec Kit is selected, use one feature Issue by default. Expand T### tasks
+into separate Issues only when each task is independently reviewable,
+assignable, and PR-sized. Spec Kit status is planning evidence; GitHub status
+still follows observable branch, PR, check, merge, or blocker state.
+
+An exact `agent-harness` run authorization may pre-authorize Issue creation,
+bounded comments/status updates, push, PR creation, and evidence publication.
+Validate the single-use grant immediately before each write. It never grants
+Project OAuth scope expansion, ruleset changes, merge, or auto-merge.
+
 Use these Project statuses unless an existing Project defines its own mapping:
 
 | Status | Meaning |
 | --- | --- |
 | Backlog | Candidate work, not yet selected. |
 | Ready | Scoped and unblocked; no writer currently owns it. |
-| In Progress | One active writer lease owns implementation. |
+| In Progress | Work is underway; each mutation is serialized by the required writer lease. |
 | In Review | A PR exists and review/required checks remain. |
 | Done | Merged or otherwise accepted with evidence linked. |
 | Blocked | Cannot safely continue; record the blocker and owner. |

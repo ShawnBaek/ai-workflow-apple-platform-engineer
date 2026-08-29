@@ -4,6 +4,11 @@ Use this reference once a concrete Issue, Project v2, branch, or PR is in
 scope. External writes require the approval required by the repository and
 user; this workflow does not grant it.
 
+If an immutable run authorization already grants the exact unchanged action,
+target, repository, branch, and idempotency key, reuse that authorization hash
+instead of asking a routine second time. A scope/target mismatch or missing
+Project permission becomes `blocked`/partial success; do not broaden access.
+
 ## Minimal mapping
 
 | Delivery artifact | Required link or evidence |

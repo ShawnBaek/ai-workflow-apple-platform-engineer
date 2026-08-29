@@ -8,9 +8,15 @@
     "selected_writer",
     "reviewer",
     "platforms",
+    "delivery_target",
+    "health_profile",
+    "health_components",
     "authoritative_root",
     "xcode_container",
     "private_policy_overlay",
+    "run_authorization",
+    "spec_kit",
+    "github_tracking",
     "max_active_repository_writers",
     "max_implementation_attempts",
     "max_review_cycles"
@@ -27,9 +33,41 @@
       "uniqueItems": true,
       "items": {"enum": ["ios", "ipados", "watchos", "macos"]}
     },
+    "delivery_target": {
+      "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+    },
+    "health_profile": {
+      "enum": ["pr_ready", "runtime_ui", "testflight_uploaded", "testflight_distributed", "icon_upstream"]
+    },
+    "health_components": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["spec_kit", "xcode_mcp", "github_project", "local_llm"]
+      }
+    },
     "authoritative_root": {"type": "string", "minLength": 1},
     "xcode_container": {"type": "string", "minLength": 1},
     "private_policy_overlay": {"type": "string", "minLength": 1},
+    "run_authorization": {"type": "string", "minLength": 1},
+    "spec_kit": {
+      "type": "object",
+      "required": ["enabled", "release"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "release": {"const": "v1.0.1"}
+      },
+      "additionalProperties": false
+    },
+    "github_tracking": {
+      "type": "object",
+      "required": ["issues", "project"],
+      "properties": {
+        "issues": {"const": true},
+        "project": {"type": ["object", "null"]}
+      },
+      "additionalProperties": false
+    },
     "max_active_repository_writers": {"const": 1},
     "max_implementation_attempts": {"const": 3},
     "max_review_cycles": {"const": 2}
@@ -70,6 +108,52 @@
             }
           }
         ]
+      }
+    },
+    {
+      "if": {"properties": {"delivery_target": {"const": "pr_ready"}}},
+      "then": {
+        "properties": {
+          "health_profile": {
+            "enum": ["pr_ready", "runtime_ui", "icon_upstream"]
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"delivery_target": {"const": "testflight_uploaded"}}},
+      "then": {
+        "properties": {"health_profile": {"const": "testflight_uploaded"}}
+      }
+    },
+    {
+      "if": {"properties": {"delivery_target": {"const": "testflight_distributed"}}},
+      "then": {
+        "properties": {"health_profile": {"const": "testflight_distributed"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "spec_kit": {"properties": {"enabled": {"const": true}}}
+        }
+      },
+      "then": {
+        "properties": {
+          "health_components": {"contains": {"const": "spec_kit"}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "github_tracking": {"properties": {"project": {"type": "object"}}}
+        }
+      },
+      "then": {
+        "properties": {
+          "health_components": {"contains": {"const": "github_project"}}
+        }
       }
     }
   ],

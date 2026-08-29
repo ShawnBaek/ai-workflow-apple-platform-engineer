@@ -30,6 +30,7 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 | Need | Skill |
 |---|---|
 | graph/loop/RAG, Codex/Claude collaboration, task-to-PR | `agent-harness` |
+| CLI/skill/MCP/account/Spec Kit readiness | `apple-development-health` |
 | project root/container, host Xcode, XcodeGen | `xcode-project-workflow` |
 | branches, explicit worktrees, index locks, PR Git state | `git-workflow` |
 | UI implementation without Figma | `apple-platform-ui` |
@@ -60,8 +61,10 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 6. Review a frozen patch, converge with bounded attempts, and preserve failures.
 7. Prepare evidence, confirm repository, commit, push, create the PR, and wait
    for required checks when the task authorized those actions.
-8. Stop at PR-ready. Merge, App Store submission, destructive cleanup, and scope
-   expansion remain separate human gates.
+8. Stop at the selected authorized target: `pr_ready` by default, or the
+   pre-authorized TestFlight uploaded/internal-distributed continuation. Merge,
+   App Review/production release, signing-resource mutation, destructive
+   cleanup, and scope expansion remain separate human gates.
 
 ## UI path
 
@@ -80,5 +83,5 @@ one acceptance flow and assigns the repository writer to connect them.
 - current source and observable behavior over assumptions;
 - minimum-sufficient tests, with omitted checks and residual risk recorded;
 - a file/artifact existing is not proof that its acceptance criterion passed;
-- no specialist duplication, blind retry, auto-worktree, auto-cleanup, auto-submit,
-  force push, or auto-merge.
+- no specialist duplication, blind retry, auto-worktree, auto-cleanup, unscoped
+  auto-submit, force push, or auto-merge.

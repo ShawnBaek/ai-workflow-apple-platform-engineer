@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -15,6 +16,11 @@ CONTRACTS = SKILLS / "agent-harness" / "contracts"
 
 def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def canonical_sha256(value: Any) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def frontmatter_name(path: Path) -> str | None:
@@ -58,6 +64,8 @@ def validate_json_schema(instance: Any, schema: dict[str, Any], path: str = "$")
             errors.append(f"{path}: must have minLength {schema['minLength']}")
         if schema.get("format") == "date-time" and not _date_time(instance):
             errors.append(f"{path}: must be an RFC3339 date-time")
+        if "pattern" in schema and not re.search(schema["pattern"], instance):
+            errors.append(f"{path}: must match pattern {schema['pattern']!r}")
     if isinstance(instance, (int, float)) and not isinstance(instance, bool) and "minimum" in schema and instance < schema["minimum"]:
         errors.append(f"{path}: must be at least {schema['minimum']}")
     if isinstance(instance, list):
@@ -70,13 +78,28 @@ def validate_json_schema(instance: Any, schema: dict[str, Any], path: str = "$")
         if isinstance(schema.get("items"), dict):
             for index, value in enumerate(instance):
                 errors.extend(validate_json_schema(value, schema["items"], f"{path}[{index}]"))
+        if isinstance(schema.get("contains"), dict) and not any(
+            not validate_json_schema(value, schema["contains"], f"{path}[*]")
+            for value in instance
+        ):
+            errors.append(f"{path}: must contain an item matching the required schema")
     if isinstance(instance, dict):
         properties = schema.get("properties", {})
+        if "minProperties" in schema and len(instance) < schema["minProperties"]:
+            errors.append(f"{path}: must contain at least {schema['minProperties']} properties")
         for key in schema.get("required", []):
             if key not in instance:
                 errors.append(f"{path}: missing required property {key!r}")
         if schema.get("additionalProperties") is False:
             errors.extend(f"{path}: additional property {key!r} is forbidden" for key in instance if key not in properties)
+        elif isinstance(schema.get("additionalProperties"), dict):
+            for key in instance:
+                if key not in properties:
+                    errors.extend(
+                        validate_json_schema(
+                            instance[key], schema["additionalProperties"], f"{path}.{key}"
+                        )
+                    )
         for key, child in properties.items():
             if key in instance and isinstance(child, dict):
                 errors.extend(validate_json_schema(instance[key], child, f"{path}.{key}"))
@@ -86,6 +109,8 @@ def validate_json_schema(instance: Any, schema: dict[str, Any], path: str = "$")
         matches = sum(not validate_json_schema(instance, child, path) for child in schema["oneOf"])
         if matches != 1:
             errors.append(f"{path}: must match exactly one oneOf branch (matched {matches})")
+    if "not" in schema and not validate_json_schema(instance, schema["not"], path):
+        errors.append(f"{path}: must not match the forbidden schema")
     if "if" in schema:
         branch = "then" if not validate_json_schema(instance, schema["if"], path) else "else"
         if isinstance(schema.get(branch), dict):
@@ -155,8 +180,65 @@ def validate_dag(nodes: list[dict[str, Any]]) -> list[str]:
     return sorted(set(errors))
 
 
-CONTROL_SPINE = ["intake", "guard", "discover", "plan", "approve_plan", "branch_approval", "claim_implementation_writer", "implement", "release_implementation_writer", "verify", "freeze_review", "review", "converge", "reverify", "prepare_evidence", "prepare_pr", "repository_confirmation", "claim_delivery_writer", "commit", "release_delivery_writer", "claim_github_mutation", "push", "verify_remote_sha", "create_pr", "publish_evidence", "verify_published_evidence", "release_github_mutation", "checks", "pr_ready"]
-LEASE_PAIRS = {"source_checkout_writer": ["claim_implementation_writer", "release_implementation_writer", "claim_delivery_writer", "release_delivery_writer"], "github_external_mutation": ["claim_github_mutation", "release_github_mutation"]}
+CONTROL_SPINE = [
+    "intake",
+    "guard",
+    "health",
+    "discover",
+    "discover_spec_kit",
+    "plan",
+    "approve_plan",
+    "branch_approval",
+    "bind_spec_kit_snapshot",
+    "bind_run_authorization",
+    "claim_implementation_writer",
+    "prepare_and_verify_branch",
+    "claim_github_tracking",
+    "ensure_issue_ready",
+    "release_github_tracking",
+    "claim_github_in_progress",
+    "mark_issue_in_progress",
+    "release_github_in_progress",
+    "implement",
+    "release_implementation_writer",
+    "verify",
+    "freeze_review",
+    "review",
+    "converge",
+    "reverify",
+    "prepare_evidence",
+    "prepare_pr",
+    "repository_confirmation",
+    "claim_delivery_writer",
+    "commit",
+    "release_delivery_writer",
+    "claim_github_mutation",
+    "push",
+    "verify_remote_sha",
+    "create_pr",
+    "mark_issue_in_review",
+    "publish_evidence",
+    "verify_published_evidence",
+    "checks",
+    "release_github_mutation",
+    "pr_ready",
+]
+LEASE_PAIRS = {
+    "source_checkout_writer": [
+        "claim_implementation_writer",
+        "release_implementation_writer",
+        "claim_delivery_writer",
+        "release_delivery_writer",
+    ],
+    "github_external_mutation": [
+        "claim_github_tracking",
+        "release_github_tracking",
+        "claim_github_in_progress",
+        "release_github_in_progress",
+        "claim_github_mutation",
+        "release_github_mutation",
+    ],
+}
 RUNTIME_REGISTRY_POLICY = {
     "failure_class": "coresimulator_runtime_disk_registration",
     "normalized_signatures": ["unable to get a dev_t for store <store-id>"],
@@ -207,6 +289,7 @@ XCODE_MCP_PROVIDER_POLICY = {
         "registration",
         "current_task_exposure",
         "read_only_connectivity",
+        "exact_workspace_binding",
     ],
     "record_install_provenance": [
         "config_scope",
@@ -216,6 +299,21 @@ XCODE_MCP_PROVIDER_POLICY = {
         "resolved_version",
     ],
     "same_codex_host_clients_share_configuration": True,
+    "provider_injection_layers": [
+        "official_codex_mcpbridge",
+        "direct_codex_mcp",
+        "codex_plugin_mcp",
+        "xcode_agent_plugin",
+    ],
+    "capability_results": [
+        "workspace_discovery",
+        "interaction_session",
+        "workspace_bound_run",
+        "hierarchy_touch_capture",
+        "direct_apple_cli",
+    ],
+    "read_only_probe_timeout_seconds": 30,
+    "max_unchanged_read_only_retries": 1,
     "official_external_agent_route_first": True,
     "configuration_mutation_requires_explicit_approval": True,
     "max_active_simulator_capable_providers_during_incident": 1,
@@ -232,6 +330,280 @@ XCODE_MCP_PROVIDER_POLICY = {
         "build_or_destination_inventory_as_connectivity_probe",
     ],
 }
+
+FORBIDDEN_RUN_ACTIONS = [
+    "git.force_push",
+    "github.auto_merge",
+    "github.ruleset_change",
+    "apple.app_review_submit",
+    "apple.production_release",
+    "apple.signing_resource_mutation",
+    "credential.scope_expansion",
+    "environment.destructive_cleanup",
+]
+ALLOWED_RUN_ACTIONS = {
+    "git.commit",
+    "git.push",
+    "github.issue.create",
+    "github.issue.update",
+    "github.issue.comment",
+    "github.project.update",
+    "github.pr.create",
+    "github.pr.update",
+    "github.pr.comment",
+    "github.evidence.publish",
+    "github.checks.wait",
+    "apple.testflight.upload",
+    "apple.testflight.processing.wait",
+    "apple.testflight.distribute_internal",
+    "apple.testflight.readback",
+}
+TESTFLIGHT_NODE_ORDER = [
+    "bind_pr_ready",
+    "verify_run_authorization",
+    "health_gate",
+    "claim_testflight_upload",
+    "archive",
+    "verify_artifact",
+    "upload",
+    "wait_processing",
+    "read_back_upload",
+    "release_testflight_upload",
+    "claim_upload_evidence_publication",
+    "publish_upload_evidence",
+    "verify_upload_evidence",
+    "release_upload_evidence_publication",
+    "testflight_uploaded",
+    "claim_testflight_distribution",
+    "verify_internal_groups",
+    "distribute_internal",
+    "read_back_distribution",
+    "release_testflight_distribution",
+    "claim_distribution_evidence_publication",
+    "publish_distribution_evidence",
+    "verify_distribution_evidence",
+    "release_distribution_evidence_publication",
+    "testflight_distributed",
+]
+
+
+def valid_created_github_target(grant: dict[str, Any], output_target: Any) -> bool:
+    direct = str(grant.get("target", ""))
+    kind = grant.get("produces_target_kind")
+    if kind == "github_issue" and ":feature:" in direct:
+        repository = direct.split(":feature:", 1)[0]
+        return re.fullmatch(rf"{re.escape(repository)}:issue:[1-9][0-9]*", str(output_target)) is not None
+    if kind == "github_pr" and ":" in direct:
+        repository = direct.split(":", 1)[0]
+        return re.fullmatch(rf"{re.escape(repository)}:pr:[1-9][0-9]*", str(output_target)) is not None
+    return False
+
+
+def validate_run_authorization_contract(envelope: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if envelope.get("forbidden_actions") != FORBIDDEN_RUN_ACTIONS:
+        errors.append("run authorization forbidden action boundary drifted")
+    for flag in (
+        "auto_merge",
+        "app_review_submit",
+        "credential_scope_expansion",
+        "signing_resource_mutation",
+        "destructive_cleanup",
+    ):
+        if envelope.get(flag) is not False:
+            errors.append(f"run authorization {flag} must remain false")
+    grants = envelope.get("action_grants", [])
+    grant_ids, idempotency_keys = set(), set()
+    for grant in grants:
+        action = grant.get("action")
+        if action not in ALLOWED_RUN_ACTIONS:
+            errors.append(f"run authorization contains non-allowlisted action {action}")
+        if grant.get("grant_id") in grant_ids:
+            errors.append("run authorization grant IDs must be unique")
+        if grant.get("idempotency_key") in idempotency_keys:
+            errors.append("run authorization idempotency keys must be unique")
+        grant_ids.add(grant.get("grant_id"))
+        idempotency_keys.add(grant.get("idempotency_key"))
+        if grant.get("single_use") is not True:
+            errors.append("every run authorization action grant must be single use")
+    actions = {grant.get("action") for grant in grants}
+    target = envelope.get("delivery_target")
+    apple = envelope.get("apple")
+    if target == "pr_ready" and (apple is not None or any(str(action).startswith("apple.") for action in actions)):
+        errors.append("pr_ready authorization cannot grant Apple mutations")
+    if target in {"testflight_uploaded", "testflight_distributed"}:
+        if not isinstance(apple, dict):
+            errors.append("TestFlight authorization must bind an Apple target")
+        for required in (
+            "apple.testflight.upload",
+            "apple.testflight.processing.wait",
+            "apple.testflight.readback",
+        ):
+            if required not in actions:
+                errors.append(f"TestFlight authorization missing {required}")
+    if target == "testflight_distributed":
+        if "apple.testflight.distribute_internal" not in actions:
+            errors.append("TestFlight distribution authorization missing exact distribution grant")
+        if not isinstance(apple, dict) or not apple.get("internal_group_ids"):
+            errors.append("TestFlight distribution authorization missing exact group IDs")
+    return errors
+
+
+def validate_testflight_workflow(workflow: dict[str, Any]) -> list[str]:
+    errors = validate_dag(workflow.get("nodes", []))
+    nodes = workflow.get("nodes", [])
+    ids = [node.get("id") for node in nodes]
+    if ids != TESTFLIGHT_NODE_ORDER:
+        errors.append("TestFlight continuation node order drifted")
+    expected_dependencies = {
+        node_id: ([] if index == 0 else [TESTFLIGHT_NODE_ORDER[index - 1]])
+        for index, node_id in enumerate(TESTFLIGHT_NODE_ORDER)
+    }
+    observed_dependencies = {
+        node.get("id"): node.get("requires") for node in nodes
+    }
+    if observed_dependencies != expected_dependencies:
+        errors.append("TestFlight continuation dependency edges drifted")
+    wait_node = next((node for node in nodes if node.get("id") == "wait_processing"), {})
+    if {
+        "timeout_from_authorization": wait_node.get("timeout_from_authorization"),
+        "retry_bound_from_authorization": wait_node.get("retry_bound_from_authorization"),
+        "heartbeat_active_lease": wait_node.get("heartbeat_active_lease"),
+    } != {
+        "timeout_from_authorization": "async_wait_minutes",
+        "retry_bound_from_authorization": "max_transient_retries",
+        "heartbeat_active_lease": True,
+    }:
+        errors.append("TestFlight processing wait must use authorization bounds and lease heartbeat")
+    terminals = {
+        node.get("terminal_for"): node.get("id")
+        for node in nodes
+        if node.get("terminal_for")
+    }
+    if terminals != {
+        "testflight_uploaded": "testflight_uploaded",
+        "testflight_distributed": "testflight_distributed",
+    }:
+        errors.append("TestFlight continuation terminals drifted")
+    actions = [node.get("grant_action") for node in nodes if node.get("grant_action")]
+    if actions != [
+        "apple.testflight.upload",
+        "apple.testflight.processing.wait",
+        "apple.testflight.readback",
+        "github.evidence.publish",
+        "apple.testflight.distribute_internal",
+        "apple.testflight.readback",
+        "github.evidence.publish",
+    ]:
+        errors.append("TestFlight action-grant sequence drifted")
+    leases = [
+        (node.get("id"), node.get("resource"), node.get("lease_action"))
+        for node in nodes
+        if node.get("resource")
+    ]
+    if leases != [
+        ("claim_testflight_upload", "signing_or_app_store_connect", "acquire"),
+        ("release_testflight_upload", "signing_or_app_store_connect", "release"),
+        ("claim_upload_evidence_publication", "github_external_mutation", "acquire"),
+        ("release_upload_evidence_publication", "github_external_mutation", "release"),
+        ("claim_testflight_distribution", "signing_or_app_store_connect", "acquire"),
+        ("release_testflight_distribution", "signing_or_app_store_connect", "release"),
+        ("claim_distribution_evidence_publication", "github_external_mutation", "acquire"),
+        ("release_distribution_evidence_publication", "github_external_mutation", "release"),
+    ]:
+        errors.append("TestFlight continuation must balance Apple and evidence-publication leases")
+    if workflow.get("starts_after") != "pr_ready":
+        errors.append("TestFlight continuation must start after pr_ready")
+    forbidden = workflow.get("policy", {}).get("forbidden_actions", [])
+    if workflow.get("policy", {}).get("evidence_publication_requires_github_lease") is not True:
+        errors.append("TestFlight evidence publication must require a GitHub lease")
+    if workflow.get("policy", {}).get("release_every_acquired_lease_on_blocked_or_terminal") is not True:
+        errors.append("TestFlight continuation must release every lease on blocked or terminal paths")
+    if workflow.get("cleanup") != {
+        "mode": "finally",
+        "triggers": ["blocked", "failed_terminal", "cancelled", "success_terminal"],
+        "release_active_resources": [
+            "signing_or_app_store_connect",
+            "github_external_mutation",
+        ],
+    }:
+        errors.append("TestFlight continuation finally cleanup contract drifted")
+    for action in (
+        "apple.app_review_submit",
+        "apple.production_release",
+        "apple.signing_resource_mutation",
+        "credential.scope_expansion",
+        "github.auto_merge",
+    ):
+        if action not in forbidden:
+            errors.append(f"TestFlight continuation forbidden action missing: {action}")
+    return errors
+
+
+def validate_companion_upstream(manifest: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    upstream = manifest.get("upstream", {})
+    integration = manifest.get("integration", {})
+    if upstream.get("repository") != "ShawnBaek/IconGen" or upstream.get("visibility") != "public":
+        errors.append("IconGen companion upstream identity or visibility drifted")
+    if integration != {
+        "mode": "reference-only",
+        "execute_upstream": False,
+        "vendored_files": [],
+        "consumer_skill": "icon-composer",
+        "consumer_repository": "ShawnBaek/iOS-experts",
+        "drift_action": "create_or_update_review_issue",
+        "auto_merge": False,
+    }:
+        errors.append("IconGen companion upstream safety boundary drifted")
+    if manifest.get("license", {}).get("status") == "absent" and integration.get("vendored_files"):
+        errors.append("unlicensed companion upstream cannot have vendored files")
+    return errors
+
+
+def validate_icongen_workflow_text(text: str) -> list[str]:
+    """Fail closed if the reference-only watcher gains broader triggers or writes."""
+    errors: list[str] = []
+    trigger_match = re.search(r"(?ms)^on:\n(?P<body>.*?)^permissions:\n", text)
+    if trigger_match is None:
+        return ["IconGen watcher trigger block is missing"]
+    trigger_keys = re.findall(r"(?m)^  ([A-Za-z_][A-Za-z0-9_-]*):?\s*$", trigger_match.group("body"))
+    if trigger_keys != ["schedule", "workflow_dispatch"]:
+        errors.append("IconGen watcher triggers must be exactly schedule and workflow_dispatch")
+    permission_match = re.search(r"(?ms)^permissions:\n(?P<body>.*?)^concurrency:\n", text)
+    permission_lines = [] if permission_match is None else [
+        line.strip() for line in permission_match.group("body").splitlines() if line.strip()
+    ]
+    if permission_lines != ["contents: read", "issues: write"]:
+        errors.append("IconGen watcher permissions must remain contents read and issues write only")
+    uses = re.findall(r"(?m)^\s*uses:\s*(\S+)", text)
+    if uses != ["actions/checkout@11d5960a326750d5838078e36cf38b85af677262"]:
+        errors.append("IconGen watcher may use only the pinned checkout action")
+    jobs_match = re.search(r"(?ms)^jobs:\n(?P<body>.*)\Z", text)
+    jobs = [] if jobs_match is None else re.findall(
+        r"(?m)^  ([A-Za-z_][A-Za-z0-9_-]*):\s*$", jobs_match.group("body")
+    )
+    if jobs != ["compare"]:
+        errors.append("IconGen watcher must contain exactly one compare job")
+    required = (
+        "runs-on: ubuntu-latest",
+        "timeout-minutes: 5",
+        "watch_companion_upstream.py",
+        "--target-repository \"$GITHUB_REPOSITORY\"",
+    )
+    if any(item not in text for item in required):
+        errors.append("IconGen watcher execution contract drifted")
+    forbidden = (
+        "pull_request_target",
+        "auto-merge",
+        "write-all",
+        "contents: write",
+        "pull-requests: write",
+        "id-token: write",
+    )
+    if any(item in text for item in forbidden):
+        errors.append("IconGen watcher gained a forbidden privilege or action")
+    return errors
 
 
 def validate_runtime_registry_policy(capabilities: dict[str, Any]) -> list[str]:
@@ -338,30 +710,168 @@ def validate_workflow_semantics(workflow: dict[str, Any], resources: set[str]) -
             errors.append(f"unexpected attempt bound {key}")
     if policy.get("pause_while_awaiting_human_or_ci") is not True:
         errors.append("workflow must pause active wall time while awaiting human or CI")
-    if workflow.get("runtime_edge_types") != ["attempt_of", "supersedes", "produced_by", "validates", "invalidates", "feedback_on", "promoted_to"]:
+    if workflow.get("runtime_edge_types") != [
+        "attempt_of",
+        "supersedes",
+        "produced_by",
+        "validates",
+        "invalidates",
+        "feedback_on",
+        "promoted_to",
+        "authorized_by",
+        "tracks",
+        "continues_from",
+        "derived_from",
+    ]:
         errors.append("workflow runtime edge types drifted")
     if workflow.get("terminal_outcomes") != {"success": "pr_ready", "non_success": ["blocked", "failed_terminal", "cancelled"]}:
         errors.append("workflow terminal outcomes drifted")
     identity = {"algorithm": "patch_identity_v1", "digest": "sha256", "base": "base_sha", "path_order": "utf8_bytewise", "path_record_fields": ["path", "mode", "state", "content_sha256_or_deletion"], "commit_equivalence": "commit_tree_and_changed_paths_match_reviewed_identity"}
     if workflow.get("identity_policy") != identity:
         errors.append("workflow identity policy drifted")
-    completion = ["required_nodes_passed", "latest_evidence_matches_patch_identity", "no_active_resource_lease", "review_patch_identity_current", "acceptance_evidence_complete", "evidence_published_and_viewable", "pull_request_exists", "remote_sha_matches_local_commit", "required_checks_satisfied"]
+    completion = [
+        "required_nodes_passed",
+        "required_health_profile_satisfied",
+        "run_authorization_current",
+        "spec_kit_snapshot_current_or_not_applicable",
+        "latest_evidence_matches_patch_identity",
+        "no_active_resource_lease",
+        "review_patch_identity_current",
+        "acceptance_evidence_complete",
+        "evidence_published_and_viewable",
+        "pull_request_exists",
+        "remote_sha_matches_local_commit",
+        "required_checks_satisfied",
+        "issue_tracking_reconciled_or_recorded_partial",
+    ]
     if workflow.get("completion_requires") != completion:
         errors.append("workflow completion requirements drifted")
+    expected_cleanup = {
+        "mode": "finally",
+        "triggers": ["blocked", "failed_terminal", "cancelled", "success_terminal"],
+        "release_active_resources": [
+            "source_checkout_writer",
+            "xcode_project_mutation",
+            "build_tuple",
+            "simulator_or_device",
+            "coresimulator_runtime_registry",
+            "signing_or_app_store_connect",
+            "github_external_mutation",
+        ],
+    }
+    if workflow.get("cleanup") != expected_cleanup:
+        errors.append("workflow finally cleanup contract drifted")
     return errors
 
 
 def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
     errors, previous, active = [], 0, {}
+    main_workflow = load_json(CONTRACTS / "workflow.json")
+    continuation_workflow = load_json(CONTRACTS / "testflight-workflow.json")
+    node_dependencies = {
+        node["id"]: set(node.get("requires", []))
+        for node in main_workflow.get("nodes", []) + continuation_workflow.get("nodes", [])
+    }
+    ledger_run_id: str | None = None
     registry_approvals: dict[str, dict[str, Any]] = {}
     consumed_registry_approvals: set[str] = set()
+    run_authorizations: dict[str, dict[str, Any]] = {}
+    produced_targets: dict[tuple[str, str], str] = {}
+    apple_artifacts: dict[str, tuple[Any, Any, Any, Any]] = {}
+    consumed_action_grants: set[tuple[str, str]] = set()
+    consumed_idempotency_keys: set[tuple[str, str]] = set()
+    reservations: dict[str, dict[str, Any]] = {}
+    reserved_action_grants: set[tuple[str, str]] = set()
+    reserved_idempotency_keys: set[tuple[str, str]] = set()
+    consumed_reservations: set[str] = set()
+    time_intervals: dict[str, list[tuple[datetime, datetime]]] = {}
+    apple_states: dict[str, set[str]] = {}
+    passed_nodes: set[str] = set()
+    successful_operations: set[tuple[str, str, str]] = set()
     for line, record in enumerate(records, 1):
+        run_id = record.get("run_id")
+        if not isinstance(run_id, str) or not run_id:
+            errors.append(f"ledger record must bind a run ID (line {line})")
+        elif ledger_run_id is None:
+            ledger_run_id = run_id
+        elif run_id != ledger_run_id:
+            errors.append("ledger cannot mix records from different run IDs")
         sequence = record.get("sequence")
         if not isinstance(sequence, int) or isinstance(sequence, bool) or sequence <= previous:
             errors.append(f"ledger sequence must be strictly increasing (line {line})")
         else:
             previous = sequence
         payload = record.get("payload", {})
+        if record.get("record_type") == "approval" and payload.get("kind") == "run_authorization":
+            if any(
+                not payload.get(field)
+                for field in (
+                    "approval_id",
+                    "scope",
+                    "authorization_hash",
+                    "delivery_target",
+                    "issued_at",
+                    "expires_at",
+                    "action_grants",
+                )
+            ):
+                errors.append("run authorization ledger record must bind ID, hash, target, scope, times, and grants")
+            if payload.get("decision") != "approved":
+                errors.append("run authorization ledger record must be an approved immutable envelope")
+            elif payload.get("authorization_hash"):
+                authorization_hash = payload["authorization_hash"]
+                if authorization_hash in run_authorizations:
+                    errors.append("run authorization hash must identify one immutable approval")
+                else:
+                    run_authorizations[authorization_hash] = payload
+                grants = payload.get("action_grants", [])
+                grant_ids = [grant.get("grant_id") for grant in grants]
+                keys = [grant.get("idempotency_key") for grant in grants]
+                if len(grant_ids) != len(set(grant_ids)) or len(keys) != len(set(keys)):
+                    errors.append("run authorization ledger grants and idempotency keys must be unique")
+                for grant in grants:
+                    action = grant.get("action")
+                    system = grant.get("system")
+                    if action not in ALLOWED_RUN_ACTIONS or action in FORBIDDEN_RUN_ACTIONS:
+                        errors.append("run authorization ledger contains a forbidden or unknown action")
+                    if not isinstance(action, str) or system != action.split(".", 1)[0]:
+                        errors.append("run authorization ledger grant system must match its action")
+                    if not grant.get("operation") or not isinstance(grant.get("operation_input"), dict) or not grant.get("operation_input") or grant.get("phase") not in {"pr_delivery", "testflight_upload", "testflight_distribution"} or not re.fullmatch(
+                        r"[0-9a-f]{64}", str(grant.get("constraint_sha256", ""))
+                    ) or not grant.get("resource_key"):
+                        errors.append("run authorization ledger grant must bind operation, constraint, and canonical resource key")
+                    elif canonical_sha256(grant["operation_input"]) != grant.get("constraint_sha256"):
+                        errors.append("run authorization ledger grant operation input drifted from its constraint")
+                target = payload.get("delivery_target")
+                apple_actions = [
+                    grant.get("action") for grant in grants if grant.get("system") == "apple"
+                ]
+                if target == "pr_ready" and apple_actions:
+                    errors.append("pr_ready ledger authorization cannot grant Apple actions")
+                if target == "testflight_uploaded" and "apple.testflight.distribute_internal" in apple_actions:
+                    errors.append("upload-only ledger authorization cannot grant distribution")
+                try:
+                    issued = datetime.fromisoformat(str(payload.get("issued_at")).replace("Z", "+00:00"))
+                    expires = datetime.fromisoformat(str(payload.get("expires_at")).replace("Z", "+00:00"))
+                    if issued.tzinfo is None or expires.tzinfo is None or expires <= issued:
+                        raise ValueError
+                except ValueError:
+                    errors.append("run authorization ledger time range is invalid")
+        if record.get("record_type") == "time_interval":
+            authorization_hash = payload.get("authorization_hash")
+            if authorization_hash not in run_authorizations:
+                errors.append("time interval must reference a prior run authorization")
+            try:
+                started = datetime.fromisoformat(str(payload.get("started_at")).replace("Z", "+00:00"))
+                ended = datetime.fromisoformat(str(payload.get("ended_at")).replace("Z", "+00:00"))
+                if started.tzinfo is None or ended.tzinfo is None or ended <= started:
+                    raise ValueError
+                intervals = time_intervals.setdefault(authorization_hash, [])
+                if any(started < existing_end and existing_start < ended for existing_start, existing_end in intervals):
+                    errors.append("authorization time intervals cannot overlap")
+                intervals.append((started, ended))
+            except ValueError:
+                errors.append("authorization time interval is invalid")
         if record.get("record_type") == "approval" and payload.get("kind") == "destructive_action":
             scope = str(payload.get("scope", ""))
             is_registry = payload.get("resource") == "coresimulator_runtime_registry" or scope.startswith(
@@ -428,14 +938,367 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                 if resource_key in active:
                     errors.append(f"ledger has two active leases for resource {resource_key}")
                 else:
-                    active[resource_key] = identity
+                    active[resource_key] = dict(payload)
             elif action in {"heartbeat", "release"}:
-                if active.get(resource_key) != identity:
+                current = active.get(resource_key)
+                if current is None or any(current.get(key) != value for key, value in identity.items()):
                     errors.append(f"ledger {action} must match active lease id, owner, and resource for {resource_key}")
                 elif action == "release":
                     del active[resource_key]
-        if record.get("record_type") == "node" and payload.get("node_id") == "pr_ready" and payload.get("status") == "passed" and active:
-            errors.append("pr_ready cannot pass with an active resource lease")
+                else:
+                    try:
+                        heartbeat_at = datetime.fromisoformat(str(payload.get("heartbeat_at")).replace("Z", "+00:00"))
+                        old_expiry = datetime.fromisoformat(str(current.get("expires_at")).replace("Z", "+00:00"))
+                        new_expiry = datetime.fromisoformat(str(payload.get("expires_at")).replace("Z", "+00:00"))
+                        if heartbeat_at >= old_expiry or new_expiry <= old_expiry or new_expiry <= heartbeat_at:
+                            errors.append("ledger heartbeat must be timely and extend expiry monotonically")
+                        else:
+                            current["heartbeat_at"] = payload.get("heartbeat_at")
+                            current["expires_at"] = payload.get("expires_at")
+                    except ValueError:
+                        errors.append("ledger heartbeat timestamps are invalid")
+        if record.get("record_type") == "grant_reservation":
+            authorization_hash = payload.get("authorization_hash")
+            authorization = run_authorizations.get(authorization_hash)
+            reservation_id = payload.get("reservation_id")
+            grant_key = (authorization_hash, payload.get("grant_id"))
+            idempotency_key = (authorization_hash, payload.get("idempotency_key"))
+            if not reservation_id or reservation_id in reservations:
+                errors.append("grant reservation IDs must be non-empty and unique")
+            if not isinstance(payload.get("operation_input"), dict) or not payload.get("operation_input"):
+                errors.append("grant reservation requires a structured operation input")
+            elif canonical_sha256(payload["operation_input"]) != payload.get("constraint_sha256"):
+                errors.append("grant reservation operation input does not match its constraint digest")
+            if authorization is None:
+                errors.append("grant reservation must reference a prior approved authorization")
+            else:
+                candidates = [
+                    grant
+                    for grant in authorization.get("action_grants", [])
+                    if grant.get("grant_id") == payload.get("grant_id")
+                    and grant.get("idempotency_key") == payload.get("idempotency_key")
+                    and grant.get("system") == payload.get("system")
+                    and grant.get("action") == payload.get("action")
+                    and grant.get("operation") == payload.get("operation")
+                    and grant.get("operation_input") == payload.get("operation_input")
+                    and grant.get("constraint_sha256") == payload.get("constraint_sha256")
+                    and grant.get("resource_key") == payload.get("resource_key")
+                    and grant.get("phase") == payload.get("phase")
+                ]
+                if len(candidates) != 1:
+                    errors.append("grant reservation does not match one exact approved grant")
+                else:
+                    grant = candidates[0]
+                    expected_target = grant.get("target")
+                    source_id = grant.get("target_from_grant_id")
+                    if source_id:
+                        expected_target = produced_targets.get((authorization_hash, source_id))
+                    if not expected_target or payload.get("target") != expected_target:
+                        errors.append("grant reservation target drifted or lacks its producer")
+                try:
+                    reserved_at = datetime.fromisoformat(str(record.get("recorded_at")).replace("Z", "+00:00"))
+                    issued = datetime.fromisoformat(str(authorization.get("issued_at")).replace("Z", "+00:00"))
+                    expires = datetime.fromisoformat(str(authorization.get("expires_at")).replace("Z", "+00:00"))
+                    if reserved_at.tzinfo is None or not issued <= reserved_at < expires:
+                        errors.append("grant reservation occurred outside authorization time bounds")
+                except ValueError:
+                    errors.append("grant reservation timestamp is invalid")
+            lease_key = (payload.get("resource"), payload.get("resource_key"))
+            lease = active.get(lease_key)
+            if (
+                lease is None
+                or lease.get("lease_id") != payload.get("lease_id")
+                or lease.get("owner") != payload.get("lease_owner")
+                or payload.get("action") not in lease.get("allowed_actions", [])
+            ):
+                errors.append("grant reservation requires the exact active action lease")
+            else:
+                try:
+                    reserved_at = datetime.fromisoformat(str(record.get("recorded_at")).replace("Z", "+00:00"))
+                    lease_expiry = datetime.fromisoformat(str(lease.get("expires_at")).replace("Z", "+00:00"))
+                    if reserved_at >= lease_expiry:
+                        errors.append("grant reservation cannot use an expired lease")
+                except ValueError:
+                    errors.append("grant reservation lease time is invalid")
+                authorization = run_authorizations.get(authorization_hash) or {}
+                if lease.get("approval_id") != authorization.get("approval_id"):
+                    errors.append("grant reservation lease is not bound to the authorization")
+            if grant_key in reserved_action_grants or grant_key in consumed_action_grants:
+                errors.append("single-use grant was already reserved or consumed")
+            else:
+                reserved_action_grants.add(grant_key)
+            if idempotency_key in reserved_idempotency_keys or idempotency_key in consumed_idempotency_keys:
+                errors.append("idempotency key was already reserved or consumed")
+            else:
+                reserved_idempotency_keys.add(idempotency_key)
+            if reservation_id:
+                reservations[reservation_id] = payload
+        if record.get("record_type") == "external_write":
+            authorization_hash = payload.get("authorization_hash")
+            grant_key = (authorization_hash, payload.get("grant_id"))
+            idempotency_key = (authorization_hash, payload.get("idempotency_key"))
+            authorization = run_authorizations.get(authorization_hash)
+            if authorization is None:
+                errors.append("external write must reference a prior approved run authorization")
+            if not isinstance(payload.get("operation_input"), dict) or not payload.get("operation_input"):
+                errors.append("external write requires a structured operation input")
+            elif canonical_sha256(payload["operation_input"]) != payload.get("constraint_sha256"):
+                errors.append("external write operation input does not match its constraint digest")
+            reservation_id = payload.get("reservation_id")
+            reservation = reservations.get(reservation_id)
+            if reservation is None:
+                errors.append("external write requires a prior exact grant reservation")
+            elif reservation_id in consumed_reservations:
+                errors.append("grant reservation was already consumed")
+            else:
+                for field in (
+                    "authorization_hash",
+                    "grant_id",
+                    "idempotency_key",
+                    "system",
+                    "action",
+                    "operation",
+                    "operation_input",
+                    "constraint_sha256",
+                    "resource_key",
+                    "phase",
+                    "lease_id",
+                    "lease_owner",
+                    "resource",
+                    "target",
+                    "spec_checkpoint_sha256",
+                    "apple_observation_sha256",
+                ):
+                    if reservation.get(field) != payload.get(field):
+                        errors.append("external write drifted from its grant reservation")
+                        break
+                consumed_reservations.add(reservation_id)
+            live_lease = active.get((payload.get("resource"), payload.get("resource_key")))
+            if (
+                live_lease is None
+                or live_lease.get("lease_id") != payload.get("lease_id")
+                or live_lease.get("owner") != payload.get("lease_owner")
+                or payload.get("action") not in live_lease.get("allowed_actions", [])
+            ):
+                errors.append("external write requires the same active lease used for reservation")
+            else:
+                try:
+                    write_at = datetime.fromisoformat(
+                        str(record.get("recorded_at")).replace("Z", "+00:00")
+                    )
+                    lease_expiry = datetime.fromisoformat(
+                        str(live_lease.get("expires_at")).replace("Z", "+00:00")
+                    )
+                    if write_at.tzinfo is None or write_at >= lease_expiry:
+                        errors.append("external write cannot use an expired lease")
+                except ValueError:
+                    errors.append("external write lease time is invalid")
+            action = payload.get("action")
+            system = payload.get("system")
+            if action not in ALLOWED_RUN_ACTIONS or action in FORBIDDEN_RUN_ACTIONS:
+                errors.append("external write action is forbidden or not allowlisted")
+            if not isinstance(action, str) or system != action.split(".", 1)[0]:
+                errors.append("external write system must match its action")
+            if authorization is not None:
+                try:
+                    recorded_at = datetime.fromisoformat(
+                        str(record.get("recorded_at")).replace("Z", "+00:00")
+                    )
+                    issued = datetime.fromisoformat(
+                        str(authorization.get("issued_at")).replace("Z", "+00:00")
+                    )
+                    expires = datetime.fromisoformat(
+                        str(authorization.get("expires_at")).replace("Z", "+00:00")
+                    )
+                    if recorded_at.tzinfo is None or not issued <= recorded_at < expires:
+                        errors.append("external write occurred outside authorization time bounds")
+                except ValueError:
+                    errors.append("external write or authorization timestamp is invalid")
+                candidates = [
+                    grant
+                    for grant in authorization.get("action_grants", [])
+                    if grant.get("grant_id") == payload.get("grant_id")
+                    and grant.get("idempotency_key") == payload.get("idempotency_key")
+                    and grant.get("system") == system
+                    and grant.get("action") == action
+                    and grant.get("operation") == payload.get("operation")
+                    and grant.get("operation_input") == payload.get("operation_input")
+                    and grant.get("constraint_sha256") == payload.get("constraint_sha256")
+                    and grant.get("resource_key") == payload.get("resource_key")
+                    and grant.get("phase") == payload.get("phase")
+                ]
+                if len(candidates) != 1:
+                    errors.append("external write does not match one exact approved action grant")
+                else:
+                    grant = candidates[0]
+                    expected_target = grant.get("target")
+                    source_id = grant.get("target_from_grant_id")
+                    if source_id:
+                        expected_target = produced_targets.get((authorization_hash, source_id))
+                        if expected_target is None:
+                            errors.append("external write derived target has no prior successful producer")
+                    if payload.get("target") != expected_target:
+                        errors.append("external write target drifted from its approved grant")
+                    if grant.get("produces_target_kind") and payload.get("outcome") == "succeeded":
+                        output_target = payload.get("output_target")
+                        if not valid_created_github_target(grant, output_target):
+                            errors.append("successful create grant output target has the wrong repository or object kind")
+                        else:
+                            produced_targets[(authorization_hash, payload.get("grant_id"))] = output_target
+                delivery_target = authorization.get("delivery_target")
+                if delivery_target == "pr_ready" and system == "apple":
+                    errors.append("pr_ready authorization cannot record Apple writes")
+                if delivery_target == "testflight_uploaded" and action == "apple.testflight.distribute_internal":
+                    errors.append("upload-only authorization cannot record distribution")
+            if system == "apple":
+                identity = tuple(
+                    payload.get(field)
+                    for field in ("artifact_sha256", "artifact_source_commit", "version", "build")
+                )
+                if any(not value for value in identity):
+                    errors.append("Apple external writes must record exact artifact, source, version, and build")
+                previous_identity = apple_artifacts.get(authorization_hash)
+                if previous_identity is not None and identity != previous_identity:
+                    errors.append("Apple external write artifact identity drifted within authorization")
+                elif all(identity):
+                    apple_artifacts[authorization_hash] = identity
+                states = apple_states.setdefault(authorization_hash, set())
+                target = str(payload.get("target"))
+                if action == "apple.testflight.upload" and payload.get("outcome") == "succeeded":
+                    states.add("upload_accepted")
+                elif action == "apple.testflight.processing.wait" and payload.get("outcome") == "succeeded":
+                    if "upload_accepted" not in states:
+                        errors.append("processing wait requires a prior accepted upload")
+                    states.add("processing_waited")
+                elif action == "apple.testflight.readback" and target.endswith(":upload") and payload.get("outcome") == "succeeded":
+                    if "processing_waited" not in states or payload.get("external_state") != "completed":
+                        errors.append("upload read-back must follow bounded processing and be completed")
+                    else:
+                        states.add("upload_completed")
+                elif action == "apple.testflight.distribute_internal" and payload.get("outcome") == "succeeded":
+                    if "upload_completed" not in states:
+                        errors.append("internal distribution requires completed upload read-back")
+                    states.add(f"distributed:{target}")
+                elif action == "apple.testflight.readback" and ":group:" in target and payload.get("outcome") == "succeeded":
+                    if f"distributed:{target}" not in states or payload.get("external_state") != "completed":
+                        errors.append("distribution read-back must follow distribution and be completed")
+                    else:
+                        states.add(f"distribution_completed:{target}")
+            if grant_key in consumed_action_grants:
+                errors.append("external write single-use grant was already consumed")
+            else:
+                consumed_action_grants.add(grant_key)
+            if idempotency_key in consumed_idempotency_keys:
+                errors.append("external write idempotency key was already consumed")
+            else:
+                consumed_idempotency_keys.add(idempotency_key)
+            if payload.get("outcome") == "succeeded":
+                successful_operations.add(
+                    (str(payload.get("phase")), str(action), str(payload.get("operation")))
+                )
+        if record.get("record_type") == "node" and payload.get("status") == "passed":
+            node_id = payload.get("node_id")
+            if isinstance(node_id, str):
+                if node_id == "bind_pr_ready" and "pr_ready" not in passed_nodes:
+                    errors.append("TestFlight continuation cannot bind before pr_ready")
+                if node_id in passed_nodes:
+                    errors.append(f"workflow node cannot pass more than once: {node_id}")
+                missing_dependencies = node_dependencies.get(node_id, set()) - passed_nodes
+                if missing_dependencies:
+                    errors.append(
+                        f"workflow node {node_id} passed before dependencies: "
+                        + ", ".join(sorted(missing_dependencies))
+                    )
+                passed_nodes.add(node_id)
+            if node_id in {"pr_ready", "testflight_uploaded", "testflight_distributed"} and active:
+                errors.append(f"{node_id} cannot pass with an active resource lease")
+            if node_id == "pr_ready":
+                missing_nodes = set(CONTROL_SPINE) - passed_nodes
+                if missing_nodes:
+                    errors.append(
+                        "pr_ready requires every control-spine node to pass: "
+                        + ", ".join(sorted(missing_nodes))
+                    )
+                pr_authorizations = [
+                    authorization
+                    for authorization in run_authorizations.values()
+                    if authorization.get("delivery_target") in {
+                        "pr_ready", "testflight_uploaded", "testflight_distributed"
+                    }
+                ]
+                if len(pr_authorizations) != 1:
+                    errors.append("pr_ready requires one exact run authorization")
+                else:
+                    required_operations = {
+                        (
+                            str(grant.get("phase")),
+                            str(grant.get("action")),
+                            str(grant.get("operation")),
+                        )
+                        for grant in pr_authorizations[0].get("action_grants", [])
+                        if grant.get("phase") == "pr_delivery"
+                    }
+                    missing_operations = required_operations - successful_operations
+                    if missing_operations:
+                        errors.append("pr_ready requires every authorized delivery operation to succeed")
+            if node_id == "testflight_uploaded" and not any(
+                "upload_completed" in states for states in apple_states.values()
+            ):
+                errors.append("testflight_uploaded requires completed upload read-back")
+            if node_id == "testflight_uploaded":
+                required = set(TESTFLIGHT_NODE_ORDER[: TESTFLIGHT_NODE_ORDER.index("testflight_uploaded") + 1])
+                if required - passed_nodes:
+                    errors.append("testflight_uploaded requires every upload-continuation node to pass")
+                upload_authorizations = [
+                    authorization
+                    for authorization in run_authorizations.values()
+                    if authorization.get("delivery_target") in {
+                        "testflight_uploaded", "testflight_distributed"
+                    }
+                ]
+                if len(upload_authorizations) != 1:
+                    errors.append("testflight_uploaded requires one exact continuation authorization")
+                else:
+                    required_operations = {
+                        (
+                            str(grant.get("phase")),
+                            str(grant.get("action")),
+                            str(grant.get("operation")),
+                        )
+                        for grant in upload_authorizations[0].get("action_grants", [])
+                        if grant.get("phase") == "testflight_upload"
+                    }
+                    if required_operations - successful_operations:
+                        errors.append("testflight_uploaded requires every upload-phase operation to succeed")
+            if node_id == "testflight_distributed" and not any(
+                any(state.startswith("distribution_completed:") for state in states)
+                for states in apple_states.values()
+            ):
+                errors.append("testflight_distributed requires completed distribution read-back")
+            if node_id == "testflight_distributed" and set(TESTFLIGHT_NODE_ORDER) - passed_nodes:
+                errors.append("testflight_distributed requires every continuation node to pass")
+            if node_id == "testflight_distributed":
+                distribution_authorizations = [
+                    authorization
+                    for authorization in run_authorizations.values()
+                    if authorization.get("delivery_target") == "testflight_distributed"
+                ]
+                if len(distribution_authorizations) != 1:
+                    errors.append("testflight_distributed requires one exact continuation authorization")
+                else:
+                    required_operations = {
+                        (
+                            str(grant.get("phase")),
+                            str(grant.get("action")),
+                            str(grant.get("operation")),
+                        )
+                        for grant in distribution_authorizations[0].get("action_grants", [])
+                        if grant.get("phase") == "testflight_distribution"
+                    }
+                    if required_operations - successful_operations:
+                        errors.append("testflight_distributed requires every distribution operation to succeed")
+        if record.get("record_type") == "stop" and active:
+            errors.append("terminal stop cannot leave an active resource lease")
     return errors
 
 
@@ -445,7 +1308,24 @@ def validate_contracts() -> list[str]:
         try: load_json(path)
         except (OSError, json.JSONDecodeError) as exc: errors.append(f"invalid JSON {path.relative_to(ROOT)}: {exc}")
     schemas = CONTRACTS / "schemas"
-    pairs = [(CONTRACTS / "capabilities.json", schemas / "capabilities.schema.json"), (CONTRACTS / "workflow.json", schemas / "workflow.schema.json"), (SKILLS / "agent-harness" / "templates" / "harness.json", schemas / "harness.schema.json")]
+    authorization_template = SKILLS / "agent-harness" / "templates" / "run-authorization.json"
+    authorization_fixture = ROOT / "tests" / "fixtures" / "run-authorization-approved.json"
+    policy_fixture = ROOT / "tests" / "fixtures" / "private-policy-overlay-approved.json"
+    testflight_workflow = CONTRACTS / "testflight-workflow.json"
+    health_root = SKILLS / "apple-development-health"
+    health_template = health_root / "templates" / "health-observations.json"
+    icon_root = SKILLS / "icon-composer"
+    companion_manifest = icon_root / "contracts" / "companion-upstream.json"
+    pairs = [
+        (CONTRACTS / "capabilities.json", schemas / "capabilities.schema.json"),
+        (CONTRACTS / "workflow.json", schemas / "workflow.schema.json"),
+        (testflight_workflow, schemas / "testflight-workflow.schema.json"),
+        (authorization_fixture, schemas / "run-authorization.schema.json"),
+        (policy_fixture, schemas / "private-policy-overlay.schema.json"),
+        (SKILLS / "agent-harness" / "templates" / "harness.json", schemas / "harness.schema.json"),
+        (health_template, health_root / "contracts" / "health-report.schema.json"),
+        (companion_manifest, icon_root / "contracts" / "companion-upstream.schema.json"),
+    ]
     for contract, schema_path in pairs:
         instance = load_json(contract)
         # $schema is a JSON Schema document-location annotation, not contract data.
@@ -456,7 +1336,25 @@ def validate_contracts() -> list[str]:
     errors.extend(validate_runtime_registry_policy(capabilities))
     errors.extend(validate_xcode_mcp_provider_policy(capabilities))
     errors.extend(validate_workflow_semantics(workflow, set(capabilities.get("resource_scopes", []))))
+    errors.extend(validate_testflight_workflow(load_json(testflight_workflow)))
+    errors.extend(validate_run_authorization_contract(load_json(authorization_fixture)))
+    pending_authorization = load_json(authorization_template)
+    if pending_authorization.get("decision") != "pending":
+        errors.append("run authorization template must remain pending until instantiated")
+    if pending_authorization.get("action_grants") != []:
+        errors.append("run authorization template cannot contain executable action grants")
+    if any(
+        pending_authorization.get(field) is not None
+        for field in ("run_id", "authorization_id", "actor", "issued_at", "expires_at", "repository", "github")
+    ):
+        errors.append("run authorization template must not contain executable identities or times")
+    errors.extend(validate_companion_upstream(load_json(companion_manifest)))
     template = load_json(SKILLS / "agent-harness" / "templates" / "harness.json")
+    components = set(template.get("health_components", []))
+    if template.get("spec_kit", {}).get("enabled") is True and "spec_kit" not in components:
+        errors.append("harness enabled Spec Kit must select the Spec Kit health component")
+    if template.get("github_tracking", {}).get("project") is not None and "github_project" not in components:
+        errors.append("harness configured Project must select the Project health component")
     for key in ("max_implementation_attempts", "max_review_cycles"):
         if template.get(key) != workflow.get("attempt_policy", {}).get(key):
             errors.append(f"harness template {key} drifted from workflow")
@@ -544,6 +1442,41 @@ def validate_safety_contracts() -> list[str]:
     for phrase in ("exact destination UDID", "ambiguous `booted`", "one active owner per UDID", "coresimulator_runtime_registry"):
         if phrase not in concurrent:
             errors.append(f"concurrent Xcode resource contract missing: {phrase}")
+    health = (SKILLS / "apple-development-health" / "references" / "health-matrix.md").read_text(encoding="utf-8")
+    for phrase in (
+        "Installation, registration, current-task exposure, and read-only connectivity",
+        "direct third-party Codex MCP entry",
+        "Codex plugin",
+        "Xcode Coding Assistant AgentPlugin",
+        "30 seconds",
+        "Data Migration Failed",
+        "partially usable",
+        "continuous drag",
+    ):
+        if phrase not in health:
+            errors.append(f"Apple development health contract missing: {phrase}")
+    hig = (SKILLS / "apple-platform-ui" / "hig-source-policy.md").read_text(encoding="utf-8")
+    for phrase in ("live [Apple Human Interface Guidelines]", "Do not RAG-index", "selected platform and OS generation"):
+        if phrase not in hig:
+            errors.append(f"Apple HIG source policy missing: {phrase}")
+    spec_adapter = (SKILLS / "agent-harness" / "references" / "spec-kit-adapter.md").read_text(encoding="utf-8")
+    for phrase in ("v1.0.1", ".specify/feature.json", "append-only", "spec_kit_snapshot.py", "/speckit.taskstoissues"):
+        if phrase not in spec_adapter:
+            errors.append(f"Spec Kit adapter contract missing: {phrase}")
+    authorization = (SKILLS / "agent-harness" / "references" / "run-authorization.md").read_text(encoding="utf-8")
+    for phrase in ("testflight_uploaded", "testflight_distributed", "single-use", "App Review", "auto-merge"):
+        if phrase not in authorization:
+            errors.append(f"run authorization contract missing: {phrase}")
+    upstream_workflow = (ROOT / ".github" / "workflows" / "icongen-upstream-watch.yml").read_text(encoding="utf-8")
+    for phrase in (
+        "contents: read",
+        "issues: write",
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+        "watch_companion_upstream.py",
+    ):
+        if phrase not in upstream_workflow:
+            errors.append(f"IconGen upstream watcher contract missing: {phrase}")
+    errors.extend(validate_icongen_workflow_text(upstream_workflow))
     return errors
 
 

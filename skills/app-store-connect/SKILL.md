@@ -45,6 +45,13 @@ The user's request must cover the exact external mutation. Submission and
 certificate/profile changes always use their own final gate. Never infer submit
 authority from “upload,” “release prep,” or a green build.
 
+When the user explicitly selects an unattended TestFlight delivery target, read
+[`references/unattended-testflight-delivery.md`](references/unattended-testflight-delivery.md).
+An immutable, unexpired single-use grant may authorize upload, a bounded
+processing wait, and exact named internal-group distribution without another
+routine prompt. This is not arbitrary auto-confirm: any target, account,
+artifact, group, compliance, signing, or permission drift blocks the run.
+
 ## Operating flow
 
 1. Use `app-versioning` to verify marketing/build values at their source of
@@ -88,8 +95,9 @@ successful external state automatically.
 - read or mutate an account that does not match the private guard;
 - switch to another cached profile or broaden credentials after 401/403;
 - put secrets in command arguments, logs, PRs, artifacts, or RAG;
-- auto-confirm submission, distribution, certificate/profile rotation, or
-  capability changes;
+- auto-confirm submission or arbitrary distribution, certificate/profile
+  rotation, or capability changes; exact pre-authorized internal TestFlight
+  distribution follows the separate bounded continuation;
 - archive from another checkout/container or regenerate XcodeGen implicitly;
 - treat upload as submission or processing as approval;
 - auto-merge source changes after a release operation.

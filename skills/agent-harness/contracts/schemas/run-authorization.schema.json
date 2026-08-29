@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:run-authorization:1.0.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "authorization_id",
+    "decision",
+    "actor",
+    "issued_at",
+    "expires_at",
+    "delivery_target",
+    "repository",
+    "spec_kit",
+    "acceptance_ids",
+    "allowed_paths",
+    "limits",
+    "github",
+    "apple",
+    "action_grants",
+    "forbidden_actions",
+    "auto_merge",
+    "app_review_submit",
+    "credential_scope_expansion",
+    "signing_resource_mutation",
+    "destructive_cleanup"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "authorization_id": {"type": "string", "minLength": 1},
+    "decision": {"const": "approved"},
+    "actor": {"type": "string", "minLength": 1},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "delivery_target": {
+      "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+    },
+    "repository": {
+      "type": "object",
+      "required": ["fingerprint", "canonical_root", "remote", "base_sha", "branch"],
+      "properties": {
+        "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "canonical_root": {"type": "string", "minLength": 1},
+        "remote": {"type": "string", "minLength": 1},
+        "base_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "branch": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "spec_kit": {
+      "type": ["object", "null"],
+      "properties": {
+        "release": {"const": "v1.0.1"},
+        "feature_id": {"type": "string", "minLength": 1},
+        "feature_directory": {"type": "string", "pattern": "^specs/[^/]+$"},
+        "approved_git_branch": {"type": "string", "minLength": 1},
+        "snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "workflow_run_id": {"type": "string", "minLength": 1},
+        "artifact_hashes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      },
+      "required": [
+        "release",
+        "feature_id",
+        "feature_directory",
+        "approved_git_branch",
+        "snapshot_sha256",
+        "workflow_run_id",
+        "artifact_hashes"
+      ],
+      "additionalProperties": false
+    },
+    "acceptance_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "allowed_paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "limits": {
+      "type": "object",
+      "required": [
+        "max_implementation_attempts",
+        "max_review_cycles",
+        "max_transient_retries",
+        "active_wall_minutes",
+        "async_wait_minutes"
+      ],
+      "properties": {
+        "max_implementation_attempts": {"type": "integer", "minimum": 1},
+        "max_review_cycles": {"type": "integer", "minimum": 1},
+        "max_transient_retries": {"type": "integer", "minimum": 0},
+        "active_wall_minutes": {"type": "integer", "minimum": 1},
+        "async_wait_minutes": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "github": {
+      "type": "object",
+      "required": ["owner", "repository", "issue_number", "project"],
+      "properties": {
+        "owner": {"type": "string", "minLength": 1},
+        "repository": {"type": "string", "minLength": 1},
+        "issue_number": {"type": ["integer", "null"], "minimum": 1},
+        "project": {"type": ["object", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "apple": {
+      "type": ["object", "null"],
+      "required": [
+        "account_guard_ref",
+        "team_id",
+        "app_id",
+        "bundle_id",
+        "platform",
+        "version_policy",
+        "build_policy",
+        "artifact_policy",
+        "internal_group_ids"
+      ],
+      "properties": {
+        "account_guard_ref": {"type": "string", "minLength": 1},
+        "team_id": {"type": "string", "minLength": 1},
+        "app_id": {"type": "string", "pattern": "^[0-9]+$"},
+        "bundle_id": {"type": "string", "minLength": 1},
+        "platform": {"enum": ["ios", "ipados", "watchos", "macos"]},
+        "version_policy": {
+          "type": "object",
+          "required": ["mode", "value"],
+          "properties": {
+            "mode": {"const": "exact"},
+            "value": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        "build_policy": {
+          "type": "object",
+          "properties": {
+            "mode": {"enum": ["exact", "next_after_live"]},
+            "value": {"type": "string", "minLength": 1},
+            "baseline": {"type": "string", "pattern": "^[0-9]+$"}
+          },
+          "oneOf": [
+            {
+              "required": ["mode", "value"],
+              "properties": {"mode": {"const": "exact"}},
+              "not": {"required": ["baseline"]}
+            },
+            {
+              "required": ["mode", "baseline"],
+              "properties": {"mode": {"const": "next_after_live"}},
+              "not": {"required": ["value"]}
+            }
+          ],
+          "additionalProperties": false
+        },
+        "artifact_policy": {"const": "fresh_archive_from_reviewed_pr_commit"},
+        "internal_group_ids": {
+          "type": "array",
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      },
+      "additionalProperties": false
+    },
+    "action_grants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "grant_id",
+          "system",
+          "action",
+          "operation",
+          "operation_input",
+          "constraint_sha256",
+          "resource_key",
+          "phase",
+          "single_use",
+          "idempotency_key"
+        ],
+        "properties": {
+          "grant_id": {"type": "string", "minLength": 1},
+          "system": {"enum": ["git", "github", "apple"]},
+          "action": {"type": "string", "minLength": 1},
+          "operation": {"type": "string", "minLength": 1},
+          "operation_input": {"type": "object", "minProperties": 1},
+          "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "resource_key": {"type": "string", "minLength": 1},
+          "phase": {"enum": ["pr_delivery", "testflight_upload", "testflight_distribution"]},
+          "target": {"type": "string", "minLength": 1},
+          "target_from_grant_id": {"type": "string", "minLength": 1},
+          "produces_target_kind": {"enum": ["github_issue", "github_pr"]},
+          "single_use": {"const": true},
+          "idempotency_key": {"type": "string", "minLength": 1}
+        },
+        "oneOf": [
+          {
+            "required": ["target"],
+            "not": {"required": ["target_from_grant_id"]}
+          },
+          {
+            "required": ["target_from_grant_id"],
+            "not": {"required": ["target"]}
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "forbidden_actions": {
+      "const": [
+        "git.force_push",
+        "github.auto_merge",
+        "github.ruleset_change",
+        "apple.app_review_submit",
+        "apple.production_release",
+        "apple.signing_resource_mutation",
+        "credential.scope_expansion",
+        "environment.destructive_cleanup"
+      ]
+    },
+    "auto_merge": {"const": false},
+    "app_review_submit": {"const": false},
+    "credential_scope_expansion": {"const": false},
+    "signing_resource_mutation": {"const": false},
+    "destructive_cleanup": {"const": false}
+  },
+  "additionalProperties": false
+}

@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import copy
 import contextlib
+from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
+import hashlib
+import importlib.util
 import io
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +23,227 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import validate_repository as validator  # noqa: E402
 sys.path.insert(0, str(ROOT / "skills" / "agent-harness" / "scripts"))
 import rag_index  # noqa: E402
+import check_authorization  # noqa: E402
+import spec_kit_snapshot  # noqa: E402
+sys.path.insert(0, str(ROOT / "skills" / "apple-development-health" / "scripts"))
+import evaluate_health  # noqa: E402
+sys.path.insert(0, str(ROOT / "skills" / "icon-composer" / "scripts"))
+import watch_companion_upstream  # noqa: E402
+
+
+def approved_envelope() -> dict:
+    return validator.load_json(ROOT / "tests" / "fixtures" / "run-authorization-approved.json")
+
+
+def policy_overlay() -> dict:
+    return validator.load_json(ROOT / "tests" / "fixtures" / "private-policy-overlay-approved.json")
+
+
+def ledger_record(sequence: int, record_type: str, payload: dict, second: int) -> dict:
+    return {
+        "schema_version": "1.0.0",
+        "run_id": "fixture-run-001",
+        "sequence": sequence,
+        "recorded_at": f"2026-01-01T00:00:{second:02d}Z",
+        "record_type": record_type,
+        "payload": payload,
+    }
+
+
+def authorization_ledger(envelope: dict, grant: dict) -> list[dict]:
+    digest = check_authorization.authorization_hash(envelope)
+    return [
+        ledger_record(
+            1,
+            "approval",
+            {
+                "approval_id": envelope["authorization_id"],
+                "kind": "run_authorization",
+                "actor": "fixture-user",
+                "decision": "approved",
+                "scope": "fixture:approved-delivery",
+                "authorization_hash": digest,
+                "delivery_target": envelope["delivery_target"],
+                "issued_at": envelope["issued_at"],
+                "expires_at": envelope["expires_at"],
+                "action_grants": copy.deepcopy(envelope["action_grants"]),
+            },
+            1,
+        ),
+        ledger_record(
+            2,
+            "time_interval",
+            {
+                "authorization_hash": digest,
+                "kind": "active",
+                "started_at": "2026-01-01T00:00:01Z",
+                "ended_at": "2026-01-01T00:00:02Z",
+                "reason": "authorize one exact operation",
+            },
+            2,
+        ),
+        ledger_record(
+            3,
+            "lease",
+            {
+                "lease_id": "fixture-lease",
+                "action": "acquire",
+                "owner": "fixture-agent",
+                "resource": check_authorization._expected_lease_resource(grant["action"]),
+                "resource_key": grant["resource_key"],
+                "branch": envelope["repository"]["branch"],
+                "base_sha": envelope["repository"]["base_sha"],
+                "pre_state_hash": "sha256:pre-state",
+                "allowed_paths": copy.deepcopy(envelope["allowed_paths"]),
+                "allowed_actions": [grant["action"]],
+                "approval_id": envelope["authorization_id"],
+                "acquired_at": "2026-01-01T00:00:03Z",
+                "expires_at": "2097-01-01T00:00:00Z",
+            },
+            3,
+        ),
+    ]
+
+
+def action_request(envelope: dict, grant: dict) -> dict:
+    return {
+        "run_id": envelope["run_id"],
+        "authorization_id": envelope["authorization_id"],
+        "authorization_hash": check_authorization.authorization_hash(envelope),
+        "delivery_target": envelope["delivery_target"],
+        "system": grant["system"],
+        "action": grant["action"],
+        "operation": grant["operation"],
+        "operation_input": copy.deepcopy(grant["operation_input"]),
+        "constraint_sha256": grant["constraint_sha256"],
+        "phase": grant["phase"],
+        "target": grant.get("target"),
+        "grant_id": grant["grant_id"],
+        "idempotency_key": grant["idempotency_key"],
+        "repository": copy.deepcopy(envelope["repository"]),
+        "spec_snapshot_sha256": None,
+        "spec_checkpoint_sha256": None,
+        "paths": copy.deepcopy(envelope["allowed_paths"]),
+        "apple": None,
+        "apple_observation_sha256": None,
+        "lease_id": "fixture-lease",
+        "lease_owner": "fixture-agent",
+        "lease_resource": check_authorization._expected_lease_resource(grant["action"]),
+        "lease_resource_key": grant["resource_key"],
+    }
+
+
+def live_repository(envelope: dict) -> dict:
+    return {
+        **copy.deepcopy(envelope["repository"]),
+        "head_sha": "2" * 40,
+        "staged_paths": copy.deepcopy(envelope["allowed_paths"]),
+        "staged_diff_sha256": "3" * 64,
+        "outgoing_paths": copy.deepcopy(envelope["allowed_paths"]),
+    }
+
+
+def health_report(
+    profile: str,
+    *,
+    selected_components: list[str] | None = None,
+    observed_at: str = "2026-08-29T00:00:00Z",
+) -> dict:
+    selected = selected_components or []
+    required_ids = set(evaluate_health.PROFILE_REQUIREMENTS[profile])
+    required_ids.update(
+        evaluate_health.COMPONENT_REQUIREMENTS[item] for item in selected
+    )
+
+    def category(check_id: str) -> str:
+        prefix = check_id.split(".", 1)[0]
+        return {
+            "apple": "apple_account",
+            "app": "xcode",
+            "companion_upstream": "companion_upstream",
+            "repository": "repository",
+            "agent": "agent",
+            "cli": "cli",
+            "github": "github",
+            "spec_kit": "spec_kit",
+            "xcode": "xcode",
+            "simulator": "simulator",
+            "testflight": "testflight",
+            "mcp": "mcp",
+            "local_llm": "local_llm",
+        }[prefix]
+
+    return {
+        "schema_version": "1.0.0",
+        "profile": profile,
+        "observed_at": observed_at,
+        "authoritative_targets": {"repository": "/example"},
+        "selected_components": selected,
+        "required_check_ids": sorted(required_ids),
+        "checks": [
+            {
+                "id": check_id,
+                "category": category(check_id),
+                "required": True,
+                "status": "healthy",
+                "summary": f"{check_id} is healthy",
+                "evidence": ["sanitized observation"],
+            }
+            for check_id in sorted(required_ids)
+        ],
+    }
+
+
+def testflight_envelope() -> dict:
+    """A complete continuation envelope derived from the reviewed PR fixture."""
+    envelope = approved_envelope()
+    envelope["delivery_target"] = "testflight_distributed"
+    envelope["apple"] = {
+        "account_guard_ref": "private-guard",
+        "team_id": "TEAM123",
+        "app_id": "123",
+        "bundle_id": "com.example.app",
+        "platform": "ios",
+        "version_policy": {"mode": "exact", "value": "1.2.3"},
+        "build_policy": {"mode": "next_after_live", "baseline": "41"},
+        "artifact_policy": "fresh_archive_from_reviewed_pr_commit",
+        "internal_group_ids": ["group-a"],
+    }
+
+    def grant(grant_id: str, system: str, action: str, operation: str,
+              operation_input: dict, phase: str, target: str) -> dict:
+        return {
+            "grant_id": grant_id, "system": system, "action": action,
+            "operation": operation, "operation_input": operation_input,
+            "constraint_sha256": check_authorization.canonical_sha256(operation_input),
+            "resource_key": check_authorization.canonical_lease_resource_key(envelope, action),
+            "phase": phase, "target": target, "single_use": True,
+            "idempotency_key": f"fixture-{grant_id}",
+        }
+
+    envelope["action_grants"].extend([
+        grant("upload-evidence", "github", "github.evidence.publish",
+              "publish_testflight_upload_evidence", {"artifact_policy": "sanitized_testflight_upload_evidence"},
+              "testflight_upload", "example/repository:pr:1"),
+        grant("distribution-evidence", "github", "github.evidence.publish",
+              "publish_testflight_distribution_evidence", {"artifact_policy": "sanitized_testflight_distribution_evidence"},
+              "testflight_distribution", "example/repository:pr:1"),
+        grant("upload", "apple", "apple.testflight.upload", "upload_verified_archive",
+              {"artifact_policy": "fresh_archive_from_reviewed_pr_commit"}, "testflight_upload", "app:123"),
+        grant("processing", "apple", "apple.testflight.processing.wait", "wait_bounded_processing",
+              {"timeout_minutes": 45, "max_transient_retries": 1}, "testflight_upload", "app:123:processing"),
+        grant("upload-readback", "apple", "apple.testflight.readback", "verify_uploaded_build",
+              {"readback": "uploaded_build"}, "testflight_upload", "app:123:upload"),
+        grant("distribution", "apple", "apple.testflight.distribute_internal", "distribute_named_internal_group",
+              {"group_id": "group-a"}, "testflight_distribution", "app:123:group:group-a"),
+        grant("distribution-readback", "apple", "apple.testflight.readback", "verify_internal_distribution",
+              {"readback": "internal_group_build", "group_id": "group-a"}, "testflight_distribution", "app:123:group:group-a"),
+    ])
+    for grant_id in ("upload-evidence", "distribution-evidence"):
+        evidence_grant = next(item for item in envelope["action_grants"] if item["grant_id"] == grant_id)
+        evidence_grant.pop("target")
+        evidence_grant["target_from_grant_id"] = "grant-pr"
+    return envelope
 
 
 class RepositoryContractTests(unittest.TestCase):
@@ -125,20 +352,117 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_ledger_rejects_active_lease_at_pr_ready(self) -> None:
         records = [
-            {"sequence": 1, "record_type": "lease", "payload": {"lease_id": "lease-1", "action": "acquire", "owner": "codex", "resource": "source_checkout_writer", "resource_key": "repo-a"}},
-            {"sequence": 2, "record_type": "node", "payload": {"node_id": "pr_ready", "status": "passed"}},
+            {"run_id": "run-1", "sequence": 1, "record_type": "lease", "payload": {"lease_id": "lease-1", "action": "acquire", "owner": "codex", "resource": "source_checkout_writer", "resource_key": "repo-a"}},
+            {"run_id": "run-1", "sequence": 2, "record_type": "node", "payload": {"node_id": "pr_ready", "status": "passed"}},
         ]
         errors = validator.validate_ledger_lifecycle(records)
         self.assertTrue(any("pr_ready cannot pass" in error for error in errors))
 
+    def test_ledger_rejects_lone_or_out_of_order_terminal_nodes(self) -> None:
+        lone = [{"run_id": "run-1", "sequence": 1, "record_type": "node", "payload": {"node_id": "pr_ready", "status": "passed"}}]
+        self.assertTrue(any("control" in error or "dependency" in error for error in validator.validate_ledger_lifecycle(lone)))
+        out_of_order = [{"run_id": "run-1", "sequence": 1, "record_type": "node", "payload": {"node_id": "health_gate", "status": "passed"}}]
+        self.assertTrue(any("prerequisite" in error or "dependenc" in error for error in validator.validate_ledger_lifecycle(out_of_order)))
+        continuation_too_early = [
+            ledger_record(1, "node", {"node_id": "bind_pr_ready", "status": "passed"}, 1)
+        ]
+        self.assertTrue(
+            any(
+                "cannot bind before pr_ready" in error
+                for error in validator.validate_ledger_lifecycle(continuation_too_early)
+            )
+        )
+        self.assertTrue(
+            any(
+                "cannot bind before pr_ready" in error
+                for error in check_authorization._standalone_ledger_lifecycle_errors(
+                    continuation_too_early
+                )
+            )
+        )
+
+    def test_external_write_requires_prior_authorization_and_single_use_grant(self) -> None:
+        envelope = approved_envelope()
+        grant = envelope["action_grants"][0]
+        request = action_request(envelope, grant)
+        reservation_id = "reservation-issue-ready"
+        reservation = ledger_record(
+            4,
+            "grant_reservation",
+            {
+                "reservation_id": reservation_id,
+                "authorization_hash": request["authorization_hash"],
+                "grant_id": request["grant_id"],
+                "idempotency_key": request["idempotency_key"],
+                "system": request["system"],
+                "action": request["action"],
+                "operation": request["operation"],
+                "operation_input": request["operation_input"],
+                "constraint_sha256": request["constraint_sha256"],
+                "phase": request["phase"],
+                "target": request["target"],
+                "lease_id": request["lease_id"],
+                "lease_owner": request["lease_owner"],
+                "resource": request["lease_resource"],
+                "resource_key": request["lease_resource_key"],
+                "spec_checkpoint_sha256": None,
+                "apple_observation_sha256": None,
+            },
+            4,
+        )
+        external_write = ledger_record(
+            5,
+            "external_write",
+            {
+                "system": request["system"],
+                "action": request["action"],
+                "operation": request["operation"],
+                "operation_input": request["operation_input"],
+                "constraint_sha256": request["constraint_sha256"],
+                "phase": request["phase"],
+                "resource": request["lease_resource"],
+                "resource_key": request["lease_resource_key"],
+                "lease_id": request["lease_id"],
+                "lease_owner": request["lease_owner"],
+                "target": request["target"],
+                "outcome": "succeeded",
+                "authorization_hash": request["authorization_hash"],
+                "grant_id": request["grant_id"],
+                "idempotency_key": request["idempotency_key"],
+                "reservation_id": reservation_id,
+                "spec_checkpoint_sha256": None,
+                "apple_observation_sha256": None,
+            },
+            5,
+        )
+        self.assertTrue(
+            any(
+                "prior approved run authorization" in error
+                for error in validator.validate_ledger_lifecycle([external_write])
+            )
+        )
+        records = authorization_ledger(envelope, grant) + [reservation, external_write]
+        self.assertEqual([], validator.validate_ledger_lifecycle(records))
+        failed_records = copy.deepcopy(records)
+        failed_records[-1]["payload"]["outcome"] = "failed"
+        self.assertEqual([], validator.validate_ledger_lifecycle(failed_records))
+        reused = copy.deepcopy(external_write)
+        reused["sequence"] = 6
+        reused["recorded_at"] = "2026-01-01T00:00:06Z"
+        errors = validator.validate_ledger_lifecycle(records + [reused])
+        self.assertTrue(any("single-use grant" in error for error in errors))
+        self.assertTrue(any("idempotency key" in error for error in errors))
+        failed_retry_errors = validator.validate_ledger_lifecycle(failed_records + [reused])
+        self.assertTrue(any("single-use grant" in error for error in failed_retry_errors))
+
     def test_runtime_registry_and_device_leases_conflict_both_ways(self) -> None:
         device_then_registry = [
-            {"sequence": 1, "record_type": "lease", "payload": {"lease_id": "device", "action": "acquire", "owner": "codex", "resource": "simulator_or_device", "resource_key": "device-a"}},
-            {"sequence": 2, "record_type": "lease", "payload": {"lease_id": "registry", "action": "acquire", "owner": "codex", "resource": "coresimulator_runtime_registry", "resource_key": "host-a", "allowed_actions": ["read_only_diagnosis"]}},
+            {"run_id": "run-1", "sequence": 1, "record_type": "lease", "payload": {"lease_id": "device", "action": "acquire", "owner": "codex", "resource": "simulator_or_device", "resource_key": "device-a"}},
+            {"run_id": "run-1", "sequence": 2, "record_type": "lease", "payload": {"lease_id": "registry", "action": "acquire", "owner": "codex", "resource": "coresimulator_runtime_registry", "resource_key": "host-a", "allowed_actions": ["read_only_diagnosis"]}},
         ]
         registry_then_device = [
-            {"sequence": 1, "record_type": "lease", "payload": {"lease_id": "registry", "action": "acquire", "owner": "codex", "resource": "coresimulator_runtime_registry", "resource_key": "host-a", "allowed_actions": ["read_only_diagnosis"]}},
-            {"sequence": 2, "record_type": "lease", "payload": {"lease_id": "device", "action": "acquire", "owner": "codex", "resource": "simulator_or_device", "resource_key": "device-a"}},
+            {"run_id": "run-1", "sequence": 1, "record_type": "lease", "payload": {"lease_id": "registry", "action": "acquire", "owner": "codex", "resource": "coresimulator_runtime_registry", "resource_key": "host-a", "allowed_actions": ["read_only_diagnosis"]}},
+            {"run_id": "run-1", "sequence": 2, "record_type": "lease", "payload": {"lease_id": "device", "action": "acquire", "owner": "codex", "resource": "simulator_or_device", "resource_key": "device-a"}},
         ]
         self.assertTrue(any("conflicts" in error for error in validator.validate_ledger_lifecycle(device_then_registry)))
         self.assertTrue(any("conflicts" in error for error in validator.validate_ledger_lifecycle(registry_then_device)))
@@ -146,6 +470,7 @@ class RepositoryContractTests(unittest.TestCase):
     def test_mutating_runtime_registry_lease_requires_matching_approval(self) -> None:
         def approval(decision: str = "approved", target: str = "runtime-a") -> dict:
             return {
+                "run_id": "run-1",
                 "sequence": 1,
                 "record_type": "approval",
                 "payload": {
@@ -163,6 +488,7 @@ class RepositoryContractTests(unittest.TestCase):
 
         def acquire(sequence: int = 2, target: str = "runtime-a") -> dict:
             return {
+                "run_id": "run-1",
                 "sequence": sequence,
                 "record_type": "lease",
                 "payload": {
@@ -189,7 +515,7 @@ class RepositoryContractTests(unittest.TestCase):
         approved = [
             approval(),
             acquire(),
-            {"sequence": 3, "record_type": "lease", "payload": {"lease_id": "registry", "action": "release", "owner": "codex", "resource": "coresimulator_runtime_registry", "resource_key": "host-a"}},
+            {"run_id": "run-1", "sequence": 3, "record_type": "lease", "payload": {"lease_id": "registry", "action": "release", "owner": "codex", "resource": "coresimulator_runtime_registry", "resource_key": "host-a"}},
         ]
         self.assertEqual([], validator.validate_ledger_lifecycle(approved))
 
@@ -209,6 +535,374 @@ class RepositoryContractTests(unittest.TestCase):
         )
         capabilities["xcode_mcp_provider_policy"]["max_active_simulator_capable_providers_during_incident"] = 2
         self.assertTrue(validator.validate_xcode_mcp_provider_policy(capabilities))
+
+    def test_run_authorization_allows_exact_action_and_rejects_branch_drift(self) -> None:
+        envelope = approved_envelope()
+        grant = envelope["action_grants"][0]
+        request = action_request(envelope, grant)
+        ledger = authorization_ledger(envelope, grant)
+        current = datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc)
+        self.assertEqual(
+            [],
+            check_authorization.authorize_action(
+                envelope,
+                request,
+                now=current,
+                ledger_records=ledger,
+                policy_overlay=policy_overlay(),
+                live_repository=live_repository(envelope),
+            ),
+        )
+        request["repository"]["branch"] = "different-branch"
+        self.assertTrue(any("repository or branch drifted" in error for error in check_authorization.authorize_action(envelope, request, now=current, ledger_records=ledger, policy_overlay=policy_overlay(), live_repository=live_repository(envelope))))
+        request["repository"] = copy.deepcopy(envelope["repository"])
+        request["paths"] = ["outside-approved-scope/file.swift"]
+        self.assertTrue(any("path is outside authorization" in error for error in check_authorization.authorize_action(envelope, request, now=current, ledger_records=ledger, policy_overlay=policy_overlay(), live_repository=live_repository(envelope))))
+        request["paths"] = copy.deepcopy(envelope["allowed_paths"])
+        request["operation_input"]["state"] = "Closed"
+        self.assertTrue(any("constraint digest" in error or "exact action grant" in error for error in check_authorization.authorize_action(envelope, request, now=current, ledger_records=ledger, policy_overlay=policy_overlay(), live_repository=live_repository(envelope))))
+
+    def test_operation_descriptors_block_force_push_and_remote_credentials(self) -> None:
+        envelope = approved_envelope()
+        push = next(item for item in envelope["action_grants"] if item["action"] == "git.push")
+        push["operation_input"]["force"] = True
+        push["constraint_sha256"] = check_authorization.canonical_sha256(push["operation_input"])
+        self.assertTrue(
+            any("force false" in error for error in check_authorization.validate_authorization(envelope))
+        )
+        credentialed = "https://user:secret@github.com/example/repository.git"
+        sanitized = "https://github.com/example/repository.git"
+        self.assertEqual(sanitized, check_authorization.sanitize_remote(credentialed))
+        self.assertEqual(sanitized, evaluate_health.sanitize_remote(credentialed))
+
+    def test_reservation_is_atomic_and_copied_skill_keeps_contract_checker(self) -> None:
+        envelope = approved_envelope()
+        grant = envelope["action_grants"][0]
+        request = action_request(envelope, grant)
+        with tempfile.TemporaryDirectory() as directory:
+            run_root = Path(directory)
+            ledger_path = run_root / "ledger.jsonl"
+            ledger_path.write_text("\n".join(json.dumps(item) for item in authorization_ledger(envelope, grant)) + "\n", encoding="utf-8")
+            def reserve() -> tuple[list[str], dict | None]:
+                return check_authorization.reserve_action(ledger_path, envelope, copy.deepcopy(request), run_root, policy_overlay(), live_repository(envelope))
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(lambda _: reserve(), range(2)))
+            self.assertEqual(1, sum(not errors and reservation is not None for errors, reservation in results))
+            self.assertEqual(1, sum(any("single-use" in error for error in errors) for errors, _ in results))
+            copied = run_root / "agent-harness"
+            shutil.copytree(ROOT / "skills" / "agent-harness", copied)
+            probe = "import json,sys; sys.path.insert(0,sys.argv[1]); import check_authorization as c; print(c._ledger_contract_errors(json.load(open(sys.argv[2]))))"
+            records_path = run_root / "records.json"
+            records_path.write_text(json.dumps(authorization_ledger(envelope, grant)), encoding="utf-8")
+            completed = subprocess.run([sys.executable, "-c", probe, str(copied / "scripts"), str(records_path)], check=True, capture_output=True, text=True)
+            self.assertEqual("[]", completed.stdout.strip())
+    def test_testflight_authorization_is_limited_to_named_internal_group(self) -> None:
+        envelope = testflight_envelope()
+        self.assertEqual([], check_authorization.validate_authorization(envelope))
+        group_grant = next(item for item in envelope["action_grants"] if item["grant_id"] == "distribution")
+        self.assertEqual("app:123:group:group-a", group_grant["target"])
+        mutated = copy.deepcopy(envelope)
+        mutated["apple"]["internal_group_ids"] = ["group-b"]
+        self.assertTrue(
+            any(
+                "exactly match" in error or "canonical" in error
+                for error in check_authorization.validate_authorization(mutated)
+            )
+        )
+        mutated = copy.deepcopy(envelope)
+        mutated["action_grants"].append({
+            **group_grant,
+            "grant_id": "forbidden-review",
+            "action": "apple.app_review_submit",
+            "operation": "submit",
+            "operation_input": {"submit": True},
+            "constraint_sha256": check_authorization.canonical_sha256({"submit": True}),
+            "idempotency_key": "forbidden-review",
+        })
+        self.assertTrue(
+            any(
+                "forbidden" in error or "not allowlisted" in error
+                for error in check_authorization.validate_authorization(mutated)
+            )
+        )
+
+    def test_spec_kit_snapshot_uses_feature_directory_and_allows_run_progress(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pointer = root / ".specify" / "feature.json"
+            pointer.parent.mkdir(parents=True)
+            pointer.write_text(
+                '{"feature_directory":"specs/001-example"}', encoding="utf-8"
+            )
+            feature = root / "specs" / "001-example"
+            feature.mkdir(parents=True)
+            for name in ("spec.md", "plan.md", "tasks.md"):
+                (feature / name).write_text(f"accepted {name}", encoding="utf-8")
+            run = root / ".specify" / "workflows" / "runs" / "run-1"
+            run.mkdir(parents=True)
+            (run / "state.json").write_text(
+                '{"run_id":"run-1","workflow_id":"speckit","status":"paused","current_step_index":1}',
+                encoding="utf-8",
+            )
+            (run / "inputs.json").write_text('{"inputs":{}}', encoding="utf-8")
+            (run / "log.jsonl").write_text('{"event":"one"}\n', encoding="utf-8")
+
+            expected = spec_kit_snapshot.build_snapshot(
+                root,
+                feature_directory="specs/001-example",
+                run_id="run-1",
+            )
+            self.assertEqual("001-example", expected["feature_id"])
+            self.assertNotIn("git_branch", expected)
+            self.assertTrue(
+                all(
+                    not item["path"].startswith(".specify/workflows/runs/")
+                    for item in expected["accepted_artifacts"]
+                )
+            )
+
+            (run / "state.json").write_text(
+                '{"run_id":"run-1","workflow_id":"speckit","status":"running","current_step_index":2}',
+                encoding="utf-8",
+            )
+            (run / "inputs.json").write_text(
+                '{"inputs":{"verdict":"approved"}}', encoding="utf-8"
+            )
+            with (run / "log.jsonl").open("a", encoding="utf-8") as handle:
+                handle.write('{"event":"two"}\n')
+            current = spec_kit_snapshot.build_snapshot(
+                root,
+                feature_directory="specs/001-example",
+                run_id="run-1",
+            )
+            self.assertEqual(expected["snapshot_sha256"], current["snapshot_sha256"])
+            self.assertEqual([], spec_kit_snapshot.verify_snapshot(expected, expected))
+            self.assertEqual([], spec_kit_snapshot.verify_snapshot(expected, current))
+
+    def test_spec_kit_snapshot_rejects_escape_stale_pointer_and_missing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pointer = root / ".specify" / "feature.json"
+            pointer.parent.mkdir(parents=True)
+            pointer.write_text(
+                '{"feature_directory":"specs/001-example"}', encoding="utf-8"
+            )
+            feature = root / "specs" / "001-example"
+            feature.mkdir(parents=True)
+            for name in ("spec.md", "plan.md", "tasks.md"):
+                (feature / name).write_text(name, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "approved feature_directory"):
+                spec_kit_snapshot.build_snapshot(root)
+
+            with self.assertRaisesRegex(ValueError, "pointer is stale"):
+                spec_kit_snapshot.build_snapshot(
+                    root, feature_directory="specs/002-other"
+                )
+
+            pointer.write_text(
+                '{"feature_directory":"specs/../outside"}', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "exactly specs/<feature>"):
+                spec_kit_snapshot.build_snapshot(root, discovery=True)
+
+            pointer.write_text(
+                '{"feature_directory":"specs/001-example"}', encoding="utf-8"
+            )
+            (feature / "tasks.md").unlink()
+            with self.assertRaisesRegex(ValueError, "missing selected feature artifact"):
+                spec_kit_snapshot.build_snapshot(
+                    root, feature_directory="specs/001-example"
+                )
+            (feature / "tasks.md").write_text("tasks", encoding="utf-8")
+
+            run = root / ".specify" / "workflows" / "runs" / "run-1"
+            run.mkdir(parents=True)
+            (run / "state.json").write_text(
+                '{"run_id":"run-1","workflow_id":"speckit","status":"created"}',
+                encoding="utf-8",
+            )
+            (run / "inputs.json").write_text('{"inputs":{}}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "missing Spec Kit workflow log"):
+                spec_kit_snapshot.build_snapshot(
+                    root,
+                    feature_directory="specs/001-example",
+                    run_id="run-1",
+                )
+
+    def test_spec_kit_snapshot_detects_artifact_drift_and_log_rewrite(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pointer = root / ".specify" / "feature.json"
+            pointer.parent.mkdir(parents=True)
+            pointer.write_text(
+                '{"feature_directory":"specs/001-example"}', encoding="utf-8"
+            )
+            feature = root / "specs" / "001-example"
+            feature.mkdir(parents=True)
+            for name in ("spec.md", "plan.md", "tasks.md"):
+                (feature / name).write_text(name, encoding="utf-8")
+            run = root / ".specify" / "workflows" / "runs" / "run-1"
+            run.mkdir(parents=True)
+            (run / "state.json").write_text(
+                '{"run_id":"run-1","workflow_id":"speckit","status":"paused"}',
+                encoding="utf-8",
+            )
+            (run / "inputs.json").write_text('{"inputs":{}}', encoding="utf-8")
+            log = run / "log.jsonl"
+            log.write_text('{"event":"one"}\n{"event":"two"}\n', encoding="utf-8")
+            expected = spec_kit_snapshot.build_snapshot(
+                root, feature_directory="specs/001-example", run_id="run-1"
+            )
+
+            (feature / "spec.md").write_text("changed", encoding="utf-8")
+            changed = spec_kit_snapshot.build_snapshot(
+                root, feature_directory="specs/001-example", run_id="run-1"
+            )
+            self.assertTrue(
+                any(
+                    "accepted Spec Kit artifact" in error
+                    for error in spec_kit_snapshot.verify_snapshot(expected, changed)
+                )
+            )
+            (feature / "spec.md").write_text("spec.md", encoding="utf-8")
+
+            log.write_text(
+                '{"event":"rewritten"}\n{"event":"two"}\n', encoding="utf-8"
+            )
+            rewritten = spec_kit_snapshot.build_snapshot(
+                root, feature_directory="specs/001-example", run_id="run-1"
+            )
+            self.assertTrue(
+                any(
+                    "log was rewritten" in error
+                    for error in spec_kit_snapshot.verify_snapshot(expected, rewritten)
+                )
+            )
+
+            log.write_text('{"event":"one"}\n', encoding="utf-8")
+            truncated = spec_kit_snapshot.build_snapshot(
+                root, feature_directory="specs/001-example", run_id="run-1"
+            )
+            self.assertTrue(
+                any(
+                    "log was truncated" in error
+                    for error in spec_kit_snapshot.verify_snapshot(expected, truncated)
+                )
+            )
+
+    def test_health_evaluator_keeps_required_blocker_and_redacts_evidence(self) -> None:
+        report = health_report("runtime_ui", selected_components=["xcode_mcp"])
+        check = next(item for item in report["checks"] if item["id"] == "mcp.xcode")
+        check.update(status="blocked", evidence=["Bearer secret-value"], next_action="Repair provider.")
+        evaluated, errors = evaluate_health.evaluate(
+            report, now=datetime(2026, 8, 29, 0, 1, tzinfo=timezone.utc)
+        )
+        self.assertEqual([], errors)
+        self.assertEqual("blocked", evaluated["overall_status"])
+        self.assertEqual("<redacted>", next(item for item in evaluated["checks"] if item["id"] == "mcp.xcode")["evidence"][0])
+
+    def test_optional_health_failure_is_degraded_not_blocked(self) -> None:
+        report = health_report("pr_ready")
+        report["checks"].append({"id": "local_llm", "category": "local_llm", "required": False,
+                                 "status": "blocked", "summary": "Optional loopback model is unavailable.",
+                                 "evidence": ["connection refused"], "next_action": "Continue without Local LLM."})
+        evaluated, errors = evaluate_health.evaluate(
+            report, now=datetime(2026, 8, 29, 0, 1, tzinfo=timezone.utc)
+        )
+        self.assertEqual([], errors)
+        self.assertEqual("degraded", evaluated["overall_status"])
+
+    def test_health_rejects_stale_future_and_wrong_harness_targets(self) -> None:
+        report = health_report("pr_ready")
+        now = datetime(2026, 8, 29, 0, 11, tzinfo=timezone.utc)
+        self.assertTrue(any("stale" in error for error in evaluate_health.evaluate(report, now=now)[1]))
+        report["observed_at"] = "2026-08-29T00:13:00Z"
+        self.assertTrue(any("future" in error for error in evaluate_health.evaluate(report, now=now)[1]))
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "repository"
+            repository.mkdir()
+            subprocess.run(["git", "init", "-b", "main", str(repository)], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(repository), "remote", "add", "origin", "https://github.com/example/repository.git"], check=True)
+            live = health_report("pr_ready")
+            remote = subprocess.run(["git", "-C", str(repository), "remote", "get-url", "origin"], check=True, capture_output=True, text=True).stdout.strip()
+            branch = subprocess.run(["git", "-C", str(repository), "branch", "--show-current"], check=True, capture_output=True, text=True).stdout.strip()
+            live["authoritative_targets"] = {"repository": str(repository.resolve()), "remote": remote, "branch": branch}
+            harness = {"authoritative_root": str(repository)}
+            self.assertEqual([], evaluate_health.validate_harness_binding(live, harness))
+            live["authoritative_targets"]["branch"] = "wrong"
+            self.assertTrue(evaluate_health.validate_harness_binding(live, harness))
+
+    def test_companion_upstream_drift_creates_review_candidate_only(self) -> None:
+        manifest = validator.load_json(
+            ROOT / "skills" / "icon-composer" / "contracts" / "companion-upstream.json"
+        )
+        current = watch_companion_upstream.compare(
+            manifest, manifest["upstream"]["reviewed_revision"]
+        )
+        self.assertFalse(current["changed"])
+        changed = watch_companion_upstream.compare(manifest, "f" * 40)
+        self.assertTrue(changed["changed"])
+        self.assertEqual("create_or_update_review_issue", changed["action"])
+        self.assertFalse(changed["copy_or_execute_upstream"])
+        self.assertFalse(changed["auto_merge"])
+        with self.assertRaisesRegex(ValueError, "pinned consumer repository"):
+            watch_companion_upstream.reconcile_issue(
+                manifest, "someone/else", object()  # type: ignore[arg-type]
+            )
+
+    def test_companion_upstream_requires_public_provenance_before_noop(self) -> None:
+        manifest = validator.load_json(ROOT / "skills" / "icon-composer" / "contracts" / "companion-upstream.json")
+
+        class Client:
+            def __init__(self, responses: dict[str, object]) -> None:
+                self.responses, self.calls = responses, []
+            def request(self, method: str, path: str, body: dict | None = None) -> object:
+                self.calls.append((method, path, body))
+                return self.responses[path]
+
+        upstream = manifest["upstream"]
+        owner, repository = upstream["repository"].split("/", 1)
+        reviewed = upstream["reviewed_revision"]
+        tree = upstream["reviewed_tree"]
+        prefix = f"/repos/{owner}/{repository}"
+        source_tree = {"tree": [{"path": source["path"], "type": "blob", "sha": source["blob_sha"]} for source in manifest["sources"]]}
+        responses = {
+            prefix: {"private": False, "visibility": "public", "default_branch": upstream["default_branch"]},
+            f"{prefix}/commits/{reviewed}": {"sha": reviewed, "commit": {"tree": {"sha": tree}}},
+            f"{prefix}/git/trees/{tree}?recursive=1": source_tree,
+            f"{prefix}/commits/{upstream['default_branch']}": {"sha": reviewed},
+        }
+        client = Client(responses)
+        result = watch_companion_upstream.reconcile_issue(manifest, "ShawnBaek/iOS-experts", client)  # type: ignore[arg-type]
+        self.assertEqual("none", result["issue_action"])
+        self.assertTrue(all(call[0] == "GET" for call in client.calls))
+        for mutation, message in (({prefix: {**responses[prefix], "private": True}}, "no longer public"),
+                                  ({prefix: {**responses[prefix], "default_branch": "unexpected"}}, "default branch drifted"),
+                                  ({f"{prefix}/git/trees/{tree}?recursive=1": {"tree": []}}, "source blob drifted")):
+            changed = dict(responses)
+            changed.update(mutation)
+            with self.assertRaisesRegex(RuntimeError, message):
+                watch_companion_upstream.reconcile_issue(manifest, "ShawnBaek/iOS-experts", Client(changed))  # type: ignore[arg-type]
+
+    def test_testflight_continuation_rejects_action_boundary_drift(self) -> None:
+        workflow = validator.load_json(
+            ROOT / "skills" / "agent-harness" / "contracts" / "testflight-workflow.json"
+        )
+        self.assertEqual([], validator.validate_testflight_workflow(workflow))
+        workflow["policy"]["forbidden_actions"].remove("apple.app_review_submit")
+        self.assertTrue(
+            any(
+                "forbidden action missing" in error
+                for error in validator.validate_testflight_workflow(workflow)
+            )
+        )
+        workflow = validator.load_json(ROOT / "skills" / "agent-harness" / "contracts" / "testflight-workflow.json")
+        workflow["nodes"][7]["timeout_from_authorization"] = "unbounded"
+        self.assertTrue(any("processing wait" in error for error in validator.validate_testflight_workflow(workflow)))
+        workflow = validator.load_json(ROOT / "skills" / "agent-harness" / "contracts" / "testflight-workflow.json")
+        workflow["nodes"][7]["requires"] = ["health_gate"]
+        self.assertTrue(any("dependency" in error for error in validator.validate_testflight_workflow(workflow)))
 
     def test_rag_injection_fixture_is_fail_closed(self) -> None:
         fixture = json.loads(

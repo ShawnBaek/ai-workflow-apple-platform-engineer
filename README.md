@@ -1,6 +1,6 @@
 # iOS-experts
 
-**Version:** 2.0.0-beta.1
+**Version:** 2.0.0-beta.2
 
 Agent-neutral skills and a guarded task-to-pull-request harness for iOS, iPadOS,
 watchOS, and macOS development.
@@ -32,13 +32,23 @@ Xcode skill bodies.
   GitHub Projects skills.
 - PR-ready delivery with risk-derived checks and verified screenshots/videos or
   artifact links; merge and App Store submission remain separate gates.
+- Spec Kit `v1.0.1` artifact/run-log binding, one-shot bounded run
+  authorization, GitHub Issue lifecycle nodes, and optional TestFlight upload or
+  exact internal-group continuation.
+- A read-only Apple development health skill that distinguishes CLI/MCP install,
+  registration, current-task exposure, capability connectivity, runtime health,
+  app verification, and external-delivery readiness.
+- A public, reference-only IconGen provenance watcher that opens or refreshes a
+  review Issue without copying, executing, auto-applying, or auto-merging
+  upstream content.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
     U[User goal and project guards] --> A[Authority gate]
-    A --> H[Agent harness]
+    A --> HC[Read-only delivery-profile health]
+    HC --> H[Agent harness]
     H --> C[Context and exact repo lookup]
     H --> X[Execution graph]
     H --> L[Append-only run ledger]
@@ -62,6 +72,7 @@ flowchart TB
     O[Local LLM: read-only retrieval] -. source IDs .-> K
 
     AP[Apple docs, skills, Xcode tools] --> C
+    HG[Live Apple HIG] --> SP
     SP[Focused iOS-experts skills] --> H
 ```
 
@@ -78,9 +89,9 @@ Apple built-in and Apple-exported skills are alternative exposure paths. When
 one owns the exact task, use it and record its provider/version; do not load a
 duplicate repository specialist.
 
-For Xcode MCP, the harness proves four states separately: executable provenance,
-client registration, exposure in the current task, and one read-only response
-from the exact Xcode workspace session. A Homebrew tap, global npm package,
+For Xcode MCP, the harness proves five states separately: executable provenance,
+client registration, exposure in the current task, one bounded read-only
+capability response, and binding to the exact Xcode workspace session. A Homebrew tap, global npm package,
 `npx @latest` process, or enabled config entry proves only its own layer. Codex
 uses Apple's `xcrun mcpbridge` route first; third-party providers remain pinned,
 explicit fallbacks and are not run beside it against the same Simulator incident.
@@ -89,18 +100,28 @@ explicit fallbacks and are not run beside it against the same Simulator incident
 
 ```mermaid
 flowchart TB
-    P1["1 · Intake and authority<br/>guard → discover → approve plan and branch"]
-    P2["2 · Bounded implementation<br/>claim writer → implement → release → verify"]
+    P1["1 · Intake and authority<br/>guard → profile health → discover"]
+    SK["Spec Kit v1.0.1 immutable acceptance<br/>explicit feature directory + accepted artifact hashes"]
+    SC["Mutable Spec Kit checkpoint<br/>state + inputs + append-only log continuity"]
+    AU["Exact run authorization<br/>target + phase-scoped grants + expiry"]
+    BR["Approved branch<br/>claim writer → prepare from remote default → verify exact repo/remote"]
+    GI["GitHub tracking<br/>Issue Ready"]
+    P2["2 · Bounded implementation<br/>Issue In Progress → implement → release writer → verify"]
     N["New attempt n+1<br/>new patch identity; preserve failed evidence"]
     P3["3 · Immutable convergence<br/>freeze → read-only review → converge → reverify"]
-    P4["4 · Guarded Git delivery<br/>prepare evidence → repository confirmation → commit → push → verify remote SHA → PR"]
-    P5["5 · Published proof<br/>publish and view evidence → release lease → required checks → PR ready"]
+    P4["4 · Guarded Git delivery<br/>evidence → commit → push → remote SHA → PR"]
+    P5["5 · Published proof<br/>Issue In Review → evidence → checks → release lease → PR ready"]
+    TU["Optional exact continuation<br/>archive → upload → process/read-back"]
+    TD["Optional internal distribution<br/>named group → read-back"]
 
-    P1 --> P2
+    P1 --> SK --> AU --> BR --> GI --> P2
+    SC -. append-only continuity at each write .-> AU
     P2 -->|passed| P3
     P2 -->|changed input or code| N
     N --> P3
     P3 --> P4 --> P5
+    P5 -->|target: testflight_uploaded| TU
+    P5 -->|target: testflight_distributed| TU --> TD
 ```
 
 The execution graph stays acyclic. A retry creates a new attempt linked to the
@@ -120,6 +141,13 @@ Resource leases are scoped: repository writer, Xcode project mutation, build
 tuple, Simulator/device, host CoreSimulator runtime registry, signing/App Store
 Connect, and GitHub external writes. This permits safe read-only parallelism
 without pretending one global lock can protect every Apple resource.
+
+The health gate never repairs the machine. It reports `healthy`, `degraded`,
+`blocked`, or `not_applicable` per component. Installed, registered, exposed in
+the current task, responsive for one bounded read-only capability, and bound to
+the exact Xcode workspace are distinct MCP facts. GitHub Project scope, Local
+LLM, Simulator, Icon Composer, or TestFlight support is optional unless the
+selected delivery profile needs it.
 
 On a Mac running several Xcode projects, every run is namespaced by repository,
 container, build/cache tuple, bundle ID, tool session, and exact destination
@@ -172,6 +200,7 @@ GitHub credentials.
 |---|---|
 | [native-app-lead](skills/native-app-lead/SKILL.md) | routes broad Apple work to the smallest specialist set |
 | [agent-harness](skills/agent-harness/SKILL.md) | graph/loop/RAG, three model modes, leases, evidence, task-to-PR |
+| [apple-development-health](skills/apple-development-health/SKILL.md) | read-only CLI/skill/MCP/GitHub/Spec Kit/Xcode/Simulator/ASC readiness by delivery profile |
 | [xcode-project-workflow](skills/xcode-project-workflow/SKILL.md) | authoritative Xcode root/container, host execution, XcodeGen gate |
 | [git-workflow](skills/git-workflow/SKILL.md) | branch approval/naming, explicit worktrees, index-lock/AD recovery, PR Git state |
 | [github-projects](skills/github-projects/SKILL.md) | Issues and Projects v2 planning/status linkage |
@@ -193,11 +222,11 @@ GitHub credentials.
 
 | Skill | Owns |
 |---|---|
-| [apple-platform-ui](skills/apple-platform-ui/SKILL.md) | SwiftUI/UIKit UI and HIG decisions |
+| [apple-platform-ui](skills/apple-platform-ui/SKILL.md) | SwiftUI/UIKit UI with live Apple HIG and Apple-authored source policy |
 | [figma-bridge](skills/figma-bridge/SKILL.md) | Figma-to-Apple UI handoff |
 | [apple-data](skills/apple-data/SKILL.md) | Core Data/SwiftData/CloudKit/CloudKit Web Services routing |
 | [core-data](skills/core-data/SKILL.md) | Core Data models, migration, concurrency, CloudKit mirroring |
-| [icon-composer](skills/icon-composer/SKILL.md) | Apple icon design and Xcode handoff |
+| [icon-composer](skills/icon-composer/SKILL.md) | Apple icon design/Xcode handoff plus reference-only IconGen provenance |
 | [screenshot](skills/screenshot/SKILL.md) | deterministic visual/video and App Store evidence |
 | [app-store-connect](skills/app-store-connect/SKILL.md) | guarded TestFlight/App Store/Xcode Cloud operations |
 | [app-website](skills/app-website/SKILL.md) | one-page app introduction site |
@@ -223,6 +252,41 @@ than the change without risk justification. Each new test names its observable
 contract, prevented failure, and unique path. The PR states omitted checks and
 residual risk. Full suites/matrices are for shared core, release, explicit user
 requests, or impact graphs that justify them.
+
+## Spec Kit, GitHub tracking, and delivery targets
+
+Spec Kit remains the human-readable specification/workflow layer; the harness
+owns authority, leases, attempts, evidence, and external writes. The adapter
+pins `v1.0.1`, binds the explicit `feature_directory` plus the separately
+approved Git branch, and hashes only accepted feature artifacts. Mutable run
+state and append-only logs use a separate checkpoint. One feature Issue is
+the default; `T###` child Issues are created only for independently reviewable PR-sized
+work.
+
+An immutable authorization can remove routine green-path prompts after the
+repository, accepted feature/branch mapping, scope, derived-artifact policy,
+actions, and target rules are exact. It never
+authorizes force push, merge/auto-merge, ruleset/scope expansion, signing
+mutation, destructive cleanup, App Review, or production release. The three
+targets are `pr_ready`, `testflight_uploaded`, and
+`testflight_distributed` (named internal groups only).
+
+```mermaid
+flowchart LR
+    IG["Public IconGen main"] -->|weekly/manual HEAD read| W["Reference-only watcher"]
+    M["Reviewed commit + source blob manifest"] --> W
+    W -->|same SHA| N["No action"]
+    W -->|drift| I["Create/update one iOS-experts Issue"]
+    I --> R["Human/agent exact-commit review"]
+    R -->|general rule only| P["Normal tested PR"]
+    R -->|product-specific or unlicensed copy| B["Reject / keep reference-only"]
+    P -. no auto-merge .-> M
+```
+
+IconGen is public, but currently has no declared license. The watcher needs only
+the current repository `GITHUB_TOKEN` with `contents: read` and `issues: write`;
+it never writes to IconGen, runs its generators, copies files, opens a PR, or
+merges. Updating the reviewed revision remains an ordinary evidence-backed PR.
 
 ## Git sandbox and linked-worktree recovery
 
@@ -301,11 +365,14 @@ then copy and customize these files from the installed `agent-harness` folder:
 ```text
 templates/AGENTS.md   -> <app-repository>/AGENTS.md
 templates/harness.json -> <app-repository>/.iosx/harness.json
+templates/run-authorization.json -> <private-untracked-run-path>/authorization.json
 ```
 
 Keep account/team identifiers in a private, untracked overlay referenced by the
-project harness. Do not commit credentials or personal policy into this public
-collection.
+project harness. Start a health report from
+`apple-development-health/templates/health-observations.json`; store sanitized
+evidence with the run, not credentials. Do not commit personal policy or live
+authorization envelopes into this public collection.
 
 ## Repository contracts
 
@@ -338,9 +405,12 @@ Xcode build or four-platform matrix.
 
 Primary references:
 
+- [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)
 - [Apple: Extending and customizing agents](https://developer.apple.com/documentation/xcode/extending-and-customizing-agents)
 - [Apple: Giving external agents access to Xcode](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode)
 - [OpenAI: Codex as a platform](https://developers.openai.com/blog/codex-as-a-platform)
+- [GitHub Spec Kit v1.0.1](https://github.com/github/spec-kit/releases/tag/v1.0.1)
 - [Anthropic: Knowledge graph guide](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide)
 - [GitHub Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
+- [IconGen companion upstream](https://github.com/ShawnBaek/IconGen)
 - [Agent Skills specification](https://agentskills.io/specification)

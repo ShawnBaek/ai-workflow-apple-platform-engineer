@@ -4,12 +4,23 @@
   "nodes": [
     {"id": "intake", "requires": []},
     {"id": "guard", "requires": ["intake"]},
-    {"id": "discover", "requires": ["guard"]},
-    {"id": "plan", "requires": ["discover"]},
+    {"id": "health", "requires": ["guard"]},
+    {"id": "discover", "requires": ["health"]},
+    {"id": "discover_spec_kit", "requires": ["discover"]},
+    {"id": "plan", "requires": ["discover_spec_kit"]},
     {"id": "approve_plan", "requires": ["plan"]},
     {"id": "branch_approval", "requires": ["approve_plan"]},
-    {"id": "claim_implementation_writer", "requires": ["branch_approval"], "resource": "source_checkout_writer", "lease_action": "acquire"},
-    {"id": "implement", "requires": ["claim_implementation_writer"]},
+    {"id": "bind_spec_kit_snapshot", "requires": ["branch_approval"]},
+    {"id": "bind_run_authorization", "requires": ["bind_spec_kit_snapshot"]},
+    {"id": "claim_implementation_writer", "requires": ["bind_run_authorization"], "resource": "source_checkout_writer", "lease_action": "acquire"},
+    {"id": "prepare_and_verify_branch", "requires": ["claim_implementation_writer"]},
+    {"id": "claim_github_tracking", "requires": ["prepare_and_verify_branch"], "resource": "github_external_mutation", "lease_action": "acquire"},
+    {"id": "ensure_issue_ready", "requires": ["claim_github_tracking"]},
+    {"id": "release_github_tracking", "requires": ["ensure_issue_ready"], "resource": "github_external_mutation", "lease_action": "release"},
+    {"id": "claim_github_in_progress", "requires": ["release_github_tracking"], "resource": "github_external_mutation", "lease_action": "acquire"},
+    {"id": "mark_issue_in_progress", "requires": ["claim_github_in_progress"]},
+    {"id": "release_github_in_progress", "requires": ["mark_issue_in_progress"], "resource": "github_external_mutation", "lease_action": "release"},
+    {"id": "implement", "requires": ["release_github_in_progress"]},
     {"id": "release_implementation_writer", "requires": ["implement"], "resource": "source_checkout_writer", "lease_action": "release"},
     {"id": "verify", "requires": ["release_implementation_writer"]},
     {"id": "freeze_review", "requires": ["verify"]},
@@ -26,11 +37,12 @@
     {"id": "push", "requires": ["claim_github_mutation"]},
     {"id": "verify_remote_sha", "requires": ["push"]},
     {"id": "create_pr", "requires": ["verify_remote_sha"]},
-    {"id": "publish_evidence", "requires": ["create_pr"]},
+    {"id": "mark_issue_in_review", "requires": ["create_pr"]},
+    {"id": "publish_evidence", "requires": ["mark_issue_in_review"]},
     {"id": "verify_published_evidence", "requires": ["publish_evidence"]},
-    {"id": "release_github_mutation", "requires": ["verify_published_evidence"], "resource": "github_external_mutation", "lease_action": "release"},
-    {"id": "checks", "requires": ["release_github_mutation"]},
-    {"id": "pr_ready", "requires": ["checks"], "terminal": true}
+    {"id": "checks", "requires": ["verify_published_evidence"]},
+    {"id": "release_github_mutation", "requires": ["checks"], "resource": "github_external_mutation", "lease_action": "release"},
+    {"id": "pr_ready", "requires": ["release_github_mutation"], "terminal": true}
   ],
   "attempt_policy": {
     "max_implementation_attempts": 3,
@@ -47,7 +59,11 @@
     "validates",
     "invalidates",
     "feedback_on",
-    "promoted_to"
+    "promoted_to",
+    "authorized_by",
+    "tracks",
+    "continues_from",
+    "derived_from"
   ],
   "terminal_outcomes": {
     "success": "pr_ready",
@@ -63,6 +79,9 @@
   },
   "completion_requires": [
     "required_nodes_passed",
+    "required_health_profile_satisfied",
+    "run_authorization_current",
+    "spec_kit_snapshot_current_or_not_applicable",
     "latest_evidence_matches_patch_identity",
     "no_active_resource_lease",
     "review_patch_identity_current",
@@ -70,6 +89,20 @@
     "evidence_published_and_viewable",
     "pull_request_exists",
     "remote_sha_matches_local_commit",
-    "required_checks_satisfied"
-  ]
+    "required_checks_satisfied",
+    "issue_tracking_reconciled_or_recorded_partial"
+  ],
+  "cleanup": {
+    "mode": "finally",
+    "triggers": ["blocked", "failed_terminal", "cancelled", "success_terminal"],
+    "release_active_resources": [
+      "source_checkout_writer",
+      "xcode_project_mutation",
+      "build_tuple",
+      "simulator_or_device",
+      "coresimulator_runtime_registry",
+      "signing_or_app_store_connect",
+      "github_external_mutation"
+    ]
+  }
 }
