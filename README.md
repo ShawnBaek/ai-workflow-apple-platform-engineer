@@ -81,6 +81,10 @@ Choose exactly one collaboration mode:
 A Local LLM may retrieve, rerank, extract entities, or cluster logs on loopback, but never writes or approves.
 Human feedback updates affected plan/evidence; durable self-improvement remains a reviewed change.
 
+Unless the user fixes a model, each graph node is classified `simple`, `standard`, or `deep`. Current examples are
+Codex Luna/Terra/Sol and Claude `haiku`/`sonnet`/`opus`; the harness resolves current availability at run time,
+keeps planning/high-risk review on deep capability, and escalates only from evidence.
+
 ## Architecture and Delivery
 
 ```mermaid
@@ -112,6 +116,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
   taps, launch, splash, and waiting unless startup is the acceptance target.
 - Preserve raw video, publish the reviewed trim, and verify playback, boundary frames, hashes, and viewer access.
 - A build exit code is not runtime proof. Report platform, destination, `.xcresult`, state, and omitted coverage.
+- Finish with provider-reported token usage per model/agent; mark partial or unavailable data instead of estimating.
 
 ## Skills
 
@@ -167,6 +172,6 @@ Also validate each changed skill. Documentation-only work does not justify a fou
 
 Official Apple: [external Xcode agents](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode), [agent customization](https://developer.apple.com/documentation/xcode/extending-and-customizing-agents), [HIG](https://developer.apple.com/design/human-interface-guidelines/), [XCTest](https://developer.apple.com/documentation/xctest), [`accessibilityIdentifier`](https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier), [`XCUIElement.identifier`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/identifier).
 
-Official agent/workflow docs: [OpenAI MCP](https://developers.openai.com/codex/mcp/), [Codex platform](https://developers.openai.com/blog/codex-as-a-platform), [Claude MCP](https://code.claude.com/docs/en/mcp), [Anthropic knowledge graphs](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide), [Spec Kit v1.0.1](https://github.com/github/spec-kit/releases/tag/v1.0.1), [GitHub Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects).
+Official agent/workflow docs: [OpenAI MCP](https://developers.openai.com/codex/mcp/), [OpenAI models](https://developers.openai.com/api/docs/guides/latest-model), [Codex platform](https://developers.openai.com/blog/codex-as-a-platform), [Claude models](https://code.claude.com/docs/en/model-config), [Claude usage](https://code.claude.com/docs/en/costs), [Claude MCP](https://code.claude.com/docs/en/mcp), [Anthropic knowledge graphs](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide), [Spec Kit v1.0.1](https://github.com/github/spec-kit/releases/tag/v1.0.1), [GitHub Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects).
 
 Independent: [AppleSampleCode MCP](https://applesamplecode.com/MCP.html), [IconGen](https://github.com/ShawnBaek/IconGen), [Agent Skills specification](https://agentskills.io/specification).

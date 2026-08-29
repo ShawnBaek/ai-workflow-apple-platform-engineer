@@ -1001,6 +1001,52 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, harness_delivery)
 
+    def test_completion_report_requires_exact_provider_usage_aggregation(self) -> None:
+        schema = validator.load_json(
+            ROOT / "skills" / "agent-harness" / "contracts" / "schemas"
+            / "completion-report.schema.json"
+        )
+        report = validator.load_json(
+            ROOT / "skills" / "agent-harness" / "templates"
+            / "completion-report.json"
+        )
+        self.assertEqual([], validator.validate_json_schema(report, schema))
+        self.assertEqual([], validator.validate_completion_report(report))
+
+        report["usage"] = {
+            "status": "full",
+            "missing_sources": [],
+            "source_records": {
+                "codex-response-1": {
+                    "provider": "openai", "input_tokens": 10,
+                    "output_tokens": 5, "cached_input_tokens": 2,
+                    "reasoning_tokens": 3,
+                },
+                "claude-message-1": {
+                    "provider": "anthropic", "input_tokens": 20,
+                    "output_tokens": 10, "cached_input_tokens": 1,
+                    "reasoning_tokens": 4,
+                },
+            },
+            "attribution": [
+                {"agent_id": "writer", "session_id": "session-a", "model": "balanced", "source_ids": ["codex-response-1"]},
+                {"agent_id": "reviewer", "session_id": "session-b", "model": "deep", "source_ids": ["claude-message-1"]},
+            ],
+            "cross_provider_total": {
+                "input_tokens": 30, "output_tokens": 15,
+                "label": "informational; cached input and reasoning are subsets, not added",
+            },
+            "cost": {"status": "client_estimate", "amount": 0.25, "currency": "USD"},
+        }
+        self.assertEqual([], validator.validate_json_schema(report, schema))
+        self.assertEqual([], validator.validate_completion_report(report))
+
+        report["usage"]["source_records"]["codex-response-1"]["cached_input_tokens"] = 11
+        report["usage"]["cross_provider_total"]["output_tokens"] = 16
+        errors = validator.validate_completion_report(report)
+        self.assertTrue(any("cached input exceeds" in error for error in errors))
+        self.assertTrue(any("must equal each unique" in error for error in errors))
+
     def test_companion_upstream_drift_creates_review_candidate_only(self) -> None:
         manifest = validator.load_json(
             ROOT / "skills" / "icon-composer" / "contracts" / "companion-upstream.json"

@@ -17,6 +17,9 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 - Signing/App Store actions load the private Apple account/team policy before
   account discovery.
 - Broad work uses one writer lease and evidence-backed bounded attempts.
+- Preserve an explicit model choice. Otherwise keep planning/architecture on a
+  deep-capability lead and route only independently bounded mechanical work to
+  a current cost-efficient model under `agent-harness/references/cost-and-usage.md`.
 - For cross-layer features, the repository writer owns final integration across
   UI, package, persistence, and navigation boundaries. Specialists advise or
   change their layer; none may declare the feature complete from an isolated
@@ -55,7 +58,8 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 
 1. Freeze acceptance criteria and affected tradeoffs.
 2. Resolve authoritative repository/Xcode/account boundaries.
-3. Plan only real dependencies; parallelize frozen-snapshot read-only research.
+3. Plan only real dependencies, assign a justified model class per node, and
+   parallelize frozen-snapshot read-only research.
 4. Implement with one repository writer and scoped Apple resource leases.
 5. Run the minimum checks justified by impact and risk.
 6. Review a frozen patch, converge with bounded attempts, and preserve failures.

@@ -23,6 +23,73 @@ def canonical_sha256(value: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def validate_completion_report(report: dict[str, Any]) -> list[str]:
+    """Validate usage aggregation rules that JSON Schema cannot express."""
+    errors: list[str] = []
+    usage = report.get("usage", {})
+    status = usage.get("status")
+    missing = usage.get("missing_sources", [])
+    sources = usage.get("source_records", {})
+    attribution = usage.get("attribution", [])
+    total = usage.get("cross_provider_total")
+    cost = usage.get("cost", {})
+
+    if status == "full" and (missing or not sources):
+        errors.append("full usage requires source records and no missing sources")
+    if status == "partial" and (not missing or not sources):
+        errors.append("partial usage requires reported and missing sources")
+    if status == "not_exposed" and (not missing or sources or total is not None):
+        errors.append("not_exposed usage must preserve missing sources without token records or totals")
+
+    known_input = known_output = complete_source_count = 0
+    unknown_counts: list[str] = []
+    referenced: list[str] = []
+    for source_id, source in sources.items():
+        input_tokens, output_tokens = source.get("input_tokens"), source.get("output_tokens")
+        cached = source.get("cached_input_tokens")
+        reasoning = source.get("reasoning_tokens")
+        if (input_tokens is None) != (output_tokens is None):
+            errors.append(f"usage source {source_id} must expose input and output together")
+        if input_tokens is None and output_tokens is None:
+            unknown_counts.append(source_id)
+        if input_tokens is not None and cached is not None and cached > input_tokens:
+            errors.append(f"usage source {source_id} cached input exceeds input tokens")
+        if output_tokens is not None and reasoning is not None and reasoning > output_tokens:
+            errors.append(f"usage source {source_id} reasoning exceeds output tokens")
+        if input_tokens is not None and output_tokens is not None:
+            complete_source_count += 1
+            known_input += input_tokens
+            known_output += output_tokens
+    if status == "full" and unknown_counts:
+        errors.append(f"full usage cannot contain unexposed token sources: {sorted(unknown_counts)}")
+    if status == "partial" and complete_source_count == 0:
+        errors.append("partial usage requires at least one complete token source")
+    for item in attribution:
+        referenced.extend(item.get("source_ids", []))
+    unknown_refs = sorted(set(referenced) - set(sources))
+    if unknown_refs:
+        errors.append(f"usage attribution references unknown sources: {unknown_refs}")
+    duplicate_refs = sorted(source_id for source_id in set(referenced) if referenced.count(source_id) != 1)
+    if duplicate_refs:
+        errors.append(f"usage sources must be attributed exactly once: {duplicate_refs}")
+    unattributed = sorted(set(sources) - set(referenced))
+    if unattributed:
+        errors.append(f"usage sources lack attribution: {unattributed}")
+
+    if known_input or known_output:
+        if total is None or total.get("input_tokens") != known_input or total.get("output_tokens") != known_output:
+            errors.append("cross-provider token total must equal each unique reported source exactly once")
+    elif total is not None:
+        errors.append("cross-provider token total requires at least one complete source")
+
+    cost_status, amount, currency = cost.get("status"), cost.get("amount"), cost.get("currency")
+    if cost_status == "not_exposed" and (amount is not None or currency is not None):
+        errors.append("unexposed cost cannot contain an amount or currency")
+    if cost_status in {"provider_reported", "client_estimate"} and (amount is None or not currency):
+        errors.append("reported or estimated cost requires amount and currency")
+    return errors
+
+
 def frontmatter_name(path: Path) -> str | None:
     text = path.read_text(encoding="utf-8")
     match = re.search(r"^name:\s*([^\n]+)$", text, re.MULTILINE) if text.startswith("---\n") else None
@@ -1319,6 +1386,7 @@ def validate_contracts() -> list[str]:
     pairs = [
         (CONTRACTS / "capabilities.json", schemas / "capabilities.schema.json"),
         (CONTRACTS / "workflow.json", schemas / "workflow.schema.json"),
+        (SKILLS / "agent-harness" / "templates" / "completion-report.json", schemas / "completion-report.schema.json"),
         (testflight_workflow, schemas / "testflight-workflow.schema.json"),
         (authorization_fixture, schemas / "run-authorization.schema.json"),
         (policy_fixture, schemas / "private-policy-overlay.schema.json"),
@@ -1337,6 +1405,7 @@ def validate_contracts() -> list[str]:
     errors.extend(validate_xcode_mcp_provider_policy(capabilities))
     errors.extend(validate_workflow_semantics(workflow, set(capabilities.get("resource_scopes", []))))
     errors.extend(validate_testflight_workflow(load_json(testflight_workflow)))
+    errors.extend(validate_completion_report(load_json(SKILLS / "agent-harness" / "templates" / "completion-report.json")))
     errors.extend(validate_run_authorization_contract(load_json(authorization_fixture)))
     pending_authorization = load_json(authorization_template)
     if pending_authorization.get("decision") != "pending":
@@ -1536,6 +1605,22 @@ def validate_safety_contracts() -> list[str]:
     ):
         if phrase not in delivery:
             errors.append(f"Harness delivery evidence contract missing: {phrase}")
+    cost_usage = " ".join(
+        (SKILLS / "agent-harness" / "references" / "cost-and-usage.md")
+        .read_text(encoding="utf-8")
+        .split()
+    )
+    for phrase in (
+        "Current examples—not permanent mappings",
+        "Escalate only for recorded evidence",
+        "provider/client-reported only",
+        "cached_input_tokens` is a subset of input",
+        "reasoning_tokens` a subset of output",
+        "multi-provider total is informational",
+        "client_estimate",
+    ):
+        if phrase not in cost_usage:
+            errors.append(f"Cost-aware model and usage contract missing: {phrase}")
     git_workflow = (SKILLS / "git-workflow" / "SKILL.md").read_text(encoding="utf-8")
     for phrase in (
         "ordered phase map",
