@@ -90,6 +90,35 @@ def validate_completion_report(report: dict[str, Any]) -> list[str]:
     return errors
 
 
+def validate_delivery_channel_config(config: dict[str, Any]) -> list[str]:
+    """Enforce alias and channel-ownership rules beyond JSON Schema."""
+    errors: list[str] = []
+    channels = config.get("channels", [])
+    ids = [item.get("id") for item in channels]
+    if len(ids) != len(set(ids)):
+        errors.append("delivery channel IDs must be unique")
+    active = [item for item in channels if item.get("enabled") is True]
+    if config.get("enabled") is True and not active:
+        errors.append("enabled delivery config requires one enabled channel")
+    if config.get("enabled") is False and active:
+        errors.append("disabled delivery config cannot contain enabled channels")
+    transport_prefix = {"telegram": "bot-api", "whatsapp": "cloud-api", "imessage": "shortcuts"}
+    for item in channels:
+        kind = item.get("kind")
+        credential, destination = item.get("credential_ref"), str(item.get("destination_ref", ""))
+        if kind in {"telegram", "whatsapp"} and credential is None:
+            errors.append(f"{kind} channel requires a private credential reference")
+        if kind == "imessage" and (credential is not None or not destination.startswith("shortcuts.")):
+            errors.append("iMessage channel must keep its recipient only inside a Shortcut")
+        if kind != "imessage" and not destination.startswith("private."):
+            errors.append(f"{kind} channel destination must be a private alias")
+        if kind in transport_prefix and not str(item.get("transport_ref", "")).startswith(transport_prefix[kind]):
+            errors.append(f"{kind} channel transport alias does not match its provider")
+        if kind != "whatsapp" and item.get("whatsapp_template_ref") is not None:
+            errors.append("only WhatsApp channels may reference a WhatsApp template")
+    return errors
+
+
 def frontmatter_name(path: Path) -> str | None:
     text = path.read_text(encoding="utf-8")
     match = re.search(r"^name:\s*([^\n]+)$", text, re.MULTILINE) if text.startswith("---\n") else None
@@ -1383,6 +1412,10 @@ def validate_contracts() -> list[str]:
     health_template = health_root / "templates" / "health-observations.json"
     icon_root = SKILLS / "icon-composer"
     companion_manifest = icon_root / "contracts" / "companion-upstream.json"
+    delivery_root = SKILLS / "delivery-report"
+    for path in sorted((delivery_root / "contracts").glob("*.json")):
+        try: load_json(path)
+        except (OSError, json.JSONDecodeError) as exc: errors.append(f"invalid JSON {path.relative_to(ROOT)}: {exc}")
     pairs = [
         (CONTRACTS / "capabilities.json", schemas / "capabilities.schema.json"),
         (CONTRACTS / "workflow.json", schemas / "workflow.schema.json"),
@@ -1393,6 +1426,7 @@ def validate_contracts() -> list[str]:
         (SKILLS / "agent-harness" / "templates" / "harness.json", schemas / "harness.schema.json"),
         (health_template, health_root / "contracts" / "health-report.schema.json"),
         (companion_manifest, icon_root / "contracts" / "companion-upstream.schema.json"),
+        (delivery_root / "templates" / "channel-config.json", delivery_root / "contracts" / "channel-config.schema.json"),
     ]
     for contract, schema_path in pairs:
         instance = load_json(contract)
@@ -1406,6 +1440,7 @@ def validate_contracts() -> list[str]:
     errors.extend(validate_workflow_semantics(workflow, set(capabilities.get("resource_scopes", []))))
     errors.extend(validate_testflight_workflow(load_json(testflight_workflow)))
     errors.extend(validate_completion_report(load_json(SKILLS / "agent-harness" / "templates" / "completion-report.json")))
+    errors.extend(validate_delivery_channel_config(load_json(delivery_root / "templates" / "channel-config.json")))
     errors.extend(validate_run_authorization_contract(load_json(authorization_fixture)))
     pending_authorization = load_json(authorization_template)
     if pending_authorization.get("decision") != "pending":
@@ -1605,6 +1640,28 @@ def validate_safety_contracts() -> list[str]:
     ):
         if phrase not in delivery:
             errors.append(f"Harness delivery evidence contract missing: {phrase}")
+    delivery_report = " ".join("\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            SKILLS / "delivery-report" / "SKILL.md",
+            SKILLS / "delivery-report" / "references" / "setup.md",
+        )
+    ).split())
+    for phrase in (
+        "Config alone is not authority",
+        "`channel_id`, `destination_ref`, `report_sha256`",
+        "`media_allowlist`",
+        "`idempotency_key`",
+        "accepted",
+        "delivered/read",
+        "24-hour customer service window",
+        "iMessage has no public server API",
+        "`trimmed_video`, never a raw recording",
+        "delivery-authorization.schema.json",
+        "preview-only",
+    ):
+        if phrase not in delivery_report:
+            errors.append(f"Delivery report safety contract missing: {phrase}")
     cost_usage = " ".join(
         (SKILLS / "agent-harness" / "references" / "cost-and-usage.md")
         .read_text(encoding="utf-8")
