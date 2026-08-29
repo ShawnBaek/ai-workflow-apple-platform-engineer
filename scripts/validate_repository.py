@@ -1375,7 +1375,10 @@ def validate_readme(skill_names: list[str]) -> list[str]:
     text, version, errors = (ROOT / "README.md").read_text(encoding="utf-8"), (ROOT / "VERSION").read_text(encoding="utf-8").strip(), []
     if f"**Version:** {version}" not in text: errors.append("README version must match VERSION")
     errors.extend(f"README inventory missing skill {name}" for name in skill_names if f"skills/{name}/SKILL.md" not in text)
-    if text.count("```mermaid") < 2: errors.append("README needs at least two Mermaid diagrams")
+    sections = [line for line in text.splitlines() if line.startswith("## ")]
+    if not sections or sections[0] != "## How to Install": errors.append("README first section must be How to Install")
+    if len(text.splitlines()) > 200: errors.append("README must stay within 200 lines")
+    if text.count("```mermaid") != 1: errors.append("README needs exactly one Mermaid diagram")
     if text.count("```mermaid") > text.count("```") // 2: errors.append("unbalanced README code fences")
     return errors
 
