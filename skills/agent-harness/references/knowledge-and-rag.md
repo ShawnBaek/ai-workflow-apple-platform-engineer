@@ -20,12 +20,12 @@ semantic retrieval. A decision node must be `proposed`, `accepted`, or
 ## Corpus policy
 
 Include allowlisted project source, tests, specs, ADRs, issue/PR summaries, and
-approved AppleSampleCode.com analysis snapshots. Exclude `.env`, private keys,
-profiles, credentials, session logs, DerivedData, build products, archives, and
-user home data. The local baseline requires one or more explicit `--include`
-repo-relative glob scopes; its default suffixes are only `.md`, `.txt`, and
-`.swift`. Structured files (`.json`, `.yaml`, `.yml`, `.plist`) require the
-separate `--allow-structured` opt-in. It skips files that contain a
+selected AppleSampleCode.com results or approved snapshots. Exclude `.env`,
+private keys, profiles, credentials, session logs, DerivedData, build products,
+archives, and user home data. The local baseline requires one or more explicit
+`--include` repo-relative glob scopes; its default suffixes are only `.md`,
+`.txt`, and `.swift`. Structured files (`.json`, `.yaml`, `.yml`, `.plist`)
+require the separate `--allow-structured` opt-in. It skips files that contain a
 high-confidence credential signal without printing their content.
 
 Every chunk needs source ID, authority tier, repository/URL, commit or Xcode
@@ -38,22 +38,52 @@ Do not copy the whole Apple documentation corpus. Ask Xcode Documentation Search
 for current API truth and store the query, supported decision, Xcode/SDK build,
 timestamp, and source link/hash as provenance.
 
-AppleSampleCode.com analysis is not Apple documentation. Link its claims back to
-official documentation or a pinned Apple sample before treating them as an
-implementation constraint. Fetch only an approved URL/scope and retain its URL,
-timestamp, content hash, and terms/robots decision. If the exact domain or page
-is unavailable, use only an already approved snapshot or mark retrieval blocked;
-never substitute a similarly named domain.
+### AppleSampleCode MCP
 
-For AppleSampleCode.com, prefer a selected-sample record over a site-wide
-mirror. When the page exposes them, capture the sample title, original Apple
-source URL, reviewed date, platforms/frameworks, pinned sample revision or
-archive hash, and source-map file/symbol references. Store source-visible facts
-such as ownership, state flow, concurrency boundaries, and framework boundaries
-separately from the site's interpretation. A retrieved interpretation can
-suggest a hypothesis; only the pinned source, current repository, or official
-Apple documentation can promote it to an implementation constraint. Useful
-entry points are the [About](https://applesamplecode.com/ABOUT.html),
+AppleSampleCode.com is independent source-cited analysis, not Apple
+documentation. It remains below live Apple documentation, Apple-authored Xcode
+skill exposure, and commit-pinned Apple sample code in the Apple API truth
+ladder. A retrieved interpretation can suggest a hypothesis; only official
+documentation, pinned Apple source, or the current repository can make it an
+implementation constraint.
+
+For selected sample research, use the read-only streamable HTTP MCP first:
+
+```sh
+codex mcp add apple-sample-code --url https://mcp.applesamplecode.com/mcp
+codex mcp get apple-sample-code
+
+claude mcp add --transport http apple-sample-code https://mcp.applesamplecode.com/mcp
+claude mcp get apple-sample-code
+```
+
+Client registration is a user-approved configuration mutation; the health
+skill only observes it. The remote endpoint works independently of any npm or
+public MCP Registry publication. A successful HTTP GET is not the protocol
+probe: streamable HTTP servers may reject GET. Require MCP initialization, exact
+current-task exposure of `search_samples`, `get_sample`, `compare_samples`, and
+`get_status`, then one bounded `get_status` call with `refresh: false`.
+
+Do not hardcode corpus counts or an alpha server version as acceptance. Record
+the returned server name and version, endpoint, corpus revision, freshness
+fields, source mode, last error, tool name, complete query/filter or stable
+sample ID, retrieval time, selected result/source page and source-map citations,
+and a content/result hash. `isLatest: null` means freshness is unknown, not
+automatic failure; a missing corpus revision or missing required tool is a
+blocked retrieval surface.
+
+Prefer selected sample IDs and results over a site-wide mirror. Store
+source-visible ownership, state flow, concurrency, naming, dependency, and
+framework observations separately from site interpretation. Put only the
+approved selected records into local RAG. Do not mirror or double-index the MCP
+corpus. If the live MCP is unavailable, use only an already approved exact
+AppleSampleCode page or snapshot with its URL, timestamp, content hash, and
+terms/robots decision. Otherwise mark retrieval blocked. Never substitute a
+similarly named domain.
+
+Useful human-facing entry points are the
+[MCP guide](https://applesamplecode.com/MCP.html),
+[About](https://applesamplecode.com/ABOUT.html),
 [sample catalog](https://applesamplecode.com/_catalog/SAMPLE-CODE-CATALOG.html),
 and [patterns](https://applesamplecode.com/PATTERNS.html) pages.
 

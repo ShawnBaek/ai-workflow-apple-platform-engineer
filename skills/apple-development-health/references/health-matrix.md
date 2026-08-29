@@ -69,6 +69,39 @@ agent access, discard a stale session, start one fresh session, retry the blocke
 read-only capability once, then stop if unchanged. Do not repeat 300-second
 build/install/launch loops.
 
+## AppleSampleCode MCP
+
+Treat AppleSampleCode as an optional independent analysis source, not an Apple
+official MCP or a substitute for live Apple documentation. When the harness
+selects `apple_sample_code_mcp`, verify these layers separately for each selected
+client:
+
+The required health check ID is `mcp.apple_sample_code`.
+
+1. exact registration name `apple-sample-code` and streamable HTTP endpoint
+   `https://mcp.applesamplecode.com/mcp`;
+2. exposure in the current task after any required client restart;
+3. the exact read-only tools `search_samples`, `get_sample`, `compare_samples`,
+   and `get_status`;
+4. one bounded `get_status` call with `refresh: false`.
+
+Codex registration is
+`codex mcp add apple-sample-code --url https://mcp.applesamplecode.com/mcp`;
+Claude Code registration is
+`claude mcp add --transport http apple-sample-code https://mcp.applesamplecode.com/mcp`.
+These are repair/configuration mutations and do not belong inside health. An npm
+or public MCP Registry release is not required for the remote endpoint.
+
+Do not probe this streamable HTTP server with GET and call an allowed `405` a
+failure. Use an MCP client or a bounded JSON-RPC initialization plus the
+read-only tool call. Record server version, corpus revision, sample and validated
+sequence-diagram counts, source mode, `isLatest`, `lastError`, and observation
+time without turning current counts or an alpha version into permanent policy.
+`isLatest: null` is unknown freshness; `isLatest: false` is degraded when the
+corpus remains usable; a missing revision, missing tool, failed initialization,
+or unusable status response is blocked when selected. If not selected, report
+`not_applicable` rather than requiring installation.
+
 ## GitHub, Spec Kit, and delivery
 
 - Verify active personal/approved GitHub account, exact remote repository,

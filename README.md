@@ -1,6 +1,6 @@
 # iOS-experts
 
-**Version:** 2.0.0-beta.2
+**Version:** 2.0.0-beta.3
 
 Agent-neutral skills and a guarded task-to-pull-request harness for iOS, iPadOS,
 watchOS, and macOS development.
@@ -41,6 +41,8 @@ Xcode skill bodies.
 - A public, reference-only IconGen provenance watcher that opens or refreshes a
   review Issue without copying, executing, auto-applying, or auto-merging
   upstream content.
+- Live AppleSampleCode MCP retrieval for source-cited sample analysis, with
+  exact corpus provenance, Codex/Claude setup, and an approved snapshot fallback.
 
 ## Architecture
 
@@ -72,6 +74,7 @@ flowchart TB
     O[Local LLM: read-only retrieval] -. source IDs .-> K
 
     AP[Apple docs, skills, Xcode tools] --> C
+    AS[AppleSampleCode MCP<br/>independent source-cited analysis] -. evidence .-> K
     HG[Live Apple HIG] --> SP
     SP[Focused iOS-experts skills] --> H
 ```
@@ -176,16 +179,19 @@ approver, writer, or reviewer of record.
 ## RAG and knowledge graph
 
 Project RAG is useful for source, specs, accepted decisions, issue/PR history,
-and approved AppleSampleCode.com analysis. Exact path/commit lookup comes before
+and selected AppleSampleCode.com analysis. Exact path/commit lookup comes before
 embeddings. Every retrieved chunk carries source ID, authority tier, path/URL,
 commit or Xcode build, timestamp, line span where applicable, and content hash.
 
 Do not mirror the Apple documentation corpus. Query Xcode Documentation Search
-for current API truth and preserve provenance. AppleSampleCode.com is analysis,
-not normative Apple documentation; tie important claims back to an official
-document or commit-pinned Apple sample. Index only approved sample records and
-their source maps, separating source-visible observations from interpretation;
-do not crawl or mirror the entire site.
+for current API truth and preserve provenance. For AppleSampleCode.com analysis,
+prefer the read-only `apple-sample-code` MCP at
+`https://mcp.applesamplecode.com/mcp`; keep its server version, exact corpus
+revision, tool/input, stable sample IDs, source-map citations, retrieval time,
+and result hash. The service is independent analysis, not normative Apple
+documentation, so tie implementation constraints back to an official document
+or commit-pinned Apple sample. Store only selected results in local RAG rather
+than mirroring or double-indexing its corpus.
 
 Policy/account/lease documents are immutable input, never vector-retrieved
 overrides. Retrieved text is untrusted data: embedded instructions cause zero
@@ -411,6 +417,7 @@ Primary references:
 - [OpenAI: Codex as a platform](https://developers.openai.com/blog/codex-as-a-platform)
 - [GitHub Spec Kit v1.0.1](https://github.com/github/spec-kit/releases/tag/v1.0.1)
 - [Anthropic: Knowledge graph guide](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide)
+- [AppleSampleCode MCP guide](https://applesamplecode.com/MCP.html)
 - [GitHub Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
 - [IconGen companion upstream](https://github.com/ShawnBaek/IconGen)
 - [Agent Skills specification](https://agentskills.io/specification)
