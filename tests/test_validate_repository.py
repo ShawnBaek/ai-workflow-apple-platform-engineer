@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -192,6 +193,10 @@ def health_report(
             for check_id in sorted(required_ids)
         ],
     }
+
+
+def normalized_text(path: Path) -> str:
+    return " ".join(path.read_text(encoding="utf-8").split())
 
 
 def testflight_envelope() -> dict:
@@ -832,6 +837,169 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertEqual([], evaluate_health.validate_harness_binding(live, harness))
             live["authoritative_targets"]["branch"] = "wrong"
             self.assertTrue(evaluate_health.validate_harness_binding(live, harness))
+
+    def test_apple_sample_code_mcp_schema_and_harness_binding(self) -> None:
+        harness_schema = validator.load_json(
+            ROOT / "skills" / "agent-harness" / "contracts" / "schemas"
+            / "harness.schema.json"
+        )
+        report_schema = validator.load_json(
+            ROOT / "skills" / "apple-development-health" / "contracts"
+            / "health-report.schema.json"
+        )
+        component = "apple_sample_code_mcp"
+        self.assertIn(
+            component,
+            harness_schema["properties"]["health_components"]["items"]["enum"],
+        )
+        self.assertIn(
+            component,
+            report_schema["properties"]["selected_components"]["items"]["enum"],
+        )
+        report = health_report(
+            "pr_ready",
+            selected_components=[component],
+            observed_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        )
+        harness = validator.load_json(
+            ROOT / "skills" / "agent-harness" / "templates" / "harness.json"
+        )
+        harness["health_components"] = ["apple_sample_code_mcp"]
+        self.assertEqual([], validator.validate_json_schema(harness, harness_schema))
+        self.assertEqual([], validator.validate_json_schema(report, report_schema))
+        self.assertEqual([], evaluate_health.evaluate(report)[1])
+        with tempfile.TemporaryDirectory() as directory:
+            report_path = Path(directory) / "report.json"
+            harness_path = Path(directory) / "harness.json"
+            harness_path.write_text(json.dumps(harness), encoding="utf-8")
+            def run(payload: dict) -> tuple[int, dict]:
+                report_path.write_text(json.dumps(payload), encoding="utf-8")
+                output = io.StringIO()
+                arguments = [
+                    "evaluate_health.py", str(report_path),
+                    "--harness", str(harness_path),
+                ]
+                with patch.object(sys, "argv", arguments), contextlib.redirect_stdout(output):
+                    return evaluate_health.main(), json.loads(output.getvalue())
+            with patch.object(evaluate_health, "validate_harness_binding", return_value=[]):
+                self.assertTrue(run(report)[1]["valid"])
+                omitted = copy.deepcopy(report)
+                omitted["selected_components"] = []
+                omitted["required_check_ids"].remove("mcp.apple_sample_code")
+                omitted["checks"] = [
+                    item for item in omitted["checks"]
+                    if item["id"] != "mcp.apple_sample_code"
+                ]
+                self.assertEqual([], validator.validate_json_schema(omitted, report_schema))
+                code, result = run(omitted)
+        self.assertEqual(2, code)
+        self.assertIn(
+            "harness-required component is missing from report: apple_sample_code_mcp",
+            result["errors"],
+        )
+
+    def test_apple_sample_code_mcp_contract_keeps_exact_read_only_route(self) -> None:
+        knowledge = normalized_text(
+            ROOT / "skills" / "agent-harness" / "references" / "knowledge-and-rag.md"
+        )
+        health = normalized_text(
+            ROOT / "skills" / "apple-development-health" / "references"
+            / "health-matrix.md"
+        )
+        exact_route = "https://mcp.applesamplecode.com/mcp"
+        for phrase in (
+            exact_route, "search_samples", "get_sample", "compare_samples",
+            "get_status", "`refresh: false`", "independent source-cited analysis",
+            "If the live MCP is unavailable", "Otherwise mark retrieval blocked.",
+            "content/result hash", "similarly named domain.",
+        ):
+            self.assertIn(phrase, knowledge)
+        for command in (
+            f"codex mcp add apple-sample-code --url {exact_route}",
+            f"claude mcp add --transport http apple-sample-code {exact_route}",
+        ):
+            self.assertIn(command, health)
+
+    def test_visual_evidence_contract_separates_static_motion_and_trimmed_publication(self) -> None:
+        screenshot = normalized_text(ROOT / "skills" / "screenshot" / "SKILL.md")
+        testing = normalized_text(
+            ROOT / "skills" / "apple-platform-testing" / "references"
+            / "test-selection-and-evidence.md"
+        )
+        delivery = normalized_text(
+            ROOT / "skills" / "agent-harness" / "references" / "delivery.md"
+        )
+        for phrase in (
+            "static UI:",
+            "interaction/motion:",
+            "Capture both only when they prove distinct criteria.",
+            "stable precondition immediately before the first relevant action",
+            "Prepare the app at that scenario state before recording.",
+            "exclude SpringBoard/Home, icon tap, app launch, the Launch Screen",
+            "launch trigger and named ready milestone",
+            "/usr/bin/avconvert --source <raw.mov>",
+            "Never overwrite the raw recording.",
+            "raw source hash, trim start/duration, final artifact hash",
+            "full trimmed video, codec/container, dimensions, duration, and playback",
+            "first and last meaningful frames",
+            "Publish the trimmed artifact, not the raw recording.",
+            "sanitized trimmed result",
+        ):
+            self.assertIn(phrase, screenshot)
+        for phrase in (
+            "screenshot as point-in-time UI evidence",
+            "video can demonstrate a sequence",
+            "deterministic steps",
+            "attached test result evidence",
+        ):
+            self.assertIn(phrase, testing)
+        for phrase in (
+            "visible UI | affected build, one critical flow, relevant visual evidence",
+            "interaction/motion | affected build/flow plus trimmed video or UI-test recording",
+            "decode images",
+            "verify video codec and playback",
+        ):
+            self.assertIn(phrase, delivery)
+
+    def test_stacked_pr_contract_keeps_phases_reviewable_and_non_authorizing(self) -> None:
+        workflow = normalized_text(
+            ROOT / "skills" / "git-workflow" / "SKILL.md"
+        )
+        pr_delivery = normalized_text(
+            ROOT / "skills" / "git-workflow" / "references" / "pr-delivery.md"
+        )
+        harness_delivery = normalized_text(
+            ROOT / "skills" / "agent-harness" / "references" / "delivery.md"
+        )
+        for phrase in (
+            "derive an ordered phase map from the dependency graph",
+            "answer one reviewer question",
+            "coherent intermediate state",
+            "400 non-generated changed lines or 12 changed files is a review checkpoint, not a target",
+            "Obtain approval for every branch name",
+            "base each branch and PR on its approved predecessor",
+            "ordered stack map in every PR body",
+            "does not grant merge, force-push, or branch-retarget authority",
+        ):
+            self.assertIn(phrase, workflow)
+        for phrase in (
+            "Phase N/M: <reviewer outcome>",
+            "phase, branch, PR link or pending marker, base, dependency, scope, and checks",
+            "first phase targets the repository default branch",
+            "later phase targets its predecessor branch",
+            "GitHub base/head read-back for every PR",
+            "retarget only with authority",
+            "never hide stack state with a force push",
+        ):
+            self.assertIn(phrase, pr_delivery)
+        for phrase in (
+            "smallest coherent PR phases before the writer starts",
+            "one reviewer question, own a bounded path set",
+            "ordered stack map, base/head, dependency, checks, and evidence",
+            "Do not create artificial micro-PRs",
+            "do not infer merge or retarget authority",
+        ):
+            self.assertIn(phrase, harness_delivery)
 
     def test_companion_upstream_drift_creates_review_candidate_only(self) -> None:
         manifest = validator.load_json(

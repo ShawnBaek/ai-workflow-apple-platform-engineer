@@ -1401,7 +1401,18 @@ def validate_safety_contracts() -> list[str]:
     if re.search(r"uses:\s+[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@v\d+", content):
         errors.append("skill workflow example contains a mutable major-version action ref")
     simulator_hang = (SKILLS / "xcodebuild" / "references" / "simulator-hang-recovery.md").read_text(encoding="utf-8")
-    for phrase in ("without rebuilding", "same install/launch phase hangs on both destinations", "blocked"):
+    for phrase in (
+        "without rebuilding",
+        "same install/launch phase hangs on both destinations",
+        "blocked",
+        "no new state for 30 seconds",
+        "SpringBoard/Home",
+        "app Launch Screen",
+        "command-line and GUI provenance",
+        "different Xcode installation",
+        "absence read-back",
+        "new-container read-back",
+    ):
         if phrase not in simulator_hang:
             errors.append(f"Simulator hang recovery contract missing: {phrase}")
     runtime_registry = (SKILLS / "xcodebuild" / "references" / "runtime-disk-registry-recovery.md").read_text(encoding="utf-8")
@@ -1452,9 +1463,108 @@ def validate_safety_contracts() -> list[str]:
         "Data Migration Failed",
         "partially usable",
         "continuous drag",
+        "apple_sample_code_mcp",
+        "mcp.apple_sample_code",
+        "https://mcp.applesamplecode.com/mcp",
+        "get_status",
+        "refresh: false",
+        "isLatest: null",
     ):
         if phrase not in health:
             errors.append(f"Apple development health contract missing: {phrase}")
+    knowledge = (SKILLS / "agent-harness" / "references" / "knowledge-and-rag.md").read_text(encoding="utf-8")
+    for phrase in (
+        "codex mcp add apple-sample-code --url https://mcp.applesamplecode.com/mcp",
+        "claude mcp add --transport http apple-sample-code https://mcp.applesamplecode.com/mcp",
+        "search_samples",
+        "get_sample",
+        "compare_samples",
+        "get_status",
+        "content/result hash",
+        "If the live MCP is unavailable",
+        "mirror or double-index",
+    ):
+        if phrase not in knowledge:
+            errors.append(f"AppleSampleCode MCP contract missing: {phrase}")
+    ui_automation = (SKILLS / "apple-platform-testing" / "references" / "xctest-and-ui-automation.md").read_text(encoding="utf-8")
+    for phrase in (
+        "touch-down, held move, and touch-up",
+        "XCUIElement.pinch(withScale:velocity:)",
+        "active scheme/test plan",
+        "not pinch runtime evidence",
+        "accessibility tree",
+        "stable, unique, nonlocalized `accessibilityIdentifier`",
+        "not a substitute for `accessibilityLabel`",
+        "a label only to make a test pass",
+        "localized label selector is acceptable only when",
+    ):
+        if phrase not in ui_automation:
+            errors.append(f"Apple UI automation contract missing: {phrase}")
+    screenshot = (SKILLS / "screenshot" / "SKILL.md").read_text(encoding="utf-8")
+    for phrase in (
+        "Unless app launch/startup is the acceptance criterion",
+        "SpringBoard/Home",
+        "/usr/bin/avconvert",
+        "--start <seconds> --duration <seconds>",
+        "Never overwrite the raw recording",
+        "trimmed artifact, not the raw recording",
+        "first and last meaningful frames",
+    ):
+        if phrase not in screenshot:
+            errors.append(f"Screenshot/video evidence contract missing: {phrase}")
+    testing_evidence = (SKILLS / "apple-platform-testing" / "references" / "test-selection-and-evidence.md").read_text(encoding="utf-8")
+    for phrase in (
+        "prepared-state-to-outcome",
+        "launch/startup acceptance criterion",
+        "trimmed acceptance window",
+        "trim start/duration/tool",
+    ):
+        if phrase not in testing_evidence:
+            errors.append(f"Apple testing evidence contract missing: {phrase}")
+    delivery = (SKILLS / "agent-harness" / "references" / "delivery.md").read_text(encoding="utf-8")
+    for phrase in (
+        "trimmed video or UI-test recording",
+        "shortest trimmed acceptance window",
+        "first and last meaningful frames",
+        "Phase the review surface",
+        "one reviewer question",
+        "approved stacked branches",
+        "Do not create artificial micro-PRs",
+    ):
+        if phrase not in delivery:
+            errors.append(f"Harness delivery evidence contract missing: {phrase}")
+    git_workflow = (SKILLS / "git-workflow" / "SKILL.md").read_text(encoding="utf-8")
+    for phrase in (
+        "ordered phase map",
+        "one reviewer question",
+        "400 non-generated",
+        "12 changed files",
+        "use stacked PRs",
+        "approval for every",
+        "does not grant merge, force-push, or",
+    ):
+        if phrase not in git_workflow:
+            errors.append(f"Git phased PR contract missing: {phrase}")
+    pr_delivery = (SKILLS / "git-workflow" / "references" / "pr-delivery.md").read_text(encoding="utf-8")
+    for phrase in (
+        "Phase N/M: <reviewer outcome>",
+        "ordered stack map",
+        "predecessor branch",
+        "GitHub base/head read-back",
+    ):
+        if phrase not in pr_delivery:
+            errors.append(f"Git stacked PR delivery contract missing: {phrase}")
+    figma_parity = (SKILLS / "figma-bridge" / "simulator-parity.md").read_text(encoding="utf-8")
+    for phrase in (
+        "full-screen coordinates",
+        "safe-area-adjusted coordinates",
+        "container-local coordinates",
+        "outer container",
+        "component | Figma geometry | Simulator geometry",
+        "same dimensions and coordinate space",
+    ):
+        if phrase not in figma_parity:
+            errors.append(f"Figma Simulator parity contract missing: {phrase}")
     hig = (SKILLS / "apple-platform-ui" / "hig-source-policy.md").read_text(encoding="utf-8")
     for phrase in ("live [Apple Human Interface Guidelines]", "Do not RAG-index", "selected platform and OS generation"):
         if phrase not in hig:

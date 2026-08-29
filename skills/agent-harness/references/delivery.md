@@ -10,7 +10,7 @@
 | bug fix | one regression that reproduces the original failure |
 | pure logic | changed branches and material boundary/failure only |
 | visible UI | affected build, one critical flow, relevant visual evidence |
-| interaction/motion | affected build/flow plus video or UI-test recording |
+| interaction/motion | affected build/flow plus trimmed video or UI-test recording |
 | data migration | representative old-to-new store and clean install |
 | external mutation/safety | static allow and deny contract; no live destructive eval |
 
@@ -23,6 +23,18 @@ For every new test record `observable_contract`, `prevented_failure`, and
 PR body. Full suites/device matrices are reserved for shared core, release, an
 explicit request, or an impact graph that justifies them.
 
+## Phase the review surface
+
+Map the dependency graph into the smallest coherent PR phases before the writer
+starts. Each phase should answer one reviewer question, own a bounded path set,
+have minimum-sufficient checks, and leave a valid intermediate state. Split
+independently reviewable contracts instead of publishing one accumulating diff.
+If a later phase depends on an earlier one, use approved stacked branches and
+show the ordered stack map, base/head, dependency, checks, and evidence in every
+PR. Re-evaluate the split when scope grows during implementation or feedback.
+Do not create artificial micro-PRs, and do not infer merge or retarget authority
+from approval to build the stack.
+
 ## Evidence bundle
 
 Record base SHA, `patch_identity_v1`, and commit-tree equivalence; Xcode build,
@@ -31,6 +43,13 @@ test plan, destination;
 tool/provider/version; normalized command or tool call; start/end/exit state;
 `.xcresult`, screenshot, and video path plus SHA-256; and an observed result for
 each acceptance criterion.
+
+For video evidence, publish only the shortest trimmed acceptance window. Exclude
+SpringBoard/Home, icon tap, app launch, unrelated navigation/setup, loading, and
+idle tail unless launch/startup is the acceptance criterion. Record the raw
+source hash, trim start/duration/tool, final duration and hash, and any
+re-encode; verify full playback plus the first and last meaningful frames before
+publication.
 
 Keep platform claims separate: iPad window/size class, watchOS Crown/button and
 pairing state, macOS native versus Catalyst, and iOS destination are not one

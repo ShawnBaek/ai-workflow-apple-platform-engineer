@@ -121,7 +121,7 @@ evidence publication.
 | Core Data, SwiftData, CloudKit | `apple-data` / `core-data` |
 | Issues and GitHub Projects | `github-projects` |
 | setup/MCP/CLI/account readiness | `apple-development-health` |
-| Store screenshots | `screenshot` |
+| QA screenshots/recordings and App Store assets | `screenshot` |
 | TestFlight/App Store actions | `app-store-connect` |
 
 ## Never

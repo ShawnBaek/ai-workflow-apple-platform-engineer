@@ -18,12 +18,15 @@ Use this skill when selecting, implementing, or running tests for iOS, iPadOS, w
 
 Avoid proving the same contract at unit, integration, and UI layers. Record omitted checks and residual risk in the handoff or PR. Read [test selection and evidence](references/test-selection-and-evidence.md) for the decision table and platform-specific proof.
 
-A critical flow is the shortest deterministic sequence from launch state to the
-changed observable outcome. Prefer an existing stable XCUITest. If no UI harness
-exists and adding one would exceed the feature risk, run a recorded host-driven
-manual flow with fixed fixture/launch state, hierarchy or accessibility
-checkpoints, and a final observable state assertion; state explicitly that no
-automated UI regression was added. A screenshot alone is not that assertion.
+A critical flow is the shortest deterministic sequence from the nearest
+prepared scenario state to the changed observable outcome. Include Home, icon
+tap, launch, or first-run setup only when launch/startup behavior is the changed
+contract. Prefer an existing stable XCUITest. If no UI harness exists and adding
+one would exceed the feature risk, run a recorded host-driven manual flow with a
+fixed fixture/state, hierarchy or accessibility checkpoints, and a final
+observable state assertion; state explicitly that no automated UI regression
+was added. A screenshot alone is not that assertion. Route QA screenshots,
+recordings, trimming, and publication checks to `screenshot`.
 
 ## Implement deterministic tests
 
