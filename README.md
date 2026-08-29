@@ -1,6 +1,6 @@
 # iOS-experts
 
-**Version:** 2.0.0-beta.3
+**Version:** 2.0.0-beta.4
 
 Agent-neutral skills and a guarded task-to-PR harness for iOS, iPadOS, watchOS, and macOS. It supports Codex,
 Claude Code, or one-writer collaboration without duplicating Apple-authored Xcode skills.
@@ -68,6 +68,7 @@ Keep account/team IDs and live authorizations in a private, untracked overlay. S
 
 - Start broad Apple-platform work with [`native-app-lead`](skills/native-app-lead/SKILL.md).
 - Use [`agent-harness`](skills/agent-harness/SKILL.md) for approved work through an evidence-backed PR.
+- Use [`delivery-report`](skills/delivery-report/SKILL.md) to preview or exactly authorize a private completion summary.
 - Invoke a specialist directly for a narrow build, test, data, release, package, Git, evidence, or CI task.
 
 Choose exactly one collaboration mode:
@@ -129,6 +130,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 | [`xcodebuild`](skills/xcodebuild/SKILL.md) | official-first build, test, run, debug, and capture |
 | [`apple-platform-testing`](skills/apple-platform-testing/SKILL.md) | minimum-sufficient XCTest/XCUITest planning |
 | [`screenshot`](skills/screenshot/SKILL.md) | deterministic screenshots and trimmed video evidence |
+| [`delivery-report`](skills/delivery-report/SKILL.md) | private, authorized Telegram/WhatsApp/iMessage completion summaries |
 | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | SwiftUI/UIKit implementation |
 | [`apple-platform-performance`](skills/apple-platform-performance/SKILL.md) | performance diagnosis and verification |
 | [`apple-data`](skills/apple-data/SKILL.md) | Core Data, SwiftData, CloudKit, and web-service choice |
@@ -173,5 +175,7 @@ Also validate each changed skill. Documentation-only work does not justify a fou
 Official Apple: [external Xcode agents](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode), [agent customization](https://developer.apple.com/documentation/xcode/extending-and-customizing-agents), [HIG](https://developer.apple.com/design/human-interface-guidelines/), [XCTest](https://developer.apple.com/documentation/xctest), [`accessibilityIdentifier`](https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier), [`XCUIElement.identifier`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/identifier).
 
 Official agent/workflow docs: [OpenAI MCP](https://developers.openai.com/codex/mcp/), [OpenAI models](https://developers.openai.com/api/docs/guides/latest-model), [Codex platform](https://developers.openai.com/blog/codex-as-a-platform), [Claude models](https://code.claude.com/docs/en/model-config), [Claude usage](https://code.claude.com/docs/en/costs), [Claude MCP](https://code.claude.com/docs/en/mcp), [Anthropic knowledge graphs](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide), [Spec Kit v1.0.1](https://github.com/github/spec-kit/releases/tag/v1.0.1), [GitHub Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects).
+
+Messaging setup: [Telegram Bot API](https://core.telegram.org/bots/api), [WhatsApp Cloud API](https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started), [Apple Shortcuts CLI](https://support.apple.com/guide/shortcuts-mac/apd455c82f02/mac).
 
 Independent: [AppleSampleCode MCP](https://applesamplecode.com/MCP.html), [IconGen](https://github.com/ShawnBaek/IconGen), [Agent Skills specification](https://agentskills.io/specification).

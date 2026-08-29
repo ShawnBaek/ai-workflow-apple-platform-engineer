@@ -48,6 +48,7 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 | marketing/build number | `app-versioning` |
 | Xcode/Simulator disk pressure | `xcode-storage` |
 | visual/App Store evidence | `screenshot` |
+| completion summary or private message delivery | `delivery-report` |
 | TestFlight/App Store/Xcode Cloud | `app-store-connect` |
 | CI/CD | `cicd` |
 | Issues/Projects board | `github-projects` |
@@ -63,8 +64,9 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 4. Implement with one repository writer and scoped Apple resource leases.
 5. Run the minimum checks justified by impact and risk.
 6. Review a frozen patch, converge with bounded attempts, and preserve failures.
-7. Prepare evidence, confirm repository, commit, push, create the PR, and wait
-   for required checks when the task authorized those actions.
+7. Prepare evidence, confirm repository, commit, push, create the PR, wait for
+   required checks, and route the completion summary to `delivery-report` when
+   the task authorized those actions.
 8. Stop at the selected authorized target: `pr_ready` by default, or the
    pre-authorized TestFlight uploaded/internal-distributed continuation. Merge,
    App Review/production release, signing-resource mutation, destructive

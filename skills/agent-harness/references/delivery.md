@@ -102,3 +102,13 @@ client estimate. Never infer tokens from text or turn an estimate into billing
 truth. Use [cost-and-usage.md](cost-and-usage.md) and
 `../templates/completion-report.json`. A failed Project-board update is partial
 success and must not roll back a valid PR.
+
+When a private completion-message channel is configured, route the validated
+report through `delivery-report`. Rendering a preview is read-only. Configuration
+or an enabled flag is never authority to send: the active task authorization
+must satisfy the [delivery authorization contract](../../delivery-report/contracts/delivery-authorization.schema.json)
+and bind the exact channel, destination alias, report hash, reviewed media
+allowlist, transport, expiry, and idempotency key. Publish a `trimmed_video`, not
+the raw recording. Record provider acceptance separately from delivered/read;
+an uncertain response blocks blind retry, and media failure after accepted text
+is partial success rather than a reason to resend the text.
