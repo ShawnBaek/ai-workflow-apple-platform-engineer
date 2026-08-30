@@ -2174,6 +2174,60 @@ def validate_safety_contracts() -> list[str]:
     for phrase in ("live [Apple Human Interface Guidelines]", "Do not RAG-index", "selected platform and OS generation"):
         if phrase not in hig:
             errors.append(f"Apple HIG source policy missing: {phrase}")
+    preview_skill = " ".join("\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            SKILLS / "xcode-preview-design" / "SKILL.md",
+            SKILLS / "xcode-preview-design" / "references"
+            / "preview-and-motion-contract.md",
+        )
+    ).split())
+    for phrase in (
+        "Figma is optional, not a prerequisite",
+        "Never change the deployment target, project format, or production architecture merely to enable a preview",
+        "minimum-sufficient preview matrix",
+        "A preview fixture may use bundled development assets or an isolated ephemeral/in-memory Core Data or SwiftData store",
+        "It must never reach a live network endpoint, mutable shared or production disk/database/store",
+        "`@Previewable` only for SwiftUI",
+        "Do not force all 12 principles",
+        "`accessibilityReduceMotion`",
+        "`UIAccessibility.isReduceMotionEnabled`",
+        "`NSWorkspace.shared.accessibilityDisplayShouldReduceMotion`",
+        "`WKAccessibilityIsReduceMotionEnabled()`",
+        "Preview success is not build, install, launch, integration, accessibility, or test success",
+        "canvas screenshot | point-in-time design review",
+        "trimmed runtime recording",
+        "synthetic/non-sensitive",
+        "Privacy-scan the rendered state",
+        "Proportional ten-lens contract review",
+        "mark unaffected lenses not applicable rather than creating work",
+    ):
+        if phrase not in preview_skill:
+            errors.append(f"Xcode Preview design contract missing: {phrase}")
+    ui_skill = " ".join(
+        (SKILLS / "apple-platform-ui" / "SKILL.md")
+        .read_text(encoding="utf-8")
+        .split()
+    )
+    for forbidden in (
+        "Never `.linear`",
+        "Anything longer than 0.5s",
+        "`@StateObject` / `@ObservedObject` are obsolete",
+        "default to iOS + iPad + Mac",
+    ):
+        if forbidden in ui_skill:
+            errors.append(f"Xcode Preview design contract keeps unsafe universal UI rule: {forbidden}")
+    native_lead = " ".join(
+        (SKILLS / "native-app-lead" / "SKILL.md")
+        .read_text(encoding="utf-8")
+        .split()
+    )
+    for phrase in (
+        "code-first Preview design, review, or motion",
+        "`xcode-preview-design` (routes bounded implementation to `apple-platform-ui`)",
+    ):
+        if phrase not in native_lead:
+            errors.append(f"Native app lead Preview routing contract missing: {phrase}")
     spec_adapter = (SKILLS / "agent-harness" / "references" / "spec-kit-adapter.md").read_text(encoding="utf-8")
     for phrase in ("v1.0.1", ".specify/feature.json", "append-only", "spec_kit_snapshot.py", "/speckit.taskstoissues"):
         if phrase not in spec_adapter:

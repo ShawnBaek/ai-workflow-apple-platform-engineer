@@ -154,6 +154,7 @@ only from provider/client records; unavailable totals remain explicit unknowns.
 | App marketing/build versions | `app-versioning` |
 | Xcode/Simulator disk audit | `xcode-storage` |
 | Core Data, SwiftData, CloudKit | `apple-data` / `core-data` |
+| Code-first Xcode Preview and motion review | `xcode-preview-design` |
 | Issues and GitHub Projects | `github-projects` |
 | setup/MCP/CLI/account readiness | `apple-development-health` |
 | QA screenshots/recordings and App Store assets | `screenshot` |

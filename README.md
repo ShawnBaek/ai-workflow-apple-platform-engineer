@@ -1,6 +1,6 @@
 # iOS-experts
 
-**Version:** 2.0.0-beta.5
+**Version:** 2.0.0-beta.6
 
 Agent-neutral skills and a guarded task-to-PR harness for iOS, iPadOS, watchOS, and macOS. It supports Codex,
 Claude Code, or one-writer collaboration without duplicating Apple-authored Xcode skills.
@@ -147,6 +147,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 | [`screenshot`](skills/screenshot/SKILL.md) | deterministic screenshots and trimmed video evidence |
 | [`delivery-report`](skills/delivery-report/SKILL.md) | private, authorized Telegram/WhatsApp/iMessage completion summaries |
 | [`apple-platform-ui`](skills/apple-platform-ui/SKILL.md) | SwiftUI/UIKit implementation |
+| [`xcode-preview-design`](skills/xcode-preview-design/SKILL.md) | Figma-optional code-first Preview and motion review |
 | [`apple-platform-performance`](skills/apple-platform-performance/SKILL.md) | performance diagnosis and verification |
 | [`apple-data`](skills/apple-data/SKILL.md) | Core Data, SwiftData, CloudKit, and web-service choice |
 | [`core-data`](skills/core-data/SKILL.md) | Core Data architecture, migration, and concurrency |
@@ -188,7 +189,7 @@ Also validate each changed skill. Documentation-only work does not justify a fou
 
 ## References
 
-Official Apple: [external Xcode agents](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode), [agent customization](https://developer.apple.com/documentation/xcode/extending-and-customizing-agents), [HIG](https://developer.apple.com/design/human-interface-guidelines/), [XCTest](https://developer.apple.com/documentation/xctest), [`accessibilityIdentifier`](https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier), [`XCUIElement.identifier`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/identifier).
+Official Apple: [external Xcode agents](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode), [agent customization](https://developer.apple.com/documentation/xcode/extending-and-customizing-agents), [Xcode Previews](https://developer.apple.com/documentation/xcode/previewing-your-apps-interface-in-xcode), [HIG](https://developer.apple.com/design/human-interface-guidelines/), [HIG Motion](https://developer.apple.com/design/human-interface-guidelines/motion), [XCTest](https://developer.apple.com/documentation/xctest), [`accessibilityIdentifier`](https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier), [`XCUIElement.identifier`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/identifier).
 
 Official agent/workflow docs: [OpenAI MCP](https://developers.openai.com/codex/mcp/), [OpenAI models](https://developers.openai.com/api/docs/guides/latest-model), [Codex platform](https://developers.openai.com/blog/codex-as-a-platform), [Claude models](https://code.claude.com/docs/en/model-config), [Claude usage](https://code.claude.com/docs/en/costs), [Claude MCP](https://code.claude.com/docs/en/mcp), [Anthropic knowledge graphs](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide), [Spec Kit v1.0.1](https://github.com/github/spec-kit/releases/tag/v1.0.1), [GitHub Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects).
 

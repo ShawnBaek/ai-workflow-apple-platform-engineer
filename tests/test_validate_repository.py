@@ -4166,6 +4166,55 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, delivery)
 
+    def test_xcode_preview_contract_is_official_deterministic_accessible_and_non_accepting(self) -> None:
+        skill = normalized_text(
+            ROOT / "skills" / "xcode-preview-design" / "SKILL.md"
+        )
+        contract = normalized_text(
+            ROOT / "skills" / "xcode-preview-design" / "references"
+            / "preview-and-motion-contract.md"
+        )
+        ui = normalized_text(ROOT / "skills" / "apple-platform-ui" / "SKILL.md")
+        lead = normalized_text(ROOT / "skills" / "native-app-lead" / "SKILL.md")
+        combined = f"{skill} {contract}"
+
+        for phrase in (
+            "https://developer.apple.com/documentation/xcode/previewing-your-apps-interface-in-xcode",
+            "https://developer.apple.com/documentation/xcode/adding-previews-to-your-interface-files",
+            "Figma is optional, not a prerequisite",
+            "minimum-sufficient preview matrix",
+            "Never change the deployment target, project format, or production architecture merely to enable a preview",
+            "A preview fixture may use bundled development assets or an isolated ephemeral/in-memory Core Data or SwiftData store",
+            "It must never reach a live network endpoint, mutable shared or production disk/database/store",
+            "`@Previewable` only for SwiftUI",
+            "Do not force all 12 principles",
+            "`accessibilityReduceMotion`",
+            "`UIAccessibility.isReduceMotionEnabled`",
+            "`NSWorkspace.shared.accessibilityDisplayShouldReduceMotion`",
+            "`WKAccessibilityIsReduceMotionEnabled()`",
+            "Preview success is not build, install, launch, integration, accessibility, or test success",
+            "canvas screenshot | point-in-time design review",
+            "trimmed runtime recording",
+            "synthetic/non-sensitive",
+            "Privacy-scan the rendered state",
+            "Proportional ten-lens contract review",
+            "mark unaffected lenses not applicable rather than creating work",
+        ):
+            self.assertIn(phrase, combined)
+
+        self.assertNotIn("Never `.linear`", ui)
+        self.assertNotIn("Anything longer than 0.5s", ui)
+        self.assertNotIn("`@StateObject` / `@ObservedObject` are obsolete", ui)
+        self.assertNotIn("default to iOS + iPad + Mac", ui)
+        self.assertIn(
+            "`xcode-preview-design` (routes bounded implementation to `apple-platform-ui`)",
+            lead,
+        )
+        self.assertIn(
+            "return to that existing caller instead of starting another routing cycle",
+            ui,
+        )
+
     def test_stacked_pr_contract_keeps_phases_reviewable_and_non_authorizing(self) -> None:
         workflow = normalized_text(
             ROOT / "skills" / "git-workflow" / "SKILL.md"

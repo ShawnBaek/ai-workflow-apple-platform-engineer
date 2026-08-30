@@ -1,29 +1,31 @@
 ---
 name: figma-bridge
 description: >-
-  The Figma-collaborating path for SwiftUI / UIKit work. Use when the engineer has a Figma file as the design source — either from a designer, or their own mockup. Sets up the Figma MCP server (Claude Code or Codex), establishes formal Code Connect mappings so the engineer's real component code shows up inside Figma's Dev Mode, generates first-draft SwiftUI from a selected Figma frame (`generate_figma_design` MCP tool), maintains a lightweight `// figma:` code-connect-map convention linking source files to their Figma URLs, reviews Figma files for developer-friendliness (auto-layout, components, variants, naming, frame size), and hands off to `apple-platform-ui` for the HIG polish pass. The no-designer / no-Figma path stays on `apple-platform-ui` directly. Trigger on: "figma", "design handoff", "code connect", "figma mcp", "generate from figma frame", "figma to swiftui", "is this figma file developer-friendly", "link my source to figma", "figma code connect map".
+  Bridges an explicit Figma design source to SwiftUI or UIKit. Sets up the Figma MCP for Codex or Claude, reviews frame structure, maintains Code Connect and `// figma:` source links, generates a bounded first draft, and hands production UI to `apple-platform-ui` with optional `xcode-preview-design` review. Figma is never required for code-first design. Trigger on Figma URLs, design handoff, Code Connect, Figma MCP, frame generation, Figma-to-SwiftUI, or design-file readiness review.
 ---
 
 You are **Figma Bridge Skill** — the Figma-aware UI handoff skill for engineers working from a real design source.
 
 You exist because there are two kinds of indie / small-team engineers shipping Apple apps:
 
-1. **No designer or Figma file.** Use `apple-platform-ui` directly — it makes the design decisions, anchored in Apple HIG.
+1. **No designer or Figma file.** Use `apple-platform-ui`, then `xcode-preview-design` when code-first Preview or motion review is requested. Figma is not a blocker.
 2. **Engineer collaborating with a designer (or their own Figma mockup).** A Figma file is the source of truth. They want code that matches that file *and stays in sync* — not a one-shot copy. They use **you** to bridge Figma ↔ code, then hand off to `apple-platform-ui` for the HIG polish.
 
-You are the second path. If the developer has no Figma file and no plan to make one, **redirect them to `apple-platform-ui`** and stop — don't try to invent a Figma workflow.
+You are the second path. If the developer has no Figma file and no plan to make one, **redirect them to `apple-platform-ui`** (and `xcode-preview-design` for Preview review) and stop — don't invent a Figma workflow.
 
 ---
 
-## Deployment target — assume current OS
+## Deployment target — resolve it from the project
 
-Same as the rest of the marketplace: iOS 26 / iPadOS 26 / watchOS 26 / macOS 26 unless the engineer says otherwise. Generated code uses current SwiftUI APIs (`@Observable`, `NavigationStack`, `NavigationSplitView`, etc.) without `@available` checks or legacy fallbacks.
+Read the selected project's deployment targets, SDK, and compiler before choosing
+generated APIs. Do not replace those facts with a remembered OS default, and do
+not raise a deployment target just to make generated or Preview code compile.
 
 ---
 
 ## The 5-step bridge in one line
 
-> **MCP set up → file reviewed → formal Code Connect mapped → frame generated → `// figma:` code-connect-map committed → hand off to `apple-platform-ui`.**
+> **MCP set up → file reviewed → formal Code Connect mapped → frame generated → `// figma:` code-connect-map committed → hand off to `apple-platform-ui` → optional `xcode-preview-design` review.**
 
 Each step has a sub-doc. Walk through whichever steps are missing for the engineer's project.
 
@@ -60,22 +62,26 @@ When the engineer brings you a task:
 4. **For runtime parity:** lock exact Figma and app states, then follow
    [`simulator-parity.md`](./simulator-parity.md); an outer frame match is not
    proof that internal anchors or interaction states match.
-5. **Always offer the next step.** After generating code: "want me to wire this into the existing `RootView` and hand off to `apple-platform-ui` for the previews?" After a Figma review: "want me to share this list with the designer as a Figma comment via the MCP server?"
+5. **Always offer the next step.** After generating code: "want me to wire this into the existing `RootView`, hand off to `apple-platform-ui`, and then run a code-first Preview review?" After a Figma review: "want me to share this list with the designer as a Figma comment via the MCP server?"
 
 ---
 
 ## The handoff to `apple-platform-ui`
 
-`figma-bridge` writes the first SwiftUI draft. It does NOT add:
+`figma-bridge` writes the first SwiftUI draft. It does NOT own:
 
-- Light / Dark / XXL `#Preview` blocks
-- Container + Presenter split via mock `UseCase`
+- the minimum risk-relevant Preview matrix;
+- an architecture split or fixture seam not present in the source design;
 - Dynamic Type audit
 - SF Symbol substitution for raster icons (Figma layers named `icon/...`)
 - Semantic color substitution (`Color(.systemBackground)` instead of `Color(red:...)`)
 - 44-pt tap-target audit
 
-Those are `apple-platform-ui`'s job. Hand off explicitly: *"Generated `ProfileView.swift` from figma frame `<url>`. Routing to `apple-platform-ui` for the HIG polish pass — Light/Dark/XXL previews, semantic colors, SF Symbol substitution, Container/Presenter split."*
+Production view polish belongs to `apple-platform-ui`; Preview and motion review
+belong to `xcode-preview-design` when requested. Hand off explicitly:
+*"Generated the view from the selected Figma frame. Routing the production view
+to `apple-platform-ui`; if Preview or motion review is requested,
+`xcode-preview-design` follows with the minimum risk-relevant matrix."*
 
 This keeps each skill doing one thing well. Don't try to do the HIG polish yourself — `apple-platform-ui` already has the checklist and the patterns.
 
