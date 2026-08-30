@@ -18,6 +18,8 @@
     "xcode_mcp_provider_policy",
     "resource_scopes",
     "resource_key_fields",
+    "resource_overlap_policy",
+    "cross_run_coordination_policy",
     "runtime_registry_policy"
   ],
   "properties": {
@@ -262,6 +264,7 @@
         "build_tuple",
         "simulator_or_device",
         "coresimulator_runtime_registry",
+        "macos_gui_session",
         "signing_or_app_store_connect",
         "github_external_mutation"
       ]
@@ -274,21 +277,134 @@
         "build_tuple",
         "simulator_or_device",
         "coresimulator_runtime_registry",
+        "macos_gui_session",
         "signing_or_app_store_connect",
         "github_external_mutation"
       ],
       "properties": {
-        "source_checkout_writer": {"const": ["repository_fingerprint", "canonical_root"]},
+        "source_checkout_writer": {"const": ["identity_version", "repository_fingerprint"]},
         "xcode_project_mutation": {"const": ["repository_fingerprint", "container_path"]},
         "build_tuple": {
-          "const": ["repository_fingerprint", "container_path", "xcode_build", "sdk", "scheme", "configuration", "architecture", "package_fingerprint", "cache_paths"]
+          "const": ["repository_fingerprint", "container_path", "xcode_build", "sdk", "scheme", "configuration", "architecture", "package_fingerprint", "cache_paths", "cache_roles", "output_paths", "output_roles", "package_resolution_mode"]
         },
-        "simulator_or_device": {"const": ["platform", "udid", "paired_udids", "run_id", "bundle_id"]},
-        "coresimulator_runtime_registry": {"const": ["host_id", "registry_scope"]},
+        "simulator_or_device": {"const": ["coordinator_instance_id", "udids"]},
+        "coresimulator_runtime_registry": {"const": ["coordinator_instance_id", "registry_scope"]},
+        "macos_gui_session": {"const": ["coordinator_instance_id", "session_scope"]},
         "signing_or_app_store_connect": {"const": ["account_guard", "app_or_bundle_scope"]},
         "github_external_mutation": {"const": ["repository_fingerprint", "remote_repository"]}
       },
       "additionalProperties": false
+    },
+    "resource_overlap_policy": {
+      "const": {
+        "source_checkout_writer": {
+          "identity_version": "github_remote_v2",
+          "identity": "normalized_repository_fingerprint",
+          "conflict_when": "repository_fingerprint_equal",
+          "canonical_root_role": "exact_authorization_target_excluded_from_writer_identity",
+          "cross_resource_conflict": "xcode_project_or_build_same_repository_fingerprint",
+          "same_owner_nested_exception": "source_with_xcode_or_build_only"
+        },
+        "xcode_project_mutation": {
+          "identity_fields": ["repository_fingerprint", "container_path"],
+          "container_path_normalization": "canonical_absolute_path",
+          "conflict_when": "repository_fingerprint_or_canonical_container_path_equal",
+          "cross_resource_conflict": "source_or_build_same_repository_fingerprint"
+        },
+        "simulator_or_device": {
+          "identity_fields": ["coordinator_instance_id", "udids"],
+          "host_identity_source": "coordinator_instance_id",
+          "udids_normalization": "sorted_unique_nonempty",
+          "conflict_when": "same_host_and_udid_intersection_nonempty",
+          "evidence_only_fields": ["platform", "run_id", "bundle_id"]
+        },
+        "build_tuple": {
+          "identity_fields": ["repository_fingerprint", "container_path", "xcode_build", "sdk", "scheme", "configuration", "architecture", "package_fingerprint", "cache_paths", "cache_roles", "output_paths", "output_roles", "package_resolution_mode"],
+          "cache_paths_normalization": "canonical_absolute_sorted_unique_nonempty",
+          "required_cache_roles": ["derived_data", "source_packages", "repository_checkouts", "artifacts", "package_cache"],
+          "cache_role_policy": "cache_paths_equal_unique_role_values",
+          "output_role_policy": "declared_xcode_result_archive_export_and_diagnostic_paths",
+          "package_resolution_modes": ["none", "swiftpm_lockfile", "xcode_project_packages"],
+          "resolution_mutation_requires": "same_owner_source_writer_and_xcode_project_lease_when_applicable",
+          "conflict_when": "canonical_cache_or_output_path_tree_overlap_or_same_repository_when_either_resolves_packages",
+          "path_alias_policy": "samefile_then_unicode_casefolded_tree_overlap",
+          "cross_resource_conflict": "source_or_xcode_same_repository_fingerprint"
+        },
+        "coresimulator_runtime_registry": {
+          "identity_fields": ["coordinator_instance_id", "registry_scope"],
+          "conflict_when": "same_host_conflicts_with_every_device_lease"
+        },
+        "macos_gui_session": {
+          "identity_fields": ["coordinator_instance_id", "session_scope"],
+          "session_scope": "foreground_ui",
+          "conflict_when": "same_host_foreground_ui_session"
+        },
+        "signing_or_app_store_connect": {
+          "identity_fields": ["account_guard", "app_or_bundle_scope"],
+          "conflict_when": "exact_account_and_app_scope_equal"
+        },
+        "github_external_mutation": {
+          "identity_fields": ["repository_fingerprint", "remote_repository"],
+          "remote_normalization": "lowercase_owner_repository_without_dot_git",
+          "conflict_when": "repository_fingerprint_or_remote_equal"
+        }
+      }
+    },
+    "cross_run_coordination_policy": {
+      "const": {
+        "required_for": "every_mutating_resource_acquire",
+        "coordinator_scope": "configured_host_shared_file",
+        "atomic_acquire_required": true,
+        "execution_environment_supplies_state_path": true,
+        "live_receipt_verification_before_reservation": true,
+        "live_receipt_verification_before_dispatch": true,
+        "max_ttl_seconds": 3600,
+        "trusted_binding": {
+          "source": "private_harness",
+          "required_fields": ["state_path", "coordinator_instance_id", "script_sha256", "contract_bundle_sha256"],
+          "same_binding_for_all_clients": true
+        },
+        "receipt_binding_fields": [
+          "coordinator_instance_id",
+          "receipt_id",
+          "lease_id",
+          "owner_run_id",
+          "owner_actor",
+          "resource",
+          "resource_key",
+          "descriptor_sha256",
+          "fencing_token",
+          "acquired_at",
+          "expires_at"
+        ],
+        "registry_is_lock": false,
+        "per_run_ledger_is_lock": false,
+        "bootstrap": {
+          "legacy_leases_quiesced_confirmation_required": true,
+          "automatic_migration": false
+        },
+        "unavailable_outcome": {
+          "graph_state": "blocked",
+          "reason_code": "coordination_required"
+        },
+        "lease_expiry": {
+          "silent_takeover": false,
+          "recovery_record_required": true,
+          "recovery_requires": [
+            "previous_receipt_and_fencing_token",
+            "independent_observer_run",
+            "owner_confirmed_dead",
+            "owner_tool_children_confirmed_dead",
+            "dirty_state_clean_digest",
+            "live_resource_revalidation_digest"
+          ]
+        },
+        "forbidden_automatic_actions": [
+          "create_daemon",
+          "create_database",
+          "create_or_switch_worktree"
+        ]
+      }
     },
     "runtime_registry_policy": {
       "const": {

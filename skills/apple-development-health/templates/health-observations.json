@@ -8,11 +8,45 @@
     "remote": "https://github.com/<owner>/<repository>.git",
     "branch": "<approved-branch>"
   },
+  "agent_skill_manifest": {
+    "required_skills": [
+      "agent-harness",
+      "apple-development-health",
+      "git-workflow",
+      "github-projects",
+      "native-app-lead"
+    ],
+    "expected_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "clients": [
+      {
+        "client": "codex",
+        "root_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "skills": [
+          {"name": "agent-harness", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "apple-development-health", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "git-workflow", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "github-projects", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "native-app-lead", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+        ]
+      }
+    ]
+  },
   "project_registry_resolution": null,
+  "resource_coordinator_observation": {
+    "state_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "coordinator_instance_id": "<configured-coordinator-instance-id>",
+    "state_schema_version": 1,
+    "migration_bootstrap_confirmed": true,
+    "script_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "contract_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "active_lease_count": 0
+  },
   "selected_components": [],
   "required_check_ids": [
     "repository.identity",
     "agent.skills",
+    "agent.resource_coordinator",
     "cli.git",
     "github.issue_pr"
   ],
@@ -32,6 +66,14 @@
       "status": "healthy",
       "summary": "Required agent skills resolve from the authoritative installation.",
       "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "agent.resource_coordinator",
+      "category": "agent",
+      "required": true,
+      "status": "healthy",
+      "summary": "The private harness, installed coordinator script, and live bootstrapped state bind to one instance.",
+      "evidence": ["<sanitized-state-path-hash-instance-and-script-hash>"]
     },
     {
       "id": "cli.git",

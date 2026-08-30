@@ -4,6 +4,7 @@
   "type": "object",
   "required": ["schema_version", "decision", "github", "apple"],
   "properties": {
+    "$schema": {"type": "string", "minLength": 1},
     "schema_version": {"const": "1.0.0"},
     "decision": {"const": "approved"},
     "github": {

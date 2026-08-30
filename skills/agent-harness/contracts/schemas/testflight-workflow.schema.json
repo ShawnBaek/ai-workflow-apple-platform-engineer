@@ -16,7 +16,8 @@
     "starts_after": {"const": "pr_ready"},
     "nodes": {
       "type": "array",
-      "minItems": 25,
+      "minItems": 27,
+      "maxItems": 27,
       "items": {
         "type": "object",
         "required": ["id", "requires"],
@@ -28,9 +29,15 @@
             "items": {"type": "string", "minLength": 1}
           },
           "resource": {
-            "enum": ["signing_or_app_store_connect", "github_external_mutation"]
+            "enum": ["build_tuple", "signing_or_app_store_connect", "github_external_mutation"]
           },
           "lease_action": {"enum": ["acquire", "release"]},
+          "protects": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
           "grant_action": {"type": "string", "minLength": 1},
           "timeout_from_authorization": {"const": "async_wait_minutes"},
           "retry_bound_from_authorization": {"const": "max_transient_retries"},
@@ -42,7 +49,7 @@
         "allOf": [
           {
             "if": {"required": ["resource"]},
-            "then": {"required": ["lease_action"]}
+            "then": {"required": ["lease_action", "protects"]}
           },
           {
             "if": {"required": ["lease_action"]},
@@ -127,6 +134,7 @@
         "mode": "finally",
         "triggers": ["blocked", "failed_terminal", "cancelled", "success_terminal"],
         "release_active_resources": [
+          "build_tuple",
           "signing_or_app_store_connect",
           "github_external_mutation"
         ]
