@@ -28,11 +28,100 @@
       "type": "object",
       "minProperties": 1
     },
+    "project_registry_resolution": {
+      "type": ["object", "null"],
+      "required": [
+        "status",
+        "reason_code",
+        "resolver_version",
+        "registry_sha256",
+        "worktree_authorized",
+        "candidate",
+        "warnings"
+      ],
+      "properties": {
+        "status": {"enum": ["resolved", "blocked", "needs_selection", "unavailable"]},
+        "reason_code": {"type": "string", "minLength": 1},
+        "resolver_version": {"const": "1.0.0"},
+        "registry_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "worktree_authorized": {"type": "boolean"},
+        "candidate": {
+          "type": ["object", "null"],
+          "required": [
+            "project_id",
+            "checkout_id",
+            "canonical_root",
+            "remote_fingerprint",
+            "kind",
+            "xcode_containers"
+          ],
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+            },
+            "checkout_id": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+            },
+            "canonical_root": {
+              "type": "string",
+              "minLength": 2,
+              "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))/[^\\u0000-\\u001f\\u007f]*$"
+            },
+            "remote_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "kind": {"enum": ["primary", "worktree"]},
+            "xcode_containers": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+\\.(?:xcodeproj|xcworkspace)$"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "warnings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": ["project_id", "checkout_id", "reason_code"],
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+              },
+              "checkout_id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+              },
+              "reason_code": {
+                "enum": [
+                  "missing_path",
+                  "not_git_root",
+                  "missing_xcode_container",
+                  "remote_fingerprint_mismatch"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "selected_components": {
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "enum": ["spec_kit", "xcode_mcp", "apple_sample_code_mcp", "github_project", "local_llm"]
+        "enum": ["project_registry", "spec_kit", "xcode_mcp", "apple_sample_code_mcp", "github_project", "local_llm"]
       }
     },
     "required_check_ids": {

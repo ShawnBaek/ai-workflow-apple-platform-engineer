@@ -64,6 +64,13 @@ templates/run-authorization.json -> <private-untracked-run-path>/authorization.j
 Keep account/team IDs and live authorizations in a private, untracked overlay. Start health checks from
 `apple-development-health/templates/health-observations.json`.
 
+### 5. Optional: add a private project registry
+
+If one developer or host has several project checkouts, copy
+`agent-harness/templates/project-registry.local.example.json` to any private or ignored location and resolve it with
+`agent-harness/scripts/resolve_project.py`. Explicit paths and the exact opened Xcode container remain authoritative;
+multiple valid candidates require human selection. See the [registry contract](skills/agent-harness/references/project-registry.md).
+
 ## How to Use
 
 - Start broad Apple-platform work with [`native-app-lead`](skills/native-app-lead/SKILL.md).
@@ -91,6 +98,7 @@ keeps planning/high-risk review on deep capability, and escalates only from evid
 ```mermaid
 flowchart LR
     G[User goal] --> A[Authority and health gate]
+    Q[Optional private registry] -. validated candidates .-> A
     A --> P[Reviewable phase map]
     P --> W[One implementation writer]
     W --> V[Minimum sufficient verification]

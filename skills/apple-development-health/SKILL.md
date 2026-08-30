@@ -26,9 +26,10 @@ right now?** It does not repair the machine.
 | `testflight_distributed` | uploaded profile plus exact pre-authorized internal TestFlight group IDs |
 | `icon_upstream` | `pr_ready` plus public companion-upstream provenance and Icon Composer handoff tools that the task actually needs |
 
-Do not require every tool for every run. Missing optional AppleSampleCode MCP,
-Local LLM, Project v2, Simulator, Icon Composer, or TestFlight support is
-`not_applicable` when the selected profile does not use it.
+Do not require every tool for every run. Missing optional project registry,
+AppleSampleCode MCP, Local LLM, Project v2, Simulator, Icon Composer, or
+TestFlight support is `not_applicable` when the selected profile does not use
+it.
 
 ## Rules
 
@@ -65,6 +66,15 @@ that client's registration separately from current-task tool exposure. Require
 both Codex and Claude observations only when both clients consume the MCP. Make
 one bounded read-only corpus-status call. Health never registers the server or
 refreshes its corpus.
+
+When `project_registry` is selected, require
+`repository.project_registry`. A selected candidate is healthy only when the
+structured `project_registry_resolution` and live canonical Git root, remote
+fingerprint, checkout kind, and applicable opened Xcode container agree. A
+free-form evidence string is not sufficient. Stale unselected entries are
+degraded inventory; a selected mismatch, unapproved worktree, or unresolved
+ambiguity is blocked. Health never edits the registry or chooses among
+ambiguous candidates.
 
 ## No-repair boundary
 

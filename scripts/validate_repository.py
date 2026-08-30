@@ -1419,6 +1419,7 @@ def validate_contracts() -> list[str]:
     pairs = [
         (CONTRACTS / "capabilities.json", schemas / "capabilities.schema.json"),
         (CONTRACTS / "workflow.json", schemas / "workflow.schema.json"),
+        (SKILLS / "agent-harness" / "templates" / "project-registry.local.example.json", schemas / "project-registry.schema.json"),
         (SKILLS / "agent-harness" / "templates" / "completion-report.json", schemas / "completion-report.schema.json"),
         (testflight_workflow, schemas / "testflight-workflow.schema.json"),
         (authorization_fixture, schemas / "run-authorization.schema.json"),
@@ -1576,9 +1577,27 @@ def validate_safety_contracts() -> list[str]:
         "get_status",
         "refresh: false",
         "isLatest: null",
+        "repository.project_registry",
+        "project_registry_resolution",
     ):
         if phrase not in health:
             errors.append(f"Apple development health contract missing: {phrase}")
+    registry = (SKILLS / "agent-harness" / "references" / "project-registry.md").read_text(encoding="utf-8")
+    for phrase in (
+        "read-only candidate adapter",
+        "opened is authoritative",
+        "needs_selection",
+        "never creates, copies, switches, repairs, or deletes a checkout",
+        "coordination_required",
+        "host-shared atomic coordinator",
+    ):
+        if phrase not in registry:
+            errors.append(f"project registry contract missing: {phrase}")
+    registry_example = (SKILLS / "agent-harness" / "templates" / "project-registry.local.example.json").read_text(encoding="utf-8")
+    if "/Users/" in registry_example:
+        errors.append("project registry example contains a developer home path")
+    if '"path": "/absolute/path/to/repository"' not in registry_example:
+        errors.append("project registry example must remain path-neutral")
     knowledge = (SKILLS / "agent-harness" / "references" / "knowledge-and-rag.md").read_text(encoding="utf-8")
     for phrase in (
         "codex mcp add apple-sample-code --url https://mcp.applesamplecode.com/mcp",
