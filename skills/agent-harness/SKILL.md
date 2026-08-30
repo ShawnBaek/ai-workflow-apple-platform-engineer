@@ -29,7 +29,15 @@ visible. A fluent answer is not evidence.
    may create a short-lived envelope from the latest explicit action approval;
    unattended runs may reuse one unchanged finite envelope across its granted
    green-path actions. Validate it immediately before every granted action.
-8. Acquire scoped leases only immediately before the protected action.
+8. Before every mutating resource acquisition, use the explicitly configured
+   host-shared coordinator. Record its live receipt and fencing token in the
+   run ledger, then verify that receipt immediately before a protected action;
+   otherwise stop with `coordination_required`. A run cannot opt out by calling
+   itself sequential.
+
+Read [private coordinator setup](references/coordinator-setup.md) before first
+use, schema migration, installed-skill update, or cross-client collaboration.
+The populated harness is private host configuration, never a tracked app file.
 
 When no explicit repository or opened Xcode container already resolves the
 target, an opted-in private registry may supply validated candidates. Read
@@ -108,6 +116,23 @@ Select checks from changed behavior and risk, not a blanket coverage target.
 Each added test must name a unique observable contract and prevented failure.
 Route test mechanics to `apple-platform-testing` and dependency resolution to
 `swift-package-manager`.
+
+For an external write, reserve its exact single-use grant, then run
+`scripts/verify_reservation.py` immediately before the tool call. Do not insert
+research, rendering, or another action between revalidation and dispatch. A
+dispatch claim must start invocation within 60 seconds and never beyond its
+authority or lease; long-running completion uses its approved async bound and
+lease heartbeat. Dispatch must match the reserved action request and re-read
+selected repository or Spec Kit state; Apple dispatch must execute the exact
+private, digest-pinned guarded ASC probe again. A crash after reservation is
+ambiguous and burns that reservation; use exact live readback and a fresh
+authorization instead of blind retry.
+
+This is a cooperative same-user harness, not a credential security boundary.
+The local dispatch result is audit evidence; Git, GitHub, and Apple do not
+enforce it. If hostile same-user bypass is in scope, stop until a separate
+signed, credential-holding one-shot broker is available. Never claim local
+exactly-once delivery for a remote API.
 
 A run is `passed` only when required graph nodes passed, reverified evidence
 matches the current patch identity, no resource lease remains active, every acceptance

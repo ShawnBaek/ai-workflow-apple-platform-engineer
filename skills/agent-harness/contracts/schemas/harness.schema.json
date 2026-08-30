@@ -11,10 +11,14 @@
     "delivery_target",
     "health_profile",
     "health_components",
+    "agent_skills",
     "authoritative_root",
     "xcode_container",
     "private_policy_overlay",
     "run_authorization",
+    "run_ledger",
+    "resource_coordinator",
+    "apple_observation_probe",
     "spec_kit",
     "github_tracking",
     "max_active_repository_writers",
@@ -46,10 +50,145 @@
         "enum": ["project_registry", "spec_kit", "xcode_mcp", "apple_sample_code_mcp", "github_project", "local_llm"]
       }
     },
+    "agent_skills": {
+      "type": "object",
+      "required": ["task_skills", "expected_bundle_sha256", "installations"],
+      "properties": {
+        "task_skills": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "expected_bundle_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "installations": {
+          "type": "object",
+          "required": ["codex", "claude"],
+          "properties": {
+            "codex": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "collection_root": {
+                      "type": "string",
+                      "minLength": 2,
+                      "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"
+                    },
+                    "search_roots": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "minLength": 2,
+                        "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"
+                      }
+                    }
+                  },
+                  "oneOf": [
+                    {"required": ["collection_root"], "not": {"required": ["search_roots"]}},
+                    {"required": ["search_roots"], "not": {"required": ["collection_root"]}}
+                  ],
+                  "additionalProperties": false
+                },
+                {"type": "null"}
+              ]
+            },
+            "claude": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "collection_root": {
+                      "type": "string",
+                      "minLength": 2,
+                      "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"
+                    },
+                    "search_roots": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "minLength": 2,
+                        "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"
+                      }
+                    }
+                  },
+                  "oneOf": [
+                    {"required": ["collection_root"], "not": {"required": ["search_roots"]}},
+                    {"required": ["search_roots"], "not": {"required": ["collection_root"]}}
+                  ],
+                  "additionalProperties": false
+                },
+                {"type": "null"}
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "authoritative_root": {"type": "string", "minLength": 1},
     "xcode_container": {"type": "string", "minLength": 1},
     "private_policy_overlay": {"type": "string", "minLength": 1},
     "run_authorization": {"type": "string", "minLength": 1},
+    "run_ledger": {"type": "string", "minLength": 1},
+    "resource_coordinator": {
+      "type": "object",
+      "required": ["state_path", "coordinator_instance_id", "script_sha256", "contract_bundle_sha256"],
+      "properties": {
+        "state_path": {
+          "type": "string",
+          "minLength": 2,
+          "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"
+        },
+        "coordinator_instance_id": {"type": "string", "minLength": 1},
+        "script_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "contract_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "apple_observation_probe": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "executable",
+            "executable_sha256",
+            "output_contract",
+            "timeout_seconds"
+          ],
+          "properties": {
+            "executable": {
+              "type": "string",
+              "minLength": 2,
+              "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"
+            },
+            "executable_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "output_contract": {"const": "apple_observation_v1"},
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            }
+          },
+          "additionalProperties": false
+        },
+        {"type": "null"}
+      ]
+    },
     "spec_kit": {
       "type": "object",
       "required": ["enabled", "release"],
@@ -78,7 +217,17 @@
       "then": {
         "properties": {
           "selected_writer": {"const": "codex"},
-          "reviewer": {"const": null}
+          "reviewer": {"const": null},
+          "agent_skills": {
+            "properties": {
+              "installations": {
+                "properties": {
+                  "codex": {"type": "object"},
+                  "claude": {"const": null}
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -87,13 +236,35 @@
       "then": {
         "properties": {
           "selected_writer": {"const": "claude"},
-          "reviewer": {"const": null}
+          "reviewer": {"const": null},
+          "agent_skills": {
+            "properties": {
+              "installations": {
+                "properties": {
+                  "codex": {"const": null},
+                  "claude": {"type": "object"}
+                }
+              }
+            }
+          }
         }
       }
     },
     {
       "if": {"properties": {"mode": {"const": "collaborative"}}},
       "then": {
+        "properties": {
+          "agent_skills": {
+            "properties": {
+              "installations": {
+                "properties": {
+                  "codex": {"type": "object"},
+                  "claude": {"type": "object"}
+                }
+              }
+            }
+          }
+        },
         "oneOf": [
           {
             "properties": {

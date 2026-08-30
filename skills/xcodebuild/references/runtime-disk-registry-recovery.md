@@ -51,13 +51,15 @@ the normalized signature meet the repeat threshold; do not launch a second probe
 solely to manufacture repetition. A 30-second-or-longer gap between runtime
 records is supporting timing evidence, not a universal timeout or causal proof.
 
-## Why a restart can appear to fix the issue and still recur
+## Why a process reset can mask the issue and still recur
 
-A normal Mac restart clears the current `launchd_sim`, CoreSimulator, and
-`simdiskimaged` process state. It does not by itself remove installed runtime
-components, resolve duplicate or stale runtime registration, or prevent open
-tasks from starting multiple Simulator-capable providers again. Treat a reboot
-as a recovery boundary, never as proof that the persistent trigger was fixed.
+Relaunching Xcode or one affected Simulator can replace some local process
+state. It does not by itself remove installed runtime components, resolve
+duplicate or stale runtime registration, or prevent open tasks from starting
+multiple Simulator-capable providers again. Treat that reset only as an
+experiment, never as proof that the persistent trigger was fixed. A Mac reboot
+is outside this recovery workflow and must not be proposed as a CoreSimulator
+remedy.
 
 Low free storage can increase image-mount, cache, and runtime-registration
 pressure. Record free bytes and the run's configured storage floor, then route
@@ -98,7 +100,7 @@ From the authorized host environment, capture:
    signature state when exposed, store/image identifier, mount path, owning
    Xcode/component, dependent run IDs, and observed delay.
 
-Before a restart or component change, preserve the smallest useful Apple
+Before a component change, preserve the smallest useful Apple
 diagnostic bundle while the failure is still observable:
 
 - run one bounded `xcrun simctl diagnose` only when the service can still
@@ -140,17 +142,19 @@ not prove either that it is unknown or that a beta regression caused it.
 ## Evidence-first recovery ladder
 
 Perform only the first applicable step, then rerun one bounded discovery probe.
-Every step that closes another project, restarts the Mac, or removes a component
-needs explicit approval for that exact scope.
+Every step that closes another project or removes a component needs explicit
+approval for that exact scope. Never add a Mac reboot to this ladder.
 
 1. Preserve the timeline and stop all affected run queues. After all owners
    agree, quit the affected Simulator/Device Hub and Xcode applications normally,
    reopen the same Xcode build and authoritative container, and run one probe.
-2. If the global registry remains blocked, a normal Mac restart may be proposed
-   after every Xcode/Simulator lease is quiesced and the user approves it. Do not
-   substitute process killing or a service-reset loop. After login, do not
-   restore all tool providers at once: start the selected Xcode and the single
-   recorded Simulator provider, then perform the bounded inventory first.
+2. If a process first appears in uninterruptible `U` state, wait 15–30 seconds
+   and recheck that exact PID, elapsed time, and state once. A newly created
+   background service that clears `U` is normal startup evidence, not a global
+   hang. If the state clears, restart only the exact affected Simulator device
+   with a clean shutdown/boot and keep one recorded provider. If it persists,
+   preserve the evidence and continue to component-scoped diagnosis; do not kill
+   system services or reboot the Mac.
 3. If one exact stale or superseded runtime is strongly implicated, route the
    action through the [Xcode storage audit](../../xcode-storage/SKILL.md). Show
    its platform/version/build/image kind, size, dependent devices/projects,

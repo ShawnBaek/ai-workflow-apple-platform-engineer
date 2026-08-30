@@ -160,8 +160,9 @@ attempt for one host/Xcode/runtime tuple; a repeated signature stops reinstall.
 
 Runtime health layers are separate:
 
-1. `simctl runtime list -v` disk-image truth, including duplicate builds,
-   unavailable or `Deleting` records;
+1. `xcrun simctl list runtimes --json` bounded availability inventory; route
+   duplicate-build, disk-image, unavailable, or `Deleting` diagnosis to
+   `core-simulator-health` without mutation;
 2. fresh temporary-device monitored boot reaches terminal `Finished`;
 3. complete shutdown and a strict second monitored boot when runtime stability
    is an acceptance criterion;

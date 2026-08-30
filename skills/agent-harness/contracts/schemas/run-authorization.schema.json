@@ -4,13 +4,19 @@
   "type": "object",
   "required": [
     "schema_version",
+    "contract_schema_id",
+    "contract_schema_sha256",
     "run_id",
     "authorization_id",
     "decision",
     "actor",
+    "selected_writer",
     "issued_at",
     "expires_at",
     "delivery_target",
+    "health_profile",
+    "health_attestation",
+    "resource_plan",
     "repository",
     "spec_kit",
     "acceptance_ids",
@@ -29,14 +35,106 @@
   "properties": {
     "$schema": {"type": "string"},
     "schema_version": {"const": "1.0.0"},
+    "contract_schema_id": {"const": "urn:ios-experts:schema:run-authorization:1.0.0"},
+    "contract_schema_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "run_id": {"type": "string", "minLength": 1},
     "authorization_id": {"type": "string", "minLength": 1},
     "decision": {"const": "approved"},
     "actor": {"type": "string", "minLength": 1},
+    "selected_writer": {"enum": ["codex", "claude"]},
     "issued_at": {"type": "string", "format": "date-time"},
     "expires_at": {"type": "string", "format": "date-time"},
     "delivery_target": {
       "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+    },
+    "health_profile": {
+      "enum": [
+        "pr_ready",
+        "runtime_ui",
+        "testflight_uploaded",
+        "testflight_distributed",
+        "icon_upstream"
+      ]
+    },
+    "health_attestation": {
+      "type": "object",
+      "required": [
+        "report_sha256",
+        "observed_at",
+        "profile",
+        "overall_status",
+        "authoritative_targets_sha256",
+        "agent_skill_bundle_sha256",
+        "coordinator_instance_id",
+        "coordinator_contract_bundle_sha256"
+      ],
+      "properties": {
+        "report_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "profile": {
+          "enum": [
+            "pr_ready",
+            "runtime_ui",
+            "testflight_uploaded",
+            "testflight_distributed",
+            "icon_upstream"
+          ]
+        },
+        "overall_status": {"enum": ["healthy", "degraded"]},
+        "authoritative_targets_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "agent_skill_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "coordinator_instance_id": {"type": "string", "minLength": 1},
+        "coordinator_contract_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "resource_plan": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "plan_id",
+          "resource",
+          "resource_key",
+          "descriptor_sha256",
+          "resource_descriptor",
+          "owner_actor",
+          "protects"
+        ],
+        "properties": {
+          "plan_id": {"type": "string", "minLength": 1},
+          "resource": {
+            "enum": [
+              "source_checkout_writer",
+              "xcode_project_mutation",
+              "build_tuple",
+              "simulator_or_device",
+              "coresimulator_runtime_registry",
+              "macos_gui_session",
+              "signing_or_app_store_connect",
+              "github_external_mutation"
+            ]
+          },
+          "resource_key": {"type": "string", "minLength": 1},
+          "descriptor_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "resource_descriptor": {
+            "type": "object",
+            "minProperties": 1
+          },
+          "owner_actor": {"type": "string", "minLength": 1},
+          "protects": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "repository": {
       "type": "object",

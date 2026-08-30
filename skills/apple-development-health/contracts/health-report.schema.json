@@ -7,6 +7,8 @@
     "profile",
     "observed_at",
     "authoritative_targets",
+    "agent_skill_manifest",
+    "resource_coordinator_observation",
     "selected_components",
     "required_check_ids",
     "checks"
@@ -27,6 +29,98 @@
     "authoritative_targets": {
       "type": "object",
       "minProperties": 1
+    },
+    "agent_skill_manifest": {
+      "type": "object",
+      "required": ["required_skills", "expected_bundle_sha256", "clients"],
+      "properties": {
+        "required_skills": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "expected_bundle_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "clients": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["client", "root_path_sha256", "bundle_sha256", "skills"],
+            "properties": {
+              "client": {"enum": ["codex", "claude"]},
+              "root_path_sha256": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "bundle_sha256": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "skills": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "entry_kind",
+                    "resolved_path_sha256",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "entry_kind": {"enum": ["directory", "symlink"]},
+                    "resolved_path_sha256": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "resource_coordinator_observation": {
+      "type": "object",
+      "required": [
+        "state_path_sha256",
+        "coordinator_instance_id",
+        "state_schema_version",
+        "migration_bootstrap_confirmed",
+        "script_sha256",
+        "contract_bundle_sha256",
+        "active_lease_count"
+      ],
+      "properties": {
+        "state_path_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "coordinator_instance_id": {"type": "string", "minLength": 1},
+        "state_schema_version": {"const": 1},
+        "migration_bootstrap_confirmed": {"const": true},
+        "script_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "contract_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "active_lease_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
     },
     "project_registry_resolution": {
       "type": ["object", "null"],

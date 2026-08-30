@@ -7,11 +7,15 @@ import hashlib
 import json
 import re
 from pathlib import Path
+import sys
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
 CONTRACTS = SKILLS / "agent-harness" / "contracts"
+AGENT_HARNESS_SCRIPTS = SKILLS / "agent-harness" / "scripts"
+sys.path.insert(0, str(AGENT_HARNESS_SCRIPTS))
+import check_authorization as authorization_checker  # noqa: E402
 
 
 def load_json(path: Path) -> Any:
@@ -144,6 +148,36 @@ def _date_time(value: str) -> bool:
     return True
 
 
+def _json_schema_equal(left: Any, right: Any) -> bool:
+    """Compare JSON values without treating booleans as numbers."""
+    if isinstance(left, bool) or isinstance(right, bool):
+        return isinstance(left, bool) and isinstance(right, bool) and left == right
+    numeric = (int, float)
+    if isinstance(left, numeric) or isinstance(right, numeric):
+        return (
+            isinstance(left, numeric)
+            and isinstance(right, numeric)
+            and not isinstance(left, bool)
+            and not isinstance(right, bool)
+            and left == right
+        )
+    if isinstance(left, list) or isinstance(right, list):
+        return (
+            isinstance(left, list)
+            and isinstance(right, list)
+            and len(left) == len(right)
+            and all(_json_schema_equal(a, b) for a, b in zip(left, right))
+        )
+    if isinstance(left, dict) or isinstance(right, dict):
+        return (
+            isinstance(left, dict)
+            and isinstance(right, dict)
+            and set(left) == set(right)
+            and all(_json_schema_equal(left[key], right[key]) for key in left)
+        )
+    return type(left) is type(right) and left == right
+
+
 def validate_json_schema(instance: Any, schema: dict[str, Any], path: str = "$") -> list[str]:
     """Validate the JSON Schema subset used by contracts/schemas, without dependencies."""
     errors: list[str] = []
@@ -151,9 +185,11 @@ def validate_json_schema(instance: Any, schema: dict[str, Any], path: str = "$")
         names = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
         if not any(isinstance(name, str) and _type(instance, name) for name in names):
             return [f"{path}: expected type {schema['type']!r}"]
-    if "const" in schema and instance != schema["const"]:
+    if "const" in schema and not _json_schema_equal(instance, schema["const"]):
         errors.append(f"{path}: must equal {schema['const']!r}")
-    if "enum" in schema and instance not in schema["enum"]:
+    if "enum" in schema and not any(
+        _json_schema_equal(instance, candidate) for candidate in schema["enum"]
+    ):
         errors.append(f"{path}: must be one of {schema['enum']!r}")
     if isinstance(instance, str):
         if "minLength" in schema and len(instance) < schema["minLength"]:
@@ -205,6 +241,10 @@ def validate_json_schema(instance: Any, schema: dict[str, Any], path: str = "$")
         matches = sum(not validate_json_schema(instance, child, path) for child in schema["oneOf"])
         if matches != 1:
             errors.append(f"{path}: must match exactly one oneOf branch (matched {matches})")
+    if "anyOf" in schema:
+        matches = sum(not validate_json_schema(instance, child, path) for child in schema["anyOf"])
+        if matches < 1:
+            errors.append(f"{path}: must match at least one anyOf branch")
     if "not" in schema and not validate_json_schema(instance, schema["not"], path):
         errors.append(f"{path}: must not match the forbidden schema")
     if "if" in schema:
@@ -307,10 +347,10 @@ CONTROL_SPINE = [
     "repository_confirmation",
     "claim_delivery_writer",
     "commit",
-    "release_delivery_writer",
     "claim_github_mutation",
     "push",
     "verify_remote_sha",
+    "release_delivery_writer",
     "create_pr",
     "mark_issue_in_review",
     "publish_evidence",
@@ -426,6 +466,135 @@ XCODE_MCP_PROVIDER_POLICY = {
         "build_or_destination_inventory_as_connectivity_probe",
     ],
 }
+RESOURCE_OVERLAP_POLICY = {
+    "source_checkout_writer": {
+        "identity_version": "github_remote_v2",
+        "identity": "normalized_repository_fingerprint",
+        "conflict_when": "repository_fingerprint_equal",
+        "canonical_root_role": "exact_authorization_target_excluded_from_writer_identity",
+        "cross_resource_conflict": "xcode_project_or_build_same_repository_fingerprint",
+        "same_owner_nested_exception": "source_with_xcode_or_build_only",
+    },
+    "xcode_project_mutation": {
+        "identity_fields": ["repository_fingerprint", "container_path"],
+        "container_path_normalization": "canonical_absolute_path",
+        "conflict_when": "repository_fingerprint_or_canonical_container_path_equal",
+        "cross_resource_conflict": "source_or_build_same_repository_fingerprint",
+    },
+    "simulator_or_device": {
+        "identity_fields": ["coordinator_instance_id", "udids"],
+        "host_identity_source": "coordinator_instance_id",
+        "udids_normalization": "sorted_unique_nonempty",
+        "conflict_when": "same_host_and_udid_intersection_nonempty",
+        "evidence_only_fields": ["platform", "run_id", "bundle_id"],
+    },
+    "build_tuple": {
+        "identity_fields": [
+            "repository_fingerprint",
+            "container_path",
+            "xcode_build",
+            "sdk",
+            "scheme",
+            "configuration",
+            "architecture",
+            "package_fingerprint",
+            "cache_paths",
+            "cache_roles",
+            "output_paths",
+            "output_roles",
+            "package_resolution_mode",
+        ],
+        "cache_paths_normalization": "canonical_absolute_sorted_unique_nonempty",
+        "required_cache_roles": [
+            "derived_data", "source_packages", "repository_checkouts",
+            "artifacts", "package_cache",
+        ],
+        "cache_role_policy": "cache_paths_equal_unique_role_values",
+        "output_role_policy": "declared_xcode_result_archive_export_and_diagnostic_paths",
+        "package_resolution_modes": [
+            "none", "swiftpm_lockfile", "xcode_project_packages",
+        ],
+        "resolution_mutation_requires": "same_owner_source_writer_and_xcode_project_lease_when_applicable",
+        "conflict_when": "canonical_cache_or_output_path_tree_overlap_or_same_repository_when_either_resolves_packages",
+        "path_alias_policy": "samefile_then_unicode_casefolded_tree_overlap",
+        "cross_resource_conflict": "source_or_xcode_same_repository_fingerprint",
+    },
+    "coresimulator_runtime_registry": {
+        "identity_fields": ["coordinator_instance_id", "registry_scope"],
+        "conflict_when": "same_host_conflicts_with_every_device_lease",
+    },
+    "macos_gui_session": {
+        "identity_fields": ["coordinator_instance_id", "session_scope"],
+        "session_scope": "foreground_ui",
+        "conflict_when": "same_host_foreground_ui_session",
+    },
+    "signing_or_app_store_connect": {
+        "identity_fields": ["account_guard", "app_or_bundle_scope"],
+        "conflict_when": "exact_account_and_app_scope_equal",
+    },
+    "github_external_mutation": {
+        "identity_fields": ["repository_fingerprint", "remote_repository"],
+        "remote_normalization": "lowercase_owner_repository_without_dot_git",
+        "conflict_when": "repository_fingerprint_or_remote_equal",
+    },
+}
+CROSS_RUN_COORDINATION_POLICY = {
+    "required_for": "every_mutating_resource_acquire",
+    "coordinator_scope": "configured_host_shared_file",
+    "atomic_acquire_required": True,
+    "execution_environment_supplies_state_path": True,
+    "live_receipt_verification_before_reservation": True,
+    "live_receipt_verification_before_dispatch": True,
+    "max_ttl_seconds": 3600,
+    "trusted_binding": {
+        "source": "private_harness",
+        "required_fields": [
+            "state_path", "coordinator_instance_id", "script_sha256",
+            "contract_bundle_sha256",
+        ],
+        "same_binding_for_all_clients": True,
+    },
+    "receipt_binding_fields": [
+        "coordinator_instance_id",
+        "receipt_id",
+        "lease_id",
+        "owner_run_id",
+        "owner_actor",
+        "resource",
+        "resource_key",
+        "descriptor_sha256",
+        "fencing_token",
+        "acquired_at",
+        "expires_at",
+    ],
+    "registry_is_lock": False,
+    "per_run_ledger_is_lock": False,
+    "bootstrap": {
+        "legacy_leases_quiesced_confirmation_required": True,
+        "automatic_migration": False,
+    },
+    "unavailable_outcome": {
+        "graph_state": "blocked",
+        "reason_code": "coordination_required",
+    },
+    "lease_expiry": {
+        "silent_takeover": False,
+        "recovery_record_required": True,
+        "recovery_requires": [
+            "previous_receipt_and_fencing_token",
+            "independent_observer_run",
+            "owner_confirmed_dead",
+            "owner_tool_children_confirmed_dead",
+            "dirty_state_clean_digest",
+            "live_resource_revalidation_digest",
+        ],
+    },
+    "forbidden_automatic_actions": [
+        "create_daemon",
+        "create_database",
+        "create_or_switch_worktree",
+    ],
+}
 
 FORBIDDEN_RUN_ACTIONS = [
     "git.force_push",
@@ -458,9 +627,11 @@ TESTFLIGHT_NODE_ORDER = [
     "bind_pr_ready",
     "verify_run_authorization",
     "health_gate",
+    "claim_archive_build",
     "claim_testflight_upload",
     "archive",
     "verify_artifact",
+    "release_archive_build",
     "upload",
     "wait_processing",
     "read_back_upload",
@@ -598,7 +769,9 @@ def validate_testflight_workflow(workflow: dict[str, Any]) -> list[str]:
         if node.get("resource")
     ]
     if leases != [
+        ("claim_archive_build", "build_tuple", "acquire"),
         ("claim_testflight_upload", "signing_or_app_store_connect", "acquire"),
+        ("release_archive_build", "build_tuple", "release"),
         ("release_testflight_upload", "signing_or_app_store_connect", "release"),
         ("claim_upload_evidence_publication", "github_external_mutation", "acquire"),
         ("release_upload_evidence_publication", "github_external_mutation", "release"),
@@ -608,6 +781,42 @@ def validate_testflight_workflow(workflow: dict[str, Any]) -> list[str]:
         ("release_distribution_evidence_publication", "github_external_mutation", "release"),
     ]:
         errors.append("TestFlight continuation must balance Apple and evidence-publication leases")
+    expected_protection = {
+        "claim_archive_build": ["archive", "verify_artifact"],
+        "release_archive_build": ["archive", "verify_artifact"],
+        "claim_testflight_upload": [
+            "archive", "verify_artifact", "release_archive_build", "upload",
+            "wait_processing", "read_back_upload",
+        ],
+        "release_testflight_upload": [
+            "archive", "verify_artifact", "release_archive_build", "upload",
+            "wait_processing", "read_back_upload",
+        ],
+        "claim_upload_evidence_publication": [
+            "publish_upload_evidence", "verify_upload_evidence",
+        ],
+        "release_upload_evidence_publication": [
+            "publish_upload_evidence", "verify_upload_evidence",
+        ],
+        "claim_testflight_distribution": [
+            "verify_internal_groups", "distribute_internal", "read_back_distribution",
+        ],
+        "release_testflight_distribution": [
+            "verify_internal_groups", "distribute_internal", "read_back_distribution",
+        ],
+        "claim_distribution_evidence_publication": [
+            "publish_distribution_evidence", "verify_distribution_evidence",
+        ],
+        "release_distribution_evidence_publication": [
+            "publish_distribution_evidence", "verify_distribution_evidence",
+        ],
+    }
+    if any(
+        next((node for node in nodes if node.get("id") == node_id), {}).get("protects")
+        != protects
+        for node_id, protects in expected_protection.items()
+    ):
+        errors.append("TestFlight lease protection intervals drifted")
     if workflow.get("starts_after") != "pr_ready":
         errors.append("TestFlight continuation must start after pr_ready")
     forbidden = workflow.get("policy", {}).get("forbidden_actions", [])
@@ -619,6 +828,7 @@ def validate_testflight_workflow(workflow: dict[str, Any]) -> list[str]:
         "mode": "finally",
         "triggers": ["blocked", "failed_terminal", "cancelled", "success_terminal"],
         "release_active_resources": [
+            "build_tuple",
             "signing_or_app_store_connect",
             "github_external_mutation",
         ],
@@ -709,7 +919,7 @@ def validate_runtime_registry_policy(capabilities: dict[str, Any]) -> list[str]:
     if "coresimulator_runtime_registry" not in capabilities.get("resource_scopes", []):
         errors.append("CoreSimulator runtime registry resource scope missing")
     if capabilities.get("resource_key_fields", {}).get("coresimulator_runtime_registry") != [
-        "host_id",
+        "coordinator_instance_id",
         "registry_scope",
     ]:
         errors.append("CoreSimulator runtime registry key must be host-scoped")
@@ -722,6 +932,23 @@ def validate_xcode_mcp_provider_policy(capabilities: dict[str, Any]) -> list[str
     return []
 
 
+def validate_resource_coordination_policy(capabilities: dict[str, Any]) -> list[str]:
+    errors = []
+    resource_keys = capabilities.get("resource_key_fields", {})
+    if resource_keys.get("source_checkout_writer") != [
+        "identity_version",
+        "repository_fingerprint",
+    ]:
+        errors.append("source checkout writer key must be repository-wide")
+    if resource_keys.get("simulator_or_device") != ["coordinator_instance_id", "udids"]:
+        errors.append("Simulator/device key must use host and exact UDID set")
+    if capabilities.get("resource_overlap_policy") != RESOURCE_OVERLAP_POLICY:
+        errors.append("resource overlap policy drifted")
+    if capabilities.get("cross_run_coordination_policy") != CROSS_RUN_COORDINATION_POLICY:
+        errors.append("cross-run coordination policy drifted")
+    return errors
+
+
 def validate_workflow_semantics(workflow: dict[str, Any], resources: set[str]) -> list[str]:
     nodes, errors = workflow.get("nodes", []), validate_dag(workflow.get("nodes", []))
     ids = [node.get("id") for node in nodes]
@@ -731,13 +958,10 @@ def validate_workflow_semantics(workflow: dict[str, Any], resources: set[str]) -
         errors.append("workflow must preserve the exact approved control-spine node order")
     extension_ids = {node_id for node_id in ids if node_id not in CONTROL_SPINE}
     for node_id in extension_ids:
-        node = by_id.get(node_id, {})
-        if node.get("extension") is not True:
-            errors.append(f"workflow extension node {node_id} must declare extension true")
-        if not node.get("resource_key"):
-            errors.append(f"workflow extension node {node_id} must declare resource_key")
-        if not node.get("resource") or not node.get("lease_action"):
-            errors.append(f"workflow extension node {node_id} must be an explicit resource lease action")
+        errors.append(
+            f"workflow cannot add task-specific control node {node_id}; "
+            "bind dynamic lease/evidence edges to the installed control spine"
+        )
     for index, node_id in enumerate(CONTROL_SPINE):
         if node_id not in by_id:
             continue
@@ -784,12 +1008,55 @@ def validate_workflow_semantics(workflow: dict[str, Any], resources: set[str]) -
                 pending.extend(by_id.get(dependency, {}).get("requires", []))
         return False
 
+    for resource, expected in LEASE_PAIRS.items():
+        for acquire_id, release_id in zip(expected[::2], expected[1::2]):
+            acquire = by_id.get(acquire_id, {})
+            release = by_id.get(release_id, {})
+            protects = acquire.get("protects", [])
+            if not protects or protects != release.get("protects"):
+                errors.append(
+                    f"workflow pair must declare identical protected nodes for {resource}"
+                )
+                continue
+            for protected in protects:
+                if protected not in by_id:
+                    errors.append(f"workflow protected node is unknown: {protected}")
+                elif not transitively_depends(protected, acquire_id):
+                    errors.append(
+                        f"workflow protected node {protected} must depend on {acquire_id}"
+                    )
+                if not transitively_depends(release_id, protected):
+                    errors.append(
+                        f"workflow release {release_id} must follow protected node {protected}"
+                    )
+
     for key, actions in extension_leases.items():
         acquires, releases = actions.get("acquire", []), actions.get("release", [])
         if len(acquires) != 1 or len(releases) != 1:
             errors.append(f"workflow extension lease must have one acquire and one release for {key}")
         elif not transitively_depends(releases[0], acquires[0]):
             errors.append(f"workflow extension release must depend on its acquire for {key}")
+        else:
+            acquire, release = by_id[acquires[0]], by_id[releases[0]]
+            acquire_protects = acquire.get("protects", [])
+            release_protects = release.get("protects", [])
+            if acquire_protects != release_protects or not acquire_protects:
+                errors.append(
+                    f"workflow extension pair must declare identical protected nodes for {key}"
+                )
+            for protected in acquire_protects:
+                if protected not in CONTROL_SPINE:
+                    errors.append(
+                        f"workflow extension protected node is unknown: {protected}"
+                    )
+                elif not transitively_depends(protected, acquires[0]):
+                    errors.append(
+                        f"workflow extension protected node {protected} must depend on its acquire"
+                    )
+                if not transitively_depends(releases[0], protected):
+                    errors.append(
+                        f"workflow extension release must follow protected node {protected}"
+                    )
     reachable: set[str] = set()
     def reach(node_id: str) -> None:
         if node_id not in reachable:
@@ -851,6 +1118,7 @@ def validate_workflow_semantics(workflow: dict[str, Any], resources: set[str]) -
             "build_tuple",
             "simulator_or_device",
             "coresimulator_runtime_registry",
+            "macos_gui_session",
             "signing_or_app_store_connect",
             "github_external_mutation",
         ],
@@ -860,7 +1128,9 @@ def validate_workflow_semantics(workflow: dict[str, Any], resources: set[str]) -
     return errors
 
 
-def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
+def validate_ledger_lifecycle(
+    records: list[dict[str, Any]], coordinator_state: Path | None = None
+) -> list[str]:
     errors, previous, active = [], 0, {}
     main_workflow = load_json(CONTRACTS / "workflow.json")
     continuation_workflow = load_json(CONTRACTS / "testflight-workflow.json")
@@ -877,6 +1147,9 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
     consumed_action_grants: set[tuple[str, str]] = set()
     consumed_idempotency_keys: set[tuple[str, str]] = set()
     reservations: dict[str, dict[str, Any]] = {}
+    dispatches: dict[str, dict[str, Any]] = {}
+    claimed_reservations: set[str] = set()
+    consumed_dispatches: set[str] = set()
     reserved_action_grants: set[tuple[str, str]] = set()
     reserved_idempotency_keys: set[tuple[str, str]] = set()
     consumed_reservations: set[str] = set()
@@ -1001,7 +1274,34 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
             resource_key = (payload.get("resource"), payload.get("resource_key"))
             identity = {key: payload.get(key) for key in ("lease_id", "owner", "resource", "resource_key")}
             action = payload.get("action")
+            errors.extend(
+                authorization_checker._coordinator_binding_errors(
+                    run_id=record.get("run_id"),
+                    lease_id=payload.get("lease_id"),
+                    owner=payload.get("owner"),
+                    resource=payload.get("resource"),
+                    resource_key=payload.get("resource_key"),
+                    descriptor=payload.get("resource_descriptor"),
+                    receipt=payload.get("coordinator_receipt"),
+                )
+            )
             if action == "acquire":
+                receipt = payload.get("coordinator_receipt", {})
+                protects = payload.get("protects")
+                if payload.get("resource") in authorization_checker.PROTECTS_REQUIRED_RESOURCES:
+                    if not isinstance(protects, list) or not protects:
+                        errors.append("extension-scoped lease must declare protected workflow nodes")
+                    elif any(node_id not in node_dependencies for node_id in protects):
+                        errors.append("extension-scoped lease protects an unknown workflow node")
+                    elif set(protects) & passed_nodes:
+                        errors.append(
+                            "extension-scoped lease was acquired after its protected workflow node"
+                        )
+                if (
+                    payload.get("acquired_at") != receipt.get("acquired_at")
+                    or payload.get("expires_at") != receipt.get("expires_at")
+                ):
+                    errors.append("ledger lease acquisition times drifted from its coordinator receipt")
                 if payload.get("resource") == "coresimulator_runtime_registry":
                     if any(key[0] == "simulator_or_device" for key in active):
                         errors.append("CoreSimulator runtime registry lease conflicts with active Simulator/device lease")
@@ -1031,8 +1331,14 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                     key[0] == "coresimulator_runtime_registry" for key in active
                 ):
                     errors.append("Simulator/device lease conflicts with active CoreSimulator runtime registry lease")
-                if resource_key in active:
-                    errors.append(f"ledger has two active leases for resource {resource_key}")
+                overlaps = any(
+                    authorization_checker._coordinated_leases_conflict(
+                        payload, current
+                    )
+                    for current in active.values()
+                )
+                if resource_key in active or overlaps:
+                    errors.append(f"ledger has overlapping active leases for resource {resource_key}")
                 else:
                     active[resource_key] = dict(payload)
             elif action in {"heartbeat", "release"}:
@@ -1040,8 +1346,30 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                 if current is None or any(current.get(key) != value for key, value in identity.items()):
                     errors.append(f"ledger {action} must match active lease id, owner, and resource for {resource_key}")
                 elif action == "release":
-                    del active[resource_key]
+                    if (
+                        current.get("resource_descriptor") != payload.get("resource_descriptor")
+                        or current.get("coordinator_receipt") != payload.get("coordinator_receipt")
+                        or current.get("protects", []) != payload.get("protects", [])
+                    ):
+                        errors.append("ledger release drifted from its coordinator binding")
+                    else:
+                        unmet = set(current.get("protects", [])) - passed_nodes
+                        if unmet:
+                            errors.append(
+                                "ledger release preceded protected workflow nodes: "
+                                + ", ".join(sorted(unmet))
+                            )
+                        recovery_errors = authorization_checker._lease_release_recovery_errors(
+                            current,
+                            payload,
+                            coordinator_state=coordinator_state,
+                        )
+                        errors.extend(recovery_errors)
+                        if not recovery_errors and not unmet:
+                            del active[resource_key]
                 else:
+                    if current.get("protects", []) != payload.get("protects", []):
+                        errors.append("ledger heartbeat drifted from its protected workflow nodes")
                     try:
                         heartbeat_at = datetime.fromisoformat(str(payload.get("heartbeat_at")).replace("Z", "+00:00"))
                         old_expiry = datetime.fromisoformat(str(current.get("expires_at")).replace("Z", "+00:00"))
@@ -1049,8 +1377,14 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                         if heartbeat_at >= old_expiry or new_expiry <= old_expiry or new_expiry <= heartbeat_at:
                             errors.append("ledger heartbeat must be timely and extend expiry monotonically")
                         else:
+                            current_receipt = current.get("coordinator_receipt", {})
+                            next_receipt = payload.get("coordinator_receipt", {})
+                            stable = authorization_checker.COORDINATOR_RECEIPT_FIELDS - {"expires_at"}
+                            if any(current_receipt.get(field) != next_receipt.get(field) for field in stable):
+                                errors.append("ledger heartbeat changed its coordinator receipt identity")
                             current["heartbeat_at"] = payload.get("heartbeat_at")
                             current["expires_at"] = payload.get("expires_at")
+                            current["coordinator_receipt"] = next_receipt
                     except ValueError:
                         errors.append("ledger heartbeat timestamps are invalid")
         if record.get("record_type") == "grant_reservation":
@@ -1106,6 +1440,8 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                 or lease.get("lease_id") != payload.get("lease_id")
                 or lease.get("owner") != payload.get("lease_owner")
                 or payload.get("action") not in lease.get("allowed_actions", [])
+                or lease.get("resource_descriptor") != payload.get("resource_descriptor")
+                or lease.get("coordinator_receipt") != payload.get("coordinator_receipt")
             ):
                 errors.append("grant reservation requires the exact active action lease")
             else:
@@ -1129,6 +1465,72 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                 reserved_idempotency_keys.add(idempotency_key)
             if reservation_id:
                 reservations[reservation_id] = payload
+        if record.get("record_type") == "grant_dispatch":
+            reservation_id = payload.get("reservation_id")
+            dispatch_id = payload.get("dispatch_id")
+            reservation = reservations.get(reservation_id)
+            if (
+                reservation is None
+                or reservation_id in claimed_reservations
+                or not isinstance(dispatch_id, str)
+                or not dispatch_id
+                or dispatch_id in dispatches
+            ):
+                errors.append("grant dispatch requires one unclaimed exact reservation")
+            elif not authorization_checker._receipt_lineage_compatible(
+                reservation.get("coordinator_receipt"),
+                payload.get("coordinator_receipt"),
+            ):
+                errors.append("grant dispatch drifted from its reservation fence")
+            else:
+                lease = active.get(
+                    (reservation.get("resource"), reservation.get("resource_key"))
+                )
+                if (
+                    lease is None
+                    or lease.get("lease_id") != reservation.get("lease_id")
+                    or lease.get("owner") != reservation.get("lease_owner")
+                    or lease.get("coordinator_receipt")
+                    != payload.get("coordinator_receipt")
+                ):
+                    errors.append("grant dispatch requires its exact active reservation lease")
+                try:
+                    dispatched_at = datetime.fromisoformat(
+                        str(record.get("recorded_at")).replace("Z", "+00:00")
+                    )
+                    dispatch_expiry = datetime.fromisoformat(
+                        str(payload.get("coordinator_receipt", {}).get("expires_at")).replace(
+                            "Z", "+00:00"
+                        )
+                    )
+                    dispatch_deadline = datetime.fromisoformat(
+                        str(payload.get("dispatch_deadline")).replace("Z", "+00:00")
+                    )
+                    dispatch_authorization = run_authorizations.get(
+                        reservation.get("authorization_hash")
+                    )
+                    authorization_expiry = datetime.fromisoformat(
+                        str(
+                            dispatch_authorization.get("expires_at")
+                            if isinstance(dispatch_authorization, dict)
+                            else ""
+                        ).replace("Z", "+00:00")
+                    )
+                    if (
+                        dispatched_at.tzinfo is None
+                        or dispatched_at >= dispatch_deadline
+                        or (
+                            dispatch_deadline - dispatched_at
+                        ).total_seconds()
+                        > authorization_checker.MAX_DISPATCH_WINDOW_SECONDS
+                        or dispatch_deadline > dispatch_expiry
+                        or dispatch_deadline > authorization_expiry
+                    ):
+                        errors.append("grant dispatch cannot use an expired lease")
+                except ValueError:
+                    errors.append("grant dispatch deadline is invalid")
+                claimed_reservations.add(str(reservation_id))
+                dispatches[dispatch_id] = dict(payload)
         if record.get("record_type") == "external_write":
             authorization_hash = payload.get("authorization_hash")
             grant_key = (authorization_hash, payload.get("grant_id"))
@@ -1161,6 +1563,7 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                     "lease_id",
                     "lease_owner",
                     "resource",
+                    "resource_descriptor",
                     "target",
                     "spec_checkpoint_sha256",
                     "apple_observation_sha256",
@@ -1168,13 +1571,34 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                     if reservation.get(field) != payload.get(field):
                         errors.append("external write drifted from its grant reservation")
                         break
+                if not authorization_checker._receipt_lineage_compatible(
+                    reservation.get("coordinator_receipt"),
+                    payload.get("coordinator_receipt"),
+                ):
+                    errors.append("external write drifted from its reservation receipt lineage")
                 consumed_reservations.add(reservation_id)
+            dispatch_id = payload.get("dispatch_id")
+            dispatch = dispatches.get(dispatch_id)
+            if dispatch is None or dispatch_id in consumed_dispatches:
+                errors.append("external write requires one unconsumed dispatch claim")
+            elif (
+                dispatch.get("reservation_id") != reservation_id
+                or not authorization_checker._receipt_lineage_compatible(
+                    dispatch.get("coordinator_receipt"),
+                    payload.get("coordinator_receipt"),
+                )
+            ):
+                errors.append("external write drifted from its dispatch claim")
+            else:
+                consumed_dispatches.add(str(dispatch_id))
             live_lease = active.get((payload.get("resource"), payload.get("resource_key")))
             if (
                 live_lease is None
                 or live_lease.get("lease_id") != payload.get("lease_id")
                 or live_lease.get("owner") != payload.get("lease_owner")
                 or payload.get("action") not in live_lease.get("allowed_actions", [])
+                or live_lease.get("resource_descriptor") != payload.get("resource_descriptor")
+                or live_lease.get("coordinator_receipt") != payload.get("coordinator_receipt")
             ):
                 errors.append("external write requires the same active lease used for reservation")
             else:
@@ -1395,7 +1819,12 @@ def validate_ledger_lifecycle(records: list[dict[str, Any]]) -> list[str]:
                         errors.append("testflight_distributed requires every distribution operation to succeed")
         if record.get("record_type") == "stop" and active:
             errors.append("terminal stop cannot leave an active resource lease")
-    return errors
+    errors.extend(
+        authorization_checker._standalone_ledger_lifecycle_errors(
+            records, coordinator_state=coordinator_state
+        )
+    )
+    return sorted(set(errors))
 
 
 def validate_contracts() -> list[str]:
@@ -1422,6 +1851,7 @@ def validate_contracts() -> list[str]:
         (SKILLS / "agent-harness" / "templates" / "project-registry.local.example.json", schemas / "project-registry.schema.json"),
         (SKILLS / "agent-harness" / "templates" / "completion-report.json", schemas / "completion-report.schema.json"),
         (testflight_workflow, schemas / "testflight-workflow.schema.json"),
+        (authorization_template, schemas / "run-authorization.pending.schema.json"),
         (authorization_fixture, schemas / "run-authorization.schema.json"),
         (policy_fixture, schemas / "private-policy-overlay.schema.json"),
         (SKILLS / "agent-harness" / "templates" / "harness.json", schemas / "harness.schema.json"),
@@ -1438,6 +1868,7 @@ def validate_contracts() -> list[str]:
     capabilities, workflow = load_json(CONTRACTS / "capabilities.json"), load_json(CONTRACTS / "workflow.json")
     errors.extend(validate_runtime_registry_policy(capabilities))
     errors.extend(validate_xcode_mcp_provider_policy(capabilities))
+    errors.extend(validate_resource_coordination_policy(capabilities))
     errors.extend(validate_workflow_semantics(workflow, set(capabilities.get("resource_scopes", []))))
     errors.extend(validate_testflight_workflow(load_json(testflight_workflow)))
     errors.extend(validate_completion_report(load_json(SKILLS / "agent-harness" / "templates" / "completion-report.json")))
@@ -1536,7 +1967,7 @@ def validate_safety_contracts() -> list[str]:
         "single-use approved `destructive_action`",
         "host-wide registry lease is explicitly released before any",
         "select exactly one provider",
-        "restart clears",
+        "must not be proposed as a CoreSimulator",
         "low storage as the sole cause",
         "172343027",
         "three consecutive passes only when",
@@ -1544,6 +1975,8 @@ def validate_safety_contracts() -> list[str]:
     ):
         if phrase not in runtime_registry:
             errors.append(f"CoreSimulator runtime registry contract missing: {phrase}")
+    if "normal Mac restart may be proposed" in runtime_registry:
+        errors.append("CoreSimulator recovery contract must never recommend a Mac reboot")
     provider_preflight = (SKILLS / "xcodebuild" / "references" / "xcode-mcp-provider-preflight.md").read_text(encoding="utf-8")
     for phrase in (
         "Installation, registration, exposure, and connectivity are four separate facts",
@@ -1558,7 +1991,15 @@ def validate_safety_contracts() -> list[str]:
         if phrase not in provider_preflight:
             errors.append(f"Xcode MCP provider contract missing: {phrase}")
     concurrent = (SKILLS / "xcodebuild" / "references" / "concurrent-project-resources.md").read_text(encoding="utf-8")
-    for phrase in ("exact destination UDID", "ambiguous `booted`", "one active owner per UDID", "coresimulator_runtime_registry"):
+    for phrase in (
+        "exact destination UDIDs",
+        "ambiguous `booted`",
+        "one normalized repository fingerprint",
+        "host-shared atomic coordinator",
+        "coordination_required",
+        "expiry alone never grants takeover",
+        "coresimulator_runtime_registry",
+    ):
         if phrase not in concurrent:
             errors.append(f"concurrent Xcode resource contract missing: {phrase}")
     health = (SKILLS / "apple-development-health" / "references" / "health-matrix.md").read_text(encoding="utf-8")

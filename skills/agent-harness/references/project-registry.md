@@ -77,10 +77,15 @@ agent/model choice, lease owner, timestamps, tokens, or account identifiers.
 
 Each task keeps its own append-only run ledger. Multiple read-only tasks may use
 one logical project concurrently, but mutation requires one repository-wide
-writer lease derived from normalized repository identity. Different checkouts
-do not create different writer identities. Cross-process serialization requires
-a host-shared atomic coordinator; without one, stop with
-`coordination_required` instead of treating registry or ledger files as locks.
+writer lease derived from versioned normalized repository identity. Different
+checkouts do not create different writer identities. Every mutating acquire uses
+the explicitly configured host-shared atomic coordinator and records its
+fenced receipt; without a live receipt, stop with `coordination_required`
+instead of treating registry or ledger files as locks. The coordinator location
+is private runtime configuration, never a registry field.
+The exact key, overlap, and expiry rules are machine-readable in
+`../contracts/capabilities.json` under `resource_overlap_policy` and
+`cross_run_coordination_policy`.
 
 ## Privacy and publication
 

@@ -1,6 +1,6 @@
 # iOS-experts
 
-**Version:** 2.0.0-beta.4
+**Version:** 2.0.0-beta.5
 
 Agent-neutral skills and a guarded task-to-PR harness for iOS, iPadOS, watchOS, and macOS. It supports Codex,
 Claude Code, or one-writer collaboration without duplicating Apple-authored Xcode skills.
@@ -35,8 +35,8 @@ Verify with `codex mcp list` or `claude mcp list`. For the first connection, kee
 connection/access prompt if shown. Settings changes may require permission again or a new agent task. See Apple's
 [external-agent setup](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode).
 
-The health gate checks registration, current-task exposure, one bounded read-only response, and the exact Xcode
-window. It does not build to test connectivity; third-party Xcode MCP adapters are explicit fallbacks.
+The health gate checks exact registration and one bounded read-only MCP response; the task then confirms exposure
+to the exact Xcode window before use. It does not build for connectivity; third-party adapters are explicit fallbacks.
 
 ### 3. Add AppleSampleCode retrieval when needed
 
@@ -53,20 +53,22 @@ The health check verifies exact read-only tools and corpus provenance. The
 
 ### 4. Enable the task-to-PR harness in an app repository
 
-Installing a skill does not copy the root policy into an app. Copy and customize from `agent-harness`:
+Installing a skill does not copy the root policy into an app. Keep `AGENTS.md` in the app, but materialize JSON templates with `scripts/materialize_private_template.py` so copied files retain a valid absolute installed-schema URI:
 
 ```text
-templates/AGENTS.md             -> <app-repository>/AGENTS.md
-templates/harness.json          -> <app-repository>/.iosx/harness.json
-templates/run-authorization.json -> <private-untracked-run-path>/authorization.json
+templates/AGENTS.md              -> <app-repository>/AGENTS.md
+templates/harness.json           -> <private-untracked-host-path>/harness.json
+templates/private-policy-overlay.json -> <private-untracked-host-path>/policy.json
+templates/run-authorization.json -> <private-untracked-run-root>/authorization.json
 ```
 
-Keep account/team IDs and live authorizations in a private, untracked overlay. Start health checks from
-`apple-development-health/templates/health-observations.json`.
+Keep the populated harness, contract-bundle hash, account/team IDs, run ledger, receipts, and live authorizations private and untracked. Configure one shared
+Codex/Claude coordinator with the [step-by-step setup](skills/agent-harness/references/coordinator-setup.md), then start
+health checks from `apple-development-health/templates/health-observations.json`.
 
 ### 5. Optional: add a private project registry
 
-If one developer or host has several project checkouts, copy
+If one developer or host has several project checkouts, materialize
 `agent-harness/templates/project-registry.local.example.json` to any private or ignored location and resolve it with
 `agent-harness/scripts/resolve_project.py`. Explicit paths and the exact opened Xcode container remain authoritative;
 multiple valid candidates require human selection. See the [registry contract](skills/agent-harness/references/project-registry.md).
@@ -100,7 +102,9 @@ flowchart LR
     G[User goal] --> A[Authority and health gate]
     Q[Optional private registry] -. validated candidates .-> A
     A --> P[Reviewable phase map]
-    P --> W[One implementation writer]
+    P --> L[Per-run append-only ledger]
+    L --> C[Configured host atomic coordinator]
+    C --> W[One fenced repository writer]
     W --> V[Minimum sufficient verification]
     V --> R[Phase PR or ordered stack]
     R --> E[Published evidence and checks]
@@ -111,6 +115,8 @@ flowchart LR
 
 The harness separates authority, product truth, Apple API truth, and execution. Apple docs/Xcode lead for current
 behavior; accepted specifications and repository source define the product. RAG supplies cited context only.
+Every mutable resource acquire uses one explicitly configured host-shared coordinator; per-run ledgers and the
+optional registry are evidence, not locks. Missing or stale receipts stop with `coordination_required`.
 
 Split growing work into coherent phases. Each PR answers one reviewer question, owns bounded paths, leaves a valid
 state, and has checks/evidence. Dependent phases form a documented stack. Stack approval never implies merge,
@@ -136,6 +142,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 | [`apple-development-health`](skills/apple-development-health/SKILL.md) | read-only CLI, MCP, account, and runtime readiness |
 | [`xcode-project-workflow`](skills/xcode-project-workflow/SKILL.md) | authoritative Xcode root, container, and branch preflight |
 | [`xcodebuild`](skills/xcodebuild/SKILL.md) | official-first build, test, run, debug, and capture |
+| [`core-simulator-health`](skills/core-simulator-health/SKILL.md) | bounded non-reboot Simulator diagnosis and recovery |
 | [`apple-platform-testing`](skills/apple-platform-testing/SKILL.md) | minimum-sufficient XCTest/XCUITest planning |
 | [`screenshot`](skills/screenshot/SKILL.md) | deterministic screenshots and trimmed video evidence |
 | [`delivery-report`](skills/delivery-report/SKILL.md) | private, authorized Telegram/WhatsApp/iMessage completion summaries |
@@ -159,6 +166,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 
 - Resolve the authoritative checkout, remote, open Xcode container, and toolchain before edits or Apple tools.
 - Prepare an approved branch from the remote default; use a worktree only when explicitly requested.
+- A worktree never creates parallel writer permission for the same logical repository.
 - Confirm repository/path/branch/remote before the first commit or push.
 - Use one writer; bind read-only review to a frozen patch identity.
 - Keep Xcode/Simulator calls in the logged-in host environment, never a sandbox.

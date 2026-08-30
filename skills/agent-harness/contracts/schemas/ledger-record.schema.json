@@ -16,6 +16,7 @@
         "lease",
         "approval",
         "grant_reservation",
+        "grant_dispatch",
         "knowledge",
         "evidence",
         "external_write",
@@ -51,9 +52,93 @@
                 "superseded"
               ]
             },
-            "patch_identity": {"type": "string", "minLength": 1},
-            "reason": {"type": "string"}
+            "patch_identity": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "patch_manifest": {"type": "object", "minProperties": 1},
+            "reason": {"type": "string"},
+            "lease_id": {"type": "string", "minLength": 1},
+            "lease_resource": {
+              "enum": [
+                "source_checkout_writer",
+                "xcode_project_mutation",
+                "build_tuple",
+                "simulator_or_device",
+                "coresimulator_runtime_registry",
+                "macos_gui_session",
+                "signing_or_app_store_connect",
+                "github_external_mutation"
+              ]
+            },
+            "lease_resource_key": {"type": "string", "minLength": 1}
           },
+          "allOf": [
+            {
+              "if": {
+                "required": ["node_id", "status"],
+                "properties": {
+                  "status": {"const": "passed"},
+                  "node_id": {
+                    "enum": [
+                      "claim_implementation_writer",
+                      "release_implementation_writer",
+                      "claim_github_tracking",
+                      "release_github_tracking",
+                      "claim_github_in_progress",
+                      "release_github_in_progress",
+                      "claim_delivery_writer",
+                      "release_delivery_writer",
+                      "claim_github_mutation",
+                      "release_github_mutation",
+                      "claim_archive_build",
+                      "release_archive_build",
+                      "claim_testflight_upload",
+                      "release_testflight_upload",
+                      "claim_upload_evidence_publication",
+                      "release_upload_evidence_publication",
+                      "claim_testflight_distribution",
+                      "release_testflight_distribution",
+                      "claim_distribution_evidence_publication",
+                      "release_distribution_evidence_publication"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "required": ["lease_id", "lease_resource", "lease_resource_key"]
+              }
+            },
+            {
+              "if": {
+                "required": ["node_id", "status"],
+                "properties": {
+                  "status": {"const": "passed"},
+                  "node_id": {
+                    "enum": [
+                      "verify",
+                      "freeze_review",
+                      "review",
+                      "converge",
+                      "reverify",
+                      "prepare_evidence",
+                      "prepare_pr",
+                      "repository_confirmation",
+                      "commit",
+                      "push",
+                      "verify_remote_sha",
+                      "create_pr",
+                      "publish_evidence",
+                      "verify_published_evidence",
+                      "checks",
+                      "pr_ready"
+                    ]
+                  }
+                }
+              },
+              "then": {"required": ["patch_identity", "patch_manifest"]}
+            }
+          ],
           "additionalProperties": false
         }
       }
@@ -116,7 +201,15 @@
         "record_type": {"const": "lease"},
         "payload": {
           "type": "object",
-          "required": ["lease_id", "action", "owner", "resource", "resource_key"],
+          "required": [
+            "lease_id",
+            "action",
+            "owner",
+            "resource",
+            "resource_key",
+            "resource_descriptor",
+            "coordinator_receipt"
+          ],
           "properties": {
             "lease_id": {"type": "string", "minLength": 1},
             "action": {"enum": ["acquire", "heartbeat", "release"]},
@@ -128,23 +221,173 @@
                 "build_tuple",
                 "simulator_or_device",
                 "coresimulator_runtime_registry",
+                "macos_gui_session",
                 "signing_or_app_store_connect",
                 "github_external_mutation"
               ]
             },
             "resource_key": {"type": "string", "minLength": 1},
+            "resource_descriptor": {"type": "object", "minProperties": 1},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            },
             "branch": {"type": "string", "minLength": 1},
             "base_sha": {"type": "string", "minLength": 1},
             "pre_state_hash": {"type": "string", "minLength": 1},
             "post_state_hash": {"type": "string", "minLength": 1},
             "allowed_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
             "allowed_actions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "protects": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
             "approval_id": {"type": "string", "minLength": 1},
             "mutation_target": {"type": "string", "minLength": 1},
             "acquired_at": {"type": "string", "format": "date-time"},
             "heartbeat_at": {"type": "string", "format": "date-time"},
             "released_at": {"type": "string", "format": "date-time"},
-            "expires_at": {"type": "string", "format": "date-time"}
+            "expires_at": {"type": "string", "format": "date-time"},
+            "coordinator_release_confirmation": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "release_id",
+                "receipt_id",
+                "lease_id",
+                "fencing_token",
+                "released_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "release_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "released_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            },
+            "recovery_evidence": {
+              "type": "object",
+              "required": [
+                "previous_receipt_id",
+                "previous_fencing_token",
+                "observer",
+                "owner_liveness",
+                "owner_tool_children",
+                "dirty_state",
+                "live_resource_revalidation"
+              ],
+              "properties": {
+                "previous_receipt_id": {"type": "string", "minLength": 1},
+                "previous_fencing_token": {"type": "integer", "minimum": 1},
+                "observer": {
+                  "type": "object",
+                  "required": ["observer_run_id", "observer_actor", "method", "observed_at"],
+                  "properties": {
+                    "observer_run_id": {"type": "string", "minLength": 1},
+                    "observer_actor": {"type": "string", "minLength": 1},
+                    "method": {"const": "bounded_read_only_host_probe"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "owner_liveness": {
+                  "type": "object",
+                  "required": ["state", "digest", "observed_at"],
+                  "properties": {
+                    "state": {"const": "dead"},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "owner_tool_children": {
+                  "type": "object",
+                  "required": ["state", "digest", "observed_at"],
+                  "properties": {
+                    "state": {"const": "dead"},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "dirty_state": {
+                  "type": "object",
+                  "required": ["state", "digest", "observed_at"],
+                  "properties": {
+                    "state": {"const": "clean"},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "live_resource_revalidation": {
+                  "type": "object",
+                  "required": ["passed", "digest", "observed_at"],
+                  "properties": {
+                    "passed": {"const": true},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "recovery_confirmation": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "recovery_id",
+                "previous_receipt_id",
+                "previous_fencing_token",
+                "recovery_fencing_token",
+                "recovered_at",
+                "evidence_sha256",
+                "replacement_receipt"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "recovery_id": {"type": "string", "minLength": 1},
+                "previous_receipt_id": {"type": "string", "minLength": 1},
+                "previous_fencing_token": {"type": "integer", "minimum": 1},
+                "recovery_fencing_token": {"type": "integer", "minimum": 2},
+                "recovered_at": {"type": "string", "format": "date-time"},
+                "evidence_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "replacement_receipt": {"type": ["object", "null"]}
+              },
+              "additionalProperties": false
+            }
           },
           "allOf": [
             {
@@ -156,6 +399,7 @@
                   "pre_state_hash",
                   "allowed_paths",
                   "allowed_actions",
+                  "approval_id",
                   "acquired_at",
                   "expires_at"
                 ]
@@ -166,8 +410,41 @@
               "then": {"required": ["heartbeat_at", "expires_at"]}
             },
             {
+              "if": {
+                "properties": {
+                  "resource": {
+                    "enum": [
+                      "xcode_project_mutation",
+                      "build_tuple",
+                      "simulator_or_device",
+                      "coresimulator_runtime_registry",
+                      "macos_gui_session"
+                    ]
+                  }
+                }
+              },
+              "then": {"required": ["protects"]}
+            },
+            {
               "if": {"properties": {"action": {"const": "release"}}},
-              "then": {"required": ["released_at", "post_state_hash"]}
+              "then": {
+                "required": ["released_at", "post_state_hash"],
+                "oneOf": [
+                  {
+                    "required": ["coordinator_release_confirmation"],
+                    "not": {
+                      "anyOf": [
+                        {"required": ["recovery_evidence"]},
+                        {"required": ["recovery_confirmation"]}
+                      ]
+                    }
+                  },
+                  {
+                    "required": ["recovery_evidence", "recovery_confirmation"],
+                    "not": {"required": ["coordinator_release_confirmation"]}
+                  }
+                ]
+              }
             }
           ],
           "additionalProperties": false
@@ -206,6 +483,115 @@
             "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
             "delivery_target": {
               "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+            },
+            "health_profile": {
+              "enum": [
+                "pr_ready",
+                "runtime_ui",
+                "testflight_uploaded",
+                "testflight_distributed",
+                "icon_upstream"
+              ]
+            },
+            "selected_writer": {"enum": ["codex", "claude"]},
+            "contract_schema_id": {
+              "const": "urn:ios-experts:schema:run-authorization:1.0.0"
+            },
+            "contract_schema_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "health_attestation": {
+              "type": "object",
+              "required": [
+                "report_sha256",
+                "observed_at",
+                "profile",
+                "overall_status",
+                "authoritative_targets_sha256",
+                "agent_skill_bundle_sha256",
+                "coordinator_instance_id",
+                "coordinator_contract_bundle_sha256"
+              ],
+              "properties": {
+                "report_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "observed_at": {"type": "string", "format": "date-time"},
+                "profile": {"enum": ["pr_ready", "runtime_ui", "testflight_uploaded", "testflight_distributed", "icon_upstream"]},
+                "overall_status": {"enum": ["healthy", "degraded"]},
+                "authoritative_targets_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "agent_skill_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "coordinator_contract_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+              },
+              "additionalProperties": false
+            },
+            "resource_plan": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "required": [
+                  "plan_id",
+                  "resource",
+                  "resource_key",
+                  "descriptor_sha256",
+                  "resource_descriptor",
+                  "owner_actor",
+                  "protects"
+                ],
+                "properties": {
+                  "plan_id": {"type": "string", "minLength": 1},
+                  "resource": {
+                    "enum": [
+                      "source_checkout_writer",
+                      "xcode_project_mutation",
+                      "build_tuple",
+                      "simulator_or_device",
+                      "coresimulator_runtime_registry",
+                      "macos_gui_session",
+                      "signing_or_app_store_connect",
+                      "github_external_mutation"
+                    ]
+                  },
+                  "resource_key": {"type": "string", "minLength": 1},
+                  "descriptor_sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "resource_descriptor": {
+                    "type": "object",
+                    "minProperties": 1
+                  },
+                  "owner_actor": {"type": "string", "minLength": 1},
+                  "protects": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {"type": "string", "minLength": 1}
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "repository_fingerprint": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "repository_base_sha": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40,64}$"
+            },
+            "allowed_paths": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "acceptance_ids": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
             },
             "issued_at": {"type": "string", "format": "date-time"},
             "expires_at": {"type": "string", "format": "date-time"},
@@ -262,6 +648,16 @@
                 "required": [
                   "authorization_hash",
                   "delivery_target",
+                  "selected_writer",
+                  "contract_schema_id",
+                  "contract_schema_sha256",
+                  "health_profile",
+                  "health_attestation",
+                  "resource_plan",
+                  "repository_fingerprint",
+                  "repository_base_sha",
+                  "allowed_paths",
+                  "acceptance_ids",
                   "issued_at",
                   "expires_at",
                   "action_grants"
@@ -287,15 +683,23 @@
             "action",
             "operation",
             "operation_input",
+            "action_request_sha256",
             "constraint_sha256",
             "phase",
             "target",
             "lease_id",
             "lease_owner",
+            "writer_actor",
             "resource",
             "resource_key",
+            "resource_descriptor",
+            "coordinator_receipt",
             "spec_checkpoint_sha256",
-            "apple_observation_sha256"
+            "apple_observation_sha256",
+            "apple_observation_state_sha256",
+            "health_report_sha256",
+            "paths",
+            "repository_observation_sha256"
           ],
           "properties": {
             "reservation_id": {"type": "string", "minLength": 1},
@@ -306,11 +710,16 @@
             "action": {"type": "string", "minLength": 1},
             "operation": {"type": "string", "minLength": 1},
             "operation_input": {"type": "object", "minProperties": 1},
+            "action_request_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
             "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "phase": {"enum": ["pr_delivery", "testflight_upload", "testflight_distribution"]},
             "target": {"type": "string", "minLength": 1},
             "lease_id": {"type": "string", "minLength": 1},
             "lease_owner": {"type": "string", "minLength": 1},
+            "writer_actor": {"enum": ["codex", "claude"]},
             "resource": {
               "enum": [
                 "source_checkout_writer",
@@ -319,6 +728,37 @@
               ]
             },
             "resource_key": {"type": "string", "minLength": 1},
+            "resource_descriptor": {"type": "object", "minProperties": 1},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            },
             "spec_checkpoint_sha256": {
               "type": ["string", "null"],
               "pattern": "^[0-9a-f]{64}$"
@@ -326,6 +766,79 @@
             "apple_observation_sha256": {
               "type": ["string", "null"],
               "pattern": "^[0-9a-f]{64}$"
+            },
+            "apple_observation_state_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "health_report_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "paths": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "repository_observation_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "grant_dispatch"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "dispatch_id",
+            "reservation_id",
+            "coordinator_receipt",
+            "health_report_sha256",
+            "dispatch_deadline"
+          ],
+          "properties": {
+            "dispatch_id": {"type": "string", "minLength": 1},
+            "reservation_id": {"type": "string", "minLength": 1},
+            "health_report_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "dispatch_deadline": {"type": "string", "format": "date-time"},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
@@ -355,8 +868,11 @@
           "type": "object",
           "required": [
             "evidence_id",
+            "evidence_kind",
             "acceptance_ids",
             "patch_identity",
+            "patch_manifest",
+            "repository_fingerprint",
             "tool_tuple",
             "observed_result",
             "outcome"
@@ -369,13 +885,17 @@
               "items": {"type": "string", "minLength": 1},
               "uniqueItems": true
             },
-            "patch_identity": {"type": "string", "minLength": 1},
+            "patch_identity": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "patch_manifest": {"type": "object", "minProperties": 1},
             "tool_tuple": {"type": "object"},
             "observed_result": {"type": "string", "minLength": 1},
             "outcome": {"enum": ["passed", "failed", "blocked"]},
             "artifact_path": {"type": "string", "minLength": 1},
             "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-            ,"evidence_kind": {"enum": ["acceptance", "review", "commit_equivalence", "spec_kit_checkpoint", "testflight_artifact", "publication"]}
+            ,"evidence_kind": {"enum": ["acceptance", "review", "commit_equivalence", "spec_kit_checkpoint", "testflight_artifact", "publication", "checks_readback"]}
             ,"repository_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
             ,"local_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
             ,"remote_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
@@ -402,15 +922,20 @@
             "resource_key",
             "lease_id",
             "lease_owner",
+            "writer_actor",
             "resource",
+            "resource_descriptor",
+            "coordinator_receipt",
             "target",
             "outcome",
             "authorization_hash",
             "grant_id",
             "idempotency_key"
             ,"reservation_id",
+            "dispatch_id",
             "spec_checkpoint_sha256",
-            "apple_observation_sha256"
+            "apple_observation_sha256",
+            "health_report_sha256"
           ],
           "properties": {
             "system": {"enum": ["git", "github", "apple", "other"]},
@@ -422,12 +947,44 @@
             "resource_key": {"type": "string", "minLength": 1},
             "lease_id": {"type": "string", "minLength": 1},
             "lease_owner": {"type": "string", "minLength": 1},
+            "writer_actor": {"enum": ["codex", "claude"]},
             "resource": {
               "enum": [
                 "source_checkout_writer",
                 "github_external_mutation",
                 "signing_or_app_store_connect"
               ]
+            },
+            "resource_descriptor": {"type": "object", "minProperties": 1},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
             },
             "target": {"type": "string", "minLength": 1},
             "outcome": {"enum": ["succeeded", "failed", "blocked"]},
@@ -437,6 +994,7 @@
             "grant_id": {"type": "string", "minLength": 1},
             "idempotency_key": {"type": "string", "minLength": 1},
             "reservation_id": {"type": "string", "minLength": 1},
+            "dispatch_id": {"type": "string", "minLength": 1},
             "spec_checkpoint_sha256": {
               "type": ["string", "null"],
               "pattern": "^[0-9a-f]{64}$"
@@ -444,6 +1002,10 @@
             "apple_observation_sha256": {
               "type": ["string", "null"],
               "pattern": "^[0-9a-f]{64}$"
+            },
+            "health_report_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
             },
             "output_target": {"type": "string", "minLength": 1},
             "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},

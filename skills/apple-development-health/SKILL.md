@@ -16,6 +16,11 @@ authorized external delivery continuation. It answers a narrow question:
 **does the selected delivery profile have the connections and evidence it needs
 right now?** It does not repair the machine.
 
+This skill requires `agent-harness` from the same installed `iOS-experts`
+collection because health hashes and reads that sibling's coordinator. If the
+sibling is unavailable, report `installed resource coordinator script is
+unavailable`; do not copy an arbitrary script or create a new state as repair.
+
 ## Choose one profile
 
 | Profile | Required surfaces |
@@ -36,8 +41,9 @@ it.
 1. Resolve the authoritative repository, exact Xcode container when applicable,
    current GitHub identity, private Apple account guard, and delivery target
    before probing tools.
-2. Collect bounded read-only observations using
-   [health-matrix.md](references/health-matrix.md). Run Apple/Xcode/Simulator
+2. Materialize the private report, then let the installed evaluator collect and
+   reconcile high-risk GitHub, Xcode, Simulator, ASC, and selected MCP facts
+   using [health-matrix.md](references/health-matrix.md). Run Apple host-only
    observations only in the logged-in host environment.
 3. Emit one structured report matching
    [health-report.schema.json](contracts/health-report.schema.json), then pass it
@@ -55,10 +61,16 @@ python3 scripts/evaluate_health.py '<health-observations.json>' \
   --harness '<authoritative-harness.json>'
 ```
 
-The evaluator performs no probe or repair. It validates classification,
-derives task-selected Spec Kit/MCP/Project/Local-LLM requirements from the
-trusted harness, redacts common credential/email patterns, and returns nonzero
-for an invalid report or a blocked overall status.
+The evaluator performs bounded read-only probes but no repair. Caller-written
+status/evidence never establishes high-risk success: the evaluator overwrites
+it from live observations and repeats those observations at action dispatch.
+Missing commands, offline providers, timeouts, target/account drift, or a
+required non-healthy result block. Unselected optional MCPs are not probed.
+
+`active_lease_count` is a time-scoped observation, not coordinator identity.
+Unrelated tasks may change it between collection and evaluation; binding uses
+only canonical state-path hash, instance, schema/bootstrap state, and installed
+script plus complete executable/JSON contract-bundle hashes.
 
 When `apple_sample_code_mcp` is selected, require the exact
 `mcp.apple_sample_code` check. For each client selected by the harness, observe
@@ -83,7 +95,7 @@ The health check must not:
 - install, update, enable, disable, or uninstall a CLI, skill, plugin, MCP, Xcode
   component, runtime, package, or Local LLM model;
 - edit Codex, Claude, Xcode AgentPlugin, project, signing, or GitHub settings;
-- start a build, test, destination inventory, install, or launch merely to prove
+- start a build, test, device inventory, install, or launch merely to prove
   an MCP connection;
 - broaden OAuth scopes, switch cached accounts, create credentials, or reveal a
   token/profile/private key;

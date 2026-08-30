@@ -11,6 +11,14 @@ Use this skill when an Apple app, Xcode project, or Swift package needs dependen
 
 - Identify the dependency owner: `Package.swift`, an Xcode project/workspace, or a generated project specification. Change the source of truth, not a derived file.
 - Keep **resolve**, **update**, and **build** separate. Resolve only when dependency inputs changed or an explicit resolution is requested; update only when the requested version policy permits it.
+- Before resolve or update, acquire the repository source-writer lease as well
+  as the build/cache lease. If Xcode project package metadata can change, also
+  acquire that exact Xcode project-mutation lease. Release them in reverse
+  order after reviewing the metadata/lockfile diff.
+- A normal build also holds the source-writer lease. For a declared no-resolution
+  build, pass `-disableAutomaticPackageResolution` to `xcodebuild` or
+  `--disable-automatic-resolution` to `swift build`/`swift test`, then verify
+  tracked package/project metadata did not change. Block on drift.
 - Commit `Package.resolved` for a leaf app or project when the repository tracks it. Do not add it to reusable library packages merely to force downstream consumers' versions.
 - Before a direct Xcode CI build, resolve dependencies explicitly when inputs changed, then use `-disableAutomaticPackageResolution` for the build.
 - Never delete package caches, Derived Data, credentials, or checkouts as a first response. Inspect the failing layer first.
