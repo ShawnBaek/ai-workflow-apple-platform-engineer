@@ -40,7 +40,8 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 | project root/container, host Xcode, XcodeGen | `xcode-project-workflow` |
 | branches, explicit worktrees, index locks, PR Git state | `git-workflow` |
 | UI implementation without Figma | `apple-platform-ui` |
-| Figma handoff | `figma-bridge` then `apple-platform-ui` |
+| code-first Preview design, review, or motion | `xcode-preview-design` (routes bounded implementation to `apple-platform-ui`) |
+| Figma handoff | `figma-bridge` then `apple-platform-ui`; add `xcode-preview-design` when requested |
 | Core Data/SwiftData/CloudKit choice | `apple-data` |
 | Core Data migration/concurrency detail | `core-data` |
 | performance diagnosis | `apple-platform-performance` |
@@ -77,14 +78,19 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 
 ## UI path
 
-If a Figma file is the design source, use `figma-bridge` first. Otherwise use
-`apple-platform-ui` directly. Ask only when the repository/request does not make
-the source clear.
+If a Figma file is the design source, use `figma-bridge` first. Otherwise Figma
+is not a blocker. A code-first Preview or motion request starts with
+`xcode-preview-design`, which gives only the bounded production view change to
+`apple-platform-ui` and then resumes its deterministic matrix, canvas review,
+human feedback, and motion contract. Ask only when the repository/request does
+not make the source clear.
 
-UI mocks are preview fixtures only. Acceptance for an existing application must
-exercise the real package/persistence boundary required by the task, without
-gratuitously rewriting that layer. The lead maps those integration points into
-one acceptance flow and assigns the repository writer to connect them.
+UI mocks are preview fixtures only. Prefer a value fixture; add a narrow protocol
+mock only when the interaction requires one. Acceptance for an existing
+application must exercise the real package/persistence boundary required by the
+task, without gratuitously rewriting that layer. The lead maps those integration
+points into one acceptance flow and assigns the repository writer to connect
+them.
 
 ## Principles
 

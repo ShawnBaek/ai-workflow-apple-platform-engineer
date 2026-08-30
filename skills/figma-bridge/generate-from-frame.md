@@ -10,7 +10,7 @@ The `generate_figma_design` MCP tool turns a selected Figma node into framework 
 4. **Generate.** `generate_figma_design(fileKey, nodeId, framework: "swiftui")` returns Swift code.
 5. **Write to the right file.** New screen → new file in `Views/`. Existing screen → ask the engineer where to insert.
 6. **Add the `// figma:` code-connect-map comment** at the top of the file ([`code-connect-map.md`](code-connect-map.md)).
-7. **Hand off to `apple-platform-ui`** for the HIG polish pass — previews, semantic colors, Dynamic Type, Container/Presenter, SF Symbol substitution.
+7. **Hand off to `apple-platform-ui`** for the bounded production-view polish — semantic colors, Dynamic Type, architecture-compatible state boundaries, and SF Symbol substitution. Add `xcode-preview-design` only when Preview or motion review is requested.
 
 ## Avoid large frames — the rule and the recovery
 
@@ -40,11 +40,11 @@ What it does **not** do well — these are why you hand off to `apple-platform-u
 
 | Missing | Why `apple-platform-ui` adds it |
 |---|---|
-| `#Preview` blocks (Light / Dark / XXL) | Required by the marketplace's UI conventions |
-| Container + Presenter split | Generated view inlines state; `apple-platform-ui` extracts the presentation |
+| Minimum risk-relevant Preview matrix | `xcode-preview-design` selects only states that can change the review decision |
+| Architecture-compatible state boundary | `apple-platform-ui` preserves or narrows the project's existing seam |
 | Semantic `Color.primary` / `.secondary` / `.systemBackground` | Generated code uses literal hex; semantic colors handle dark mode |
 | SF Symbol substitution | Figma layers named `icon/chevron.right` → `Image(systemName: "chevron.right")` |
-| Mock `UseCase` injection | View state shouldn't be hard-coded — `apple-platform-ui` adds the protocol + mock |
+| Deterministic fixture seam | Prefer a value; reuse a protocol or closure only when interaction needs it |
 | 44pt tap target audit | `apple-platform-ui` checks every `Button` / `.onTapGesture` |
 | Dynamic Type readability | `apple-platform-ui` confirms accessibility3 doesn't truncate |
 
@@ -53,11 +53,13 @@ So a typical sequence is:
 ```
 generate_figma_design  →  ProfileView.swift (first draft, ~80% structurally right)
        ↓
-apple-platform-ui  →  ProfileView.swift refined + ProfileContent.swift split out + 3 previews
+apple-platform-ui  →  production view refined without gratuitous architecture changes
        ↓
-xcodebuild simulator run  →  see it on iPhone 16 Pro, compare to the Figma frame
+xcode-preview-design  →  minimum Preview matrix and optional motion review
        ↓
-screenshot (optional)  →  capture the as-built, share back to the designer
+xcodebuild/runtime evidence  →  verify on the selected affected destination
+       ↓
+screenshot (when acceptance needs it)  →  capture the as-built state or trimmed motion
 ```
 
 ## Re-generating an existing view
@@ -96,11 +98,12 @@ Sometimes `get_screenshot(fileKey, nodeId)` is more useful than `get_design_cont
 - For visual diff after build — render the as-built view, fetch the Figma screenshot, eyeball.
 - For micro-interactions the MCP doesn't expose (subtle shadows, gradient stops not yet wired to variables) — read the screenshot for ground truth.
 
-The screenshot tool is cheap. Use it freely.
+Use a screenshot only when it answers the exact source-parity or acceptance
+question; repeated captures without a changed hypothesis add noise.
 
 ## Self-review before saying "generated"
 
-- [ ] The file compiles in Xcode (you've at least mentally rendered it; ideally `xcodebuild build` confirmed).
+- [ ] Compile or Preview claims come from the official Xcode path; mental rendering is planning, never evidence.
 - [ ] `// figma:` comment at the top points at the exact node generated from.
 - [ ] No raw hex colours where a semantic / variable colour was available.
 - [ ] No empty `VStack {}` or `Spacer()` artefacts left from un-rendered nodes.
