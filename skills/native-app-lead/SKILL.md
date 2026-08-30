@@ -14,6 +14,9 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 
 - Any Xcode project action starts with `xcode-project-workflow`.
 - Any branch/index/worktree/commit/push/PR action routes through `git-workflow`.
+- If no explicit repository or opened Xcode container identifies the target,
+  `agent-harness` may use its optional private project registry to return
+  validated candidates. Ambiguity remains a human selection gate.
 - Signing/App Store actions load the private Apple account/team policy before
   account discovery.
 - Broad work uses one writer lease and evidence-backed bounded attempts.

@@ -24,6 +24,12 @@ tabs, record each session/workspace identifier. Do not choose the first result
 arbitrarily; bind work to the developer's authoritative window or ask which
 window to use when the identity cannot be established read-only.
 
+An opted-in private project registry may help locate candidates only before the
+authoritative gate is frozen. The exact opened container still wins. If a
+registry candidate, an explicit root, and the opened container do not resolve
+to the same live Git top level, stop; never switch Xcode windows, checkouts, or
+worktrees to make the registry entry fit.
+
 Use `git-workflow` for remote-default discovery, branch-name approval, Git
 metadata preflight, and PR state. A worktree remains forbidden unless the user
 explicitly opts in for this exact task; if approved, it must become a separate

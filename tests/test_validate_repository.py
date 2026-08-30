@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "skills" / "agent-harness" / "scripts"))
 import rag_index  # noqa: E402
 import check_authorization  # noqa: E402
 import spec_kit_snapshot  # noqa: E402
+import resolve_project  # noqa: E402
 sys.path.insert(0, str(ROOT / "skills" / "apple-development-health" / "scripts"))
 import evaluate_health  # noqa: E402
 sys.path.insert(0, str(ROOT / "skills" / "icon-composer" / "scripts"))
@@ -174,7 +175,7 @@ def health_report(
             "local_llm": "local_llm",
         }[prefix]
 
-    return {
+    report = {
         "schema_version": "1.0.0",
         "profile": profile,
         "observed_at": observed_at,
@@ -193,6 +194,24 @@ def health_report(
             for check_id in sorted(required_ids)
         ],
     }
+    if "project_registry" in selected:
+        report["project_registry_resolution"] = {
+            "status": "resolved",
+            "reason_code": "registry_candidate",
+            "resolver_version": "1.0.0",
+            "registry_sha256": "sha256:" + "1" * 64,
+            "worktree_authorized": False,
+            "candidate": {
+                "project_id": "project-one",
+                "checkout_id": "primary",
+                "canonical_root": "/example",
+                "remote_fingerprint": "sha256:" + "2" * 64,
+                "kind": "primary",
+                "xcode_containers": [],
+            },
+            "warnings": [],
+        }
+    return report
 
 
 def normalized_text(path: Path) -> str:
@@ -835,8 +854,255 @@ class RepositoryContractTests(unittest.TestCase):
             live["authoritative_targets"] = {"repository": str(repository.resolve()), "remote": remote, "branch": branch}
             harness = {"authoritative_root": str(repository)}
             self.assertEqual([], evaluate_health.validate_harness_binding(live, harness))
+            malformed_components = copy.deepcopy(live)
+            malformed_components["selected_components"] = None
+            self.assertIn(
+                "health report selected_components are invalid",
+                evaluate_health.evaluate(malformed_components)[1],
+            )
+            self.assertEqual(
+                [],
+                evaluate_health.validate_harness_binding(
+                    malformed_components, harness
+                ),
+            )
             live["authoritative_targets"]["branch"] = "wrong"
             self.assertTrue(evaluate_health.validate_harness_binding(live, harness))
+
+    def test_project_registry_schema_is_static_and_path_neutral(self) -> None:
+        schema = validator.load_json(
+            ROOT / "skills" / "agent-harness" / "contracts" / "schemas"
+            / "project-registry.schema.json"
+        )
+        example_path = (
+            ROOT / "skills" / "agent-harness" / "templates"
+            / "project-registry.local.example.json"
+        )
+        example = validator.load_json(example_path)
+        instance = {key: value for key, value in example.items() if key != "$schema"}
+        self.assertEqual([], validator.validate_json_schema(instance, schema))
+        self.assertNotIn("/Users/", example_path.read_text(encoding="utf-8"))
+
+        runtime_state = copy.deepcopy(instance)
+        runtime_state["projects"][0]["branch"] = "feature/runtime-state"
+        self.assertTrue(validator.validate_json_schema(runtime_state, schema))
+
+        relative_path = copy.deepcopy(instance)
+        relative_path["projects"][0]["checkouts"][0]["path"] = "../repository"
+        self.assertTrue(validator.validate_json_schema(relative_path, schema))
+
+        for unsafe in ("/../repository", "/absolute/../repository", "/absolute/\trepository", "/absolute/\x7frepository"):
+            unsafe_path = copy.deepcopy(instance)
+            unsafe_path["projects"][0]["checkouts"][0]["path"] = unsafe
+            self.assertTrue(validator.validate_json_schema(unsafe_path, schema))
+
+    def test_project_registry_health_component_is_explicit_and_optional(self) -> None:
+        harness_schema = validator.load_json(
+            ROOT / "skills" / "agent-harness" / "contracts" / "schemas"
+            / "harness.schema.json"
+        )
+        report_schema = validator.load_json(
+            ROOT / "skills" / "apple-development-health" / "contracts"
+            / "health-report.schema.json"
+        )
+        component = "project_registry"
+        self.assertIn(
+            component,
+            harness_schema["properties"]["health_components"]["items"]["enum"],
+        )
+        self.assertIn(
+            component,
+            report_schema["properties"]["selected_components"]["items"]["enum"],
+        )
+        report = health_report(
+            "pr_ready",
+            selected_components=[component],
+            observed_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        )
+        self.assertEqual([], validator.validate_json_schema(report, report_schema))
+        evaluated, errors = evaluate_health.evaluate(report)
+        self.assertEqual([], errors)
+        self.assertEqual("healthy", evaluated["overall_status"])
+
+        missing = copy.deepcopy(report)
+        missing.pop("project_registry_resolution")
+        self.assertIn(
+            "selected project registry requires a structured resolution",
+            evaluate_health.evaluate(missing)[1],
+        )
+
+        degraded = copy.deepcopy(report)
+        degraded["project_registry_resolution"]["warnings"] = [{
+            "project_id": "project-two",
+            "checkout_id": "stale",
+            "reason_code": "missing_path",
+        }]
+        registry_check = next(
+            item for item in degraded["checks"]
+            if item["id"] == "repository.project_registry"
+        )
+        registry_check["status"] = "degraded"
+        registry_check["next_action"] = "Repair the stale private entry outside health."
+        evaluated, errors = evaluate_health.evaluate(degraded)
+        self.assertEqual([], errors)
+        self.assertEqual("degraded", evaluated["overall_status"])
+
+        unsafe_warning = copy.deepcopy(degraded)
+        unsafe_warning["project_registry_resolution"]["warnings"][0][
+            "reason_code"
+        ] = "checkout_kind_mismatch"
+        self.assertIn(
+            "project registry warning is invalid",
+            evaluate_health.evaluate(unsafe_warning)[1],
+        )
+        self.assertTrue(
+            validator.validate_json_schema(unsafe_warning, report_schema)
+        )
+
+        unsafe_container = copy.deepcopy(report)
+        unsafe_container["project_registry_resolution"]["candidate"][
+            "xcode_containers"
+        ] = ["../private.xcodeproj"]
+        self.assertIn(
+            "project registry candidate Xcode containers are invalid",
+            evaluate_health.evaluate(unsafe_container)[1],
+        )
+
+        duplicate_container = copy.deepcopy(report)
+        duplicate_container["project_registry_resolution"]["candidate"][
+            "xcode_containers"
+        ] = ["Application.xcodeproj", "Application.xcodeproj"]
+        self.assertIn(
+            "project registry candidate Xcode containers are invalid",
+            evaluate_health.evaluate(duplicate_container)[1],
+        )
+
+        ambiguous = copy.deepcopy(report)
+        ambiguous["project_registry_resolution"].update({
+            "status": "needs_selection",
+            "reason_code": "multiple_candidates",
+            "candidate": None,
+        })
+        registry_check = next(
+            item for item in ambiguous["checks"]
+            if item["id"] == "repository.project_registry"
+        )
+        registry_check["status"] = "blocked"
+        registry_check["next_action"] = "Select one validated checkout."
+        evaluated, errors = evaluate_health.evaluate(ambiguous)
+        self.assertEqual([], errors)
+        self.assertEqual("blocked", evaluated["overall_status"])
+
+    def test_project_registry_health_binds_live_remote_root_and_kind(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "repository"
+            repository.mkdir()
+            xcode_container = repository / "Application.xcodeproj"
+            xcode_container.mkdir()
+            subprocess.run(
+                ["git", "init", "-b", "main", str(repository)],
+                check=True,
+                capture_output=True,
+            )
+            configured_remote = "git@github.com:example/repository.git"
+            subprocess.run(
+                ["git", "-C", str(repository), "remote", "add", "origin", configured_remote],
+                check=True,
+            )
+            remote = subprocess.run(
+                ["git", "-C", str(repository), "remote", "get-url", "origin"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            branch = subprocess.run(
+                ["git", "-C", str(repository), "branch", "--show-current"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            report = health_report(
+                "pr_ready",
+                selected_components=["project_registry", "xcode_mcp"],
+                observed_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            )
+            report["authoritative_targets"] = {
+                "repository": str(repository.resolve()),
+                "remote": remote,
+                "branch": branch,
+                "xcode_container": str(xcode_container.resolve()),
+            }
+            candidate = report["project_registry_resolution"]["candidate"]
+            candidate["canonical_root"] = str(repository.resolve())
+            candidate["remote_fingerprint"] = resolve_project.remote_fingerprint(remote)
+            candidate["xcode_containers"] = ["Application.xcodeproj"]
+            harness = {
+                "authoritative_root": str(repository),
+                "xcode_container": str(xcode_container),
+            }
+            self.assertEqual([], evaluate_health.validate_harness_binding(report, harness))
+
+            fake_container = repository / "NotAContainer.xcodeproj"
+            fake_container.write_text("not a directory\n", encoding="utf-8")
+            file_harness = {
+                "authoritative_root": str(repository),
+                "xcode_container": str(fake_container),
+            }
+            self.assertIn(
+                "harness xcode_container must be an existing project or workspace",
+                evaluate_health.validate_harness_binding(report, file_harness),
+            )
+
+            candidate["xcode_containers"] = []
+            self.assertIn(
+                "project registry candidate does not bind the authoritative Xcode container",
+                evaluate_health.validate_harness_binding(report, harness),
+            )
+            candidate["xcode_containers"] = None
+            self.assertIn(
+                "project registry candidate Xcode containers are invalid",
+                evaluate_health.evaluate(report)[1],
+            )
+            self.assertIn(
+                "project registry candidate does not bind the authoritative Xcode container",
+                evaluate_health.validate_harness_binding(report, harness),
+            )
+            candidate["xcode_containers"] = ["Application.xcodeproj"]
+
+            candidate["remote_fingerprint"] = "sha256:" + "f" * 64
+            self.assertIn(
+                "project registry candidate remote fingerprint drifted from the live repository",
+                evaluate_health.validate_harness_binding(report, harness),
+            )
+
+            unsafe_live_remote = (
+                "https://token@github.com/example/repository.git?token=value"
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(repository), "remote", "set-url", "origin",
+                    unsafe_live_remote,
+                ],
+                check=True,
+            )
+            report["authoritative_targets"]["remote"] = (
+                evaluate_health.sanitize_remote(unsafe_live_remote)
+            )
+            candidate["remote_fingerprint"] = resolve_project.remote_fingerprint(
+                "https://github.com/example/repository.git"
+            )
+            self.assertIn(
+                "live repository remote cannot be normalized for project registry binding",
+                evaluate_health.validate_harness_binding(report, harness),
+            )
+
+        for unsafe_remote in (
+            "https://token@github.com/example/repository.git",
+            "https://github.com/example/repository.git?token=value",
+            "https://github.com/example/repository.git#fragment",
+        ):
+            with self.assertRaises(ValueError):
+                evaluate_health.remote_fingerprint(unsafe_remote)
 
     def test_apple_sample_code_mcp_schema_and_harness_binding(self) -> None:
         harness_schema = validator.load_json(

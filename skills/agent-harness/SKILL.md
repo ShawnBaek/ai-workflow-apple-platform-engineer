@@ -31,6 +31,12 @@ visible. A fluent answer is not evidence.
    green-path actions. Validate it immediately before every granted action.
 8. Acquire scoped leases only immediately before the protected action.
 
+When no explicit repository or opened Xcode container already resolves the
+target, an opted-in private registry may supply validated candidates. Read
+[project registry](references/project-registry.md) before using it. The registry
+never overrides an explicit path or opened Xcode container, grants a worktree,
+or acts as a writer lock.
+
 Read [architecture.md](references/architecture.md) for graph, loop, leases, and
 completion rules. Use the machine-readable contracts in `contracts/` when a
 project needs deterministic orchestration.

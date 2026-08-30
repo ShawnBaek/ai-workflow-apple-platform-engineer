@@ -8,6 +8,7 @@
     "remote": "https://github.com/<owner>/<repository>.git",
     "branch": "<approved-branch>"
   },
+  "project_registry_resolution": null,
   "selected_components": [],
   "required_check_ids": [
     "repository.identity",
@@ -47,6 +48,14 @@
       "status": "healthy",
       "summary": "Approved GitHub account can read the repository and required Issue/PR surfaces.",
       "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "repository.project_registry",
+      "category": "repository",
+      "required": false,
+      "status": "not_applicable",
+      "summary": "This run used an explicit authoritative repository rather than the optional registry.",
+      "evidence": []
     },
     {
       "id": "mcp.apple_sample_code",

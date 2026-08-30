@@ -31,6 +31,30 @@ global npm packages, transient npx cache, and live process parentage. A Homebrew
 tap is not an installed formula. `npm exec ...@latest`, a global NVM binary, and
 a Homebrew formula are different provenance and drift risks.
 
+## Optional private project registry
+
+Select this component only when the run actually used the registry adapter. The
+required health check ID is `repository.project_registry`.
+
+Run the resolver once with the current opaque developer/host IDs and the same
+explicit-root/opened-container signals used by intake. Record its
+`resolver_version`, canonical `registry_sha256`, status/reason code, selected opaque
+project/checkout IDs, remote fingerprint, and whether worktree consideration
+was explicitly authorized. Copy the stable health-projection fields into the
+report's structured `project_registry_resolution`; omit any local
+`candidates` selection list. A prose evidence item cannot replace it.
+Then independently confirm the selected canonical path is the exact live Git
+top level and matches the harness authoritative root. For Xcode work, also
+confirm the selected repository-relative container resolves to the exact opened
+container.
+
+A uniquely resolved, live-matching candidate is healthy. Invalid or stale
+unselected inventory makes the component degraded and should be repaired
+outside health. A developer/host mismatch, ambiguous candidates, selected
+remote/root/container mismatch, or unapproved worktree is blocked. Do not print
+the populated registry, credential-bearing remotes, or unrelated absolute
+paths; do not edit the registry, scan the filesystem, or select a fallback.
+
 ## Xcode MCP ladder
 
 Installation, registration, current-task exposure, and read-only connectivity
