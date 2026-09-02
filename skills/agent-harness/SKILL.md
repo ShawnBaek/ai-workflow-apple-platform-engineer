@@ -158,6 +158,7 @@ only from provider/client records; unavailable totals remain explicit unknowns.
 | Issues and GitHub Projects | `github-projects` |
 | setup/MCP/CLI/account readiness | `apple-development-health` |
 | QA screenshots/recordings and App Store assets | `screenshot` |
+| Apple Ads campaigns, paid keywords, spend, and attribution | `apple-ads` |
 | TestFlight/App Store actions | `app-store-connect` |
 
 ## Never

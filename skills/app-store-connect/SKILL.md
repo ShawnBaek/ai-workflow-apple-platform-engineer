@@ -1,7 +1,7 @@
 ---
 name: app-store-connect
 description: >-
-  Safely handles App Store Connect and Xcode Cloud operations such as build upload, TestFlight distribution, metadata, screenshots, crash/feedback inspection, signing resources, and App Store submission. Use when the developer mentions App Store Connect, TestFlight, asc, IPA/PKG upload, provisioning, store metadata, review submission, Xcode Cloud, or release status. Enforces the project's private Apple account/team boundary and separates read, upload, distribute, and submit approvals.
+  Safely handles App Store Connect and Xcode Cloud operations such as build upload, TestFlight distribution, metadata, screenshots, crash/feedback inspection, signing resources, and App Store submission. Use when the developer mentions App Store Connect, TestFlight, asc, IPA/PKG upload, provisioning, store metadata, review submission, Xcode Cloud, or release status. Enforces the project's private Apple account/team boundary and separates read, upload, distribute, and submit approvals. Do not use for Apple Ads campaigns or paid keywords; use apple-ads.
 ---
 
 # App Store Connect
@@ -69,6 +69,9 @@ artifact, group, compliance, signing, or permission drift blocks the run.
 
 For screenshots, route capture/privacy/spec verification through `screenshot`.
 For CI credentials and protected environments, use `cicd`.
+For Apple Ads campaigns, paid keywords, bids, budgets, attribution, or reporting,
+route through `apple-ads`. App Store metadata keywords and paid Apple Ads keywords
+are different surfaces with separate account guards and mutation approvals.
 
 ## Preflight and evidence
 
