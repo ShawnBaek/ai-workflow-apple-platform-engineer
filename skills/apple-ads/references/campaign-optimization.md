@@ -12,14 +12,19 @@ Use evidence in this order:
 2. the approved account's current object read-back, reports, billing state, and
    app economics;
 3. product source, App Store product pages, localization, and attribution code;
-4. third-party keyword tools and measurement providers, with their methodology;
-5. case studies and videos as hypotheses, never as current platform guarantees.
+4. the connected Kickstart MCP for scoped, read-only ASO rankings and competitor
+   evidence, with the exact project, market, platform, date, and returned fields;
+5. other third-party keyword tools and measurement providers, with methodology;
+6. case studies and videos as hypotheses, never as current platform guarantees.
 
 The 2026 video [I Built a $10K/Month App With Only Apple Ads](https://www.youtube.com/watch?v=dbt2Mt1VpLo)
 is a useful case study, not normative documentation. Its full automatic captions
 and 1,131 one-second samples were reviewed for this guide. The video shows a form
 being configured but not the final create action, server read-back, or operating
-results. Do not claim that its example campaign was created or activated.
+results. It also contains promotional segments for third-party tooling, SDKs,
+dashboards, and an advertising-credit offer, so it is not neutral comparative
+evidence and does not justify adopting any promoted vendor. Do not claim that its
+example campaign was created or activated.
 
 ## Video lessons and corrections
 
@@ -41,6 +46,35 @@ The video's third-party SDK/dashboard promotion, free-credit marketing, revenue
 graphic, and closing tool promotion are not Apple platform evidence. Automatic
 caption values that conflict with visible UI, such as an apparent 50-dollar bid
 where the slide shows an approximately 3-dollar ceiling, must not become rules.
+
+## Kickstart MCP ASO checks
+
+Use Paul Hudson's Kickstart MCP as the preferred third-party ASO checker when it
+is available. Its current general MCP is bundled with the Kickstart app and its
+live `tools/list` response is authoritative for exact schemas.
+
+For a paid-keyword hypothesis:
+
+1. Resolve the exact approved Kickstart project and App Store app ID without
+   browsing unrelated projects when the project name is already known.
+2. Use read-only calls such as `get_project`, `list_localizations`,
+   `check_keyword_rankings`, `get_search_rankings`, and
+   `get_competitor_analysis` as the current schema permits.
+3. Record country, platform, locale, query, retrieval date, returned app rank and
+   competitors, result count, trend, and any difficulty or entry-barrier fields.
+4. Separate observed values from inference. Rank is not search volume; result
+   count is not demand; difficulty is not a bid; localization is not proof of
+   natural local-language intent.
+5. Cross-check candidates against the app's real features and live Apple Ads
+   popularity, impressions, search terms, conversion, and value evidence.
+
+Do not use `refresh_project_data`, App Store Connect update tools, tracked-keyword
+mutations, or Search Ads create/update tools under a read-only ASO request. A
+Kickstart Apple Ads report or mutation is an Apple Ads operation: explicitly pass
+the approved ad-account ID, reapply the private organization guard, and stop if
+the tool would fall back to Kickstart's selected account. If Kickstart is missing
+or rate-limited, preserve the gap instead of silently replacing it with a vendor
+promoted by a case-study video.
 
 ## Budget and bid math
 
@@ -216,3 +250,8 @@ For each decision, record:
 - https://ads.apple.com/app-store/help/ads/0077-create-ad-variations
 - https://ads.apple.com/app-store/help/billing/0032-apple-ads-promo-credit
 - https://ads.apple.com/app-store/help/apple-ads-basic/0001-compare-apple-ads-solutions
+
+## Selected third-party ASO source
+
+- https://www.kickstart.tools/mcp
+- https://www.kickstart.tools/

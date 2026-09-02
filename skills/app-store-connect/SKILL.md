@@ -72,6 +72,8 @@ For CI credentials and protected environments, use `cicd`.
 For Apple Ads campaigns, paid keywords, bids, budgets, attribution, or reporting,
 route through `apple-ads`. App Store metadata keywords and paid Apple Ads keywords
 are different surfaces with separate account guards and mutation approvals.
+Read-only ASO evidence for a paid acquisition hypothesis may use the scoped
+Kickstart MCP flow in `apple-ads`; metadata mutation remains here.
 For StoreKit Testing, Sandbox Apple Accounts, sandbox purchases, subscription
 renewal/expiry, billing failures, refunds, and transaction evidence, route the
 test workflow through `storekit-sandbox-testing`; return here only for the exact

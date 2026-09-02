@@ -50,7 +50,7 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 | test selection, XCTest/XCUITest/xcresult | `apple-platform-testing` |
 | build/run/debug/Simulator | `xcodebuild` |
 | marketing/build number | `app-versioning` |
-| Apple Ads campaigns, paid keywords, bids, budgets, and reporting | `apple-ads` |
+| Apple Ads campaigns, paid keywords, supporting ASO checks, bids, budgets, and reporting | `apple-ads` |
 | StoreKit local/sandbox/TestFlight purchase testing | `storekit-sandbox-testing` |
 | Xcode/Simulator disk pressure | `xcode-storage` |
 | visual/App Store evidence | `screenshot` |

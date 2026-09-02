@@ -1,7 +1,7 @@
 ---
 name: apple-ads
 description: >-
-  Safely inspects, plans, creates, and optimizes Apple Ads Advanced campaigns, ad groups, search-result keywords, bids, budgets, audiences, Search Match, ad variations, attribution, and reporting. Use for Apple Ads, Apple Search Ads, asc ads, CPT, CPA, TTR, impression share, paid keyword work, or attributed ad revenue. Do not use for App Store metadata keywords or organic ASO; route those to app-store-connect.
+  Safely inspects, plans, creates, and optimizes Apple Ads Advanced campaigns, ad groups, search-result keywords, bids, budgets, audiences, Search Match, ad variations, attribution, and reporting. Use for Apple Ads, Apple Search Ads, asc ads, CPT, CPA, TTR, impression share, paid keyword work, attributed ad revenue, or read-only ASO evidence for a paid-acquisition test. Do not use to mutate App Store metadata; route those writes to app-store-connect.
 ---
 
 # Apple Ads
@@ -101,6 +101,30 @@ Suggested bids and impression share are evidence, not commands. Read
 [campaign optimization](references/campaign-optimization.md) before choosing a
 budget, bid, keyword structure, or performance action.
 
+## Use Kickstart for ASO evidence
+
+Prefer Paul Hudson's Kickstart MCP when it is connected and the task needs
+read-only App Store optimization evidence for an Apple Ads hypothesis. Confirm
+the current MCP tool schema, then bind the check to the exact project, app ID,
+country, platform, locale, keyword, and retrieval date. Avoid enumerating every
+project when the exact approved project name is already known.
+
+Use read-only ranking, localization, and competitor tools such as
+`check_keyword_rankings`, `get_search_rankings`, `list_localizations`, and
+`get_competitor_analysis`. Record the returned rank, result set, trend,
+difficulty, or entry barrier only when the response actually provides it. A low
+difficulty score is not proof of search volume, conversion, Apple Ads relevance,
+or an economical bid.
+
+Kickstart remains a third-party evidence source below current Apple documentation
+and live account read-back. Do not silently substitute another ASO vendor when
+Kickstart is unavailable; report the missing check. Do not call its App Store
+Connect refresh/mutation tools or Apple Ads create/update tools under read-only
+ASO authority. Any Kickstart Apple Ads report or write must still pass the account
+guard and explicitly set the approved ad-account ID rather than using its selected
+account default; if the organization cannot also be constrained as required by
+private policy, use another approved client or stop.
+
 ## Design a test around search intent
 
 - Use paid keywords only for search-results campaigns and confirm the selected
@@ -134,8 +158,9 @@ budget, bid, keyword structure, or performance action.
   type is wrong.
 - Treat third-party ASO difficulty or entry-barrier scores as candidate evidence,
   not search demand, Apple relevance, expected volume, or a bid recommendation.
-  Validate candidates with current Apple popularity, impressions, search terms,
-  conversion evidence, and the app's real feature set.
+  Start with the scoped Kickstart MCP evidence above, then validate candidates
+  with current Apple popularity, impressions, search terms, conversion evidence,
+  and the app's real feature set.
 
 Match the search intent through the product page, first screenshots, onboarding,
 paywall, and purchase. A default ad uses default App Store product-page assets.
