@@ -159,6 +159,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 | [`app-versioning`](skills/app-versioning/SKILL.md) | marketing/build version source-of-truth changes |
 | [`apple-ads`](skills/apple-ads/SKILL.md) | account-guarded Apple Ads campaigns, keywords, budgets, and optimization |
 | [`app-store-connect`](skills/app-store-connect/SKILL.md) | upload, TestFlight, metadata, and submission gates |
+| [`storekit-sandbox-testing`](skills/storekit-sandbox-testing/SKILL.md) | StoreKit local, sandbox, and TestFlight purchase verification |
 | [`xcode-storage`](skills/xcode-storage/SKILL.md) | itemized Xcode/Simulator storage audit and cleanup |
 | [`figma-bridge`](skills/figma-bridge/SKILL.md) | Figma-to-code and simulator parity routing |
 | [`icon-composer`](skills/icon-composer/SKILL.md) | Apple icon authoring and IconGen provenance handoff |

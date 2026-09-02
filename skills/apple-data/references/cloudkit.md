@@ -10,20 +10,36 @@ Treat the CloudKit container and the development/production schemas as release-c
 
 ## Cross-app public database verification
 
-When one Apple-platform app produces public CloudKit records and another app consumes them, verify the complete path instead of treating either app's build as sync evidence:
+When one Apple-platform app produces records and another consumes them, verify the
+whole contract instead of treating either app's successful UI action as sync proof:
 
-1. Confirm both targets resolve to the same Apple Developer team, iCloud container identifier, CloudKit environment, public database, record type, field names, and query indexes.
-2. Exercise the producer's real runtime path. For a browser-backed producer, this includes the rendered browser content and production extraction logic, not a fixture or direct HTTP substitute.
-3. Perform only an explicitly authorized, bounded public-database write. Make it idempotent with stable record IDs and an update-safe save policy; do not delete unrelated records or retry partial failures without inspecting them.
-4. Read the written record IDs back from the public database with the fields needed for correlation. A successful save callback alone is not sufficient evidence.
-5. Run the consumer's real sync service, then verify the requested filter and sort behavior in the shipping UI. Build success or a local seed does not prove public CloudKit consumption.
-6. Preserve both machine-readable evidence (container, database scope, record IDs, counts, timestamps, and errors) and visible UI evidence. Correlate producer, read-back, and consumer evidence using the same stable record IDs.
+1. Resolve the producer and consumer's approved Apple Developer team, exact
+   entitlements, CloudKit container, environment, public database, record type,
+   field names, and query indexes. Stop on any mismatch; a matching record model
+   in source is not proof that both apps use the same live database.
+2. Exercise the producer through its real runtime path. For web-backed ingestion,
+   verify rendered browser content and production extraction rather than a fixture
+   or direct HTTP substitute. Keep extraction, normalization, deduplication, and
+   CloudKit persistence separately observable so failures can be localized.
+3. Make live public-database writes bounded and idempotent. Obtain explicit
+   authorization immediately before the mutation, record the attempted record
+   identity and timestamp, avoid cleanup or bulk deletion, and inspect partial
+   failures before retrying. Read the exact record back from the same container
+   and database; a successful save callback alone is insufficient.
+4. Launch the consumer through its real synchronization service. Prove that the
+   read-back record becomes the consumer's local model with the expected identity
+   and material fields, then verify the requested sort/filter behavior in the UI.
+5. Capture two kinds of evidence: machine-readable read-back (container, database
+   scope, record type, record IDs, counts, relevant timestamps, and errors) and
+   runtime UI evidence from both producer and consumer. Redact account identifiers,
+   tokens, and unrelated user data. A producer success alert, a passing build, or
+   a consumer screenshot alone does not prove end-to-end synchronization.
 
-If any container, environment, schema, record-ID, or account boundary differs, stop and report the mismatch before writing or claiming end-to-end success.
-
-For a Core Data app, route persistent-store mirroring, history, and conflict implementation to `core-data`. For a SwiftData app, use the SwiftData reference for the persistence side and retain the CloudKit product decisions here.
-
-Design an explicit response for offline edits, retries, conflict outcomes, deleted shared records, revoked access, and account/container unavailability when the product exposes those behaviors. Test only the material cases for the change.
+Use one stable record identifier across producer write, CloudKit read-back, and
+consumer display evidence whenever the product model permits it. If the UI cannot
+display that identifier, match a small, non-sensitive field tuple such as title,
+company, source URL, and fetched timestamp and state that this is correlation
+rather than identity proof.
 
 Authoritative starting points:
 
