@@ -1,6 +1,6 @@
 # iOS-experts
 
-**Version:** 2.0.0-beta.6
+**Version:** 2.0.0-beta.7
 
 Agent-neutral skills and a guarded task-to-PR harness for iOS, iPadOS, watchOS, and macOS. It supports Codex,
 Claude Code, or one-writer collaboration without duplicating Apple-authored Xcode skills.
@@ -158,6 +158,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 | [`cicd`](skills/cicd/SKILL.md) | guarded GitHub Actions for Apple builds |
 | [`app-versioning`](skills/app-versioning/SKILL.md) | marketing/build version source-of-truth changes |
 | [`app-store-connect`](skills/app-store-connect/SKILL.md) | upload, TestFlight, metadata, and submission gates |
+| [`storekit-sandbox-testing`](skills/storekit-sandbox-testing/SKILL.md) | StoreKit local, sandbox, and TestFlight purchase verification |
 | [`xcode-storage`](skills/xcode-storage/SKILL.md) | itemized Xcode/Simulator storage audit and cleanup |
 | [`figma-bridge`](skills/figma-bridge/SKILL.md) | Figma-to-code and simulator parity routing |
 | [`icon-composer`](skills/icon-composer/SKILL.md) | Apple icon authoring and IconGen provenance handoff |
