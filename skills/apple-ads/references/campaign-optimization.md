@@ -11,11 +11,53 @@ Use evidence in this order:
    help for the requested surface;
 2. the approved account's current object read-back, reports, billing state, and
    app economics;
-3. product source, App Store product pages, localization, and attribution code;
-4. the connected Kickstart MCP for scoped, read-only ASO rankings and competitor
+3. Apple-authored Developer videos for the exact topic, constrained by their
+   session date and current feature availability;
+4. product source, App Store product pages, localization, and attribution code;
+5. the connected Kickstart MCP for scoped, read-only ASO rankings and competitor
    evidence, with the exact project, market, platform, date, and returned fields;
-5. other third-party keyword tools and measurement providers, with methodology;
-6. case studies and videos as hypotheses, never as current platform guarantees.
+6. other third-party keyword tools and measurement providers, with methodology;
+7. third-party case studies and videos as hypotheses, never as current platform
+   guarantees.
+
+## Official Apple video scope
+
+Apple-authored videos explain workflows and product intent, but do not replace
+current Apple Ads Help, Platform API documentation, or live account read-back.
+Record each session's year, preserve older product names when quoting it, and
+recheck every count, limit, field, and availability claim before acting.
+
+- [Get started with app discovery and marketing](https://developer.apple.com/videos/play/tech-talks/110358/)
+  is the closest official end-to-end campaign overview. It covers app,
+  placement, market, daily budget, max-CPT, Search Match versus managed keywords,
+  audience, custom-product-page ad variations, and reporting. Treat its numbers,
+  labels, and feature limits as presentation-time context, not current defaults.
+- [Enhance your presence on the App Store](https://developer.apple.com/videos/play/wwdc2026/205/)
+  explains creative assets, Asset Library, custom product pages, Product Page
+  Optimization, and Apple Ads Platform API setup automation. It is not a guide
+  to keyword selection, bid economics, campaign structure, or budget control.
+  Verify that any announced creative-asset capability is live for the requested
+  placement before depending on it, and preserve separate App Store Connect and
+  Apple Ads review gates.
+- [What’s new in App Store Connect — WWDC25](https://developer.apple.com/videos/play/wwdc2025/328/)
+  shows keywords associated with custom product pages for organic App Store
+  search discovery. These language-specific page associations are not paid Apple
+  Ads keyword bids and remain under App Store Connect authority.
+- [What’s new in App Store Connect — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10063/)
+  shows custom-product-page deep links used with Search Results and Today tab ad
+  variations. It does not grant Apple Ads authority to create, edit, submit, or
+  publish the underlying App Store Connect page.
+- [Get ready to optimize your App Store product page — WWDC21](https://developer.apple.com/videos/play/wwdc2021/10295/)
+  is historical guidance for custom product pages and Product Page Optimization.
+  Use current App Store Connect documentation for supported counts, metadata,
+  review, and analytics behavior.
+- [Meet AdAttributionKit — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10060/)
+  and [What’s new in AdAttributionKit — WWDC25](https://developer.apple.com/videos/play/wwdc2025/221/)
+  explain privacy-preserving attribution implementation. They are not evidence
+  for Apple Ads campaign settings, keyword strategy, bids, budgets, or account
+  operations; use Apple Ads reporting and AdServices sources for those claims.
+
+## Third-party case-study scope
 
 The 2026 video [I Built a $10K/Month App With Only Apple Ads](https://www.youtube.com/watch?v=dbt2Mt1VpLo)
 is a useful case study, not normative documentation. Its full automatic captions
@@ -26,7 +68,7 @@ dashboards, and an advertising-credit offer, so it is not neutral comparative
 evidence and does not justify adopting any promoted vendor. Do not claim that its
 example campaign was created or activated.
 
-## Video lessons and corrections
+## Third-party video lessons and corrections
 
 | Time | Observed lesson | Reusable decision |
 | --- | --- | --- |
@@ -236,6 +278,16 @@ For each decision, record:
 
 ## Current official references
 
+- https://developer.apple.com/documentation/apple-ads-platform-api
+- https://developer.apple.com/documentation/adservices/
+- https://developer.apple.com/videos/play/tech-talks/110358/
+- https://developer.apple.com/videos/play/wwdc2026/205/
+- https://developer.apple.com/videos/play/wwdc2025/328/
+- https://developer.apple.com/videos/play/wwdc2024/10063/
+- https://developer.apple.com/videos/play/wwdc2021/10295/
+- https://developer.apple.com/videos/play/wwdc2024/10060/
+- https://developer.apple.com/videos/play/wwdc2025/221/
+- https://ads.apple.com/app-store/certification
 - https://ads.apple.com/app-store/help/campaigns/0056-structure-campaigns
 - https://ads.apple.com/app-store/help/campaigns/0006-understand-search-match
 - https://ads.apple.com/app-store/help/keywords/0014-add-and-manage-keywords
