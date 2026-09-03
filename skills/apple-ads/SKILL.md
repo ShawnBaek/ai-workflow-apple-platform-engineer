@@ -169,6 +169,11 @@ approved custom product page. Route creation or mutation of that page and all Ap
 Store metadata through `app-store-connect`; Apple Ads permission does not grant
 that separate mutation.
 
+App Store Connect can associate version keywords with a custom product page for
+organic App Store search discovery. Those custom-product-page keyword
+associations are not paid Apple Ads keyword bids. Keep their authority,
+measurement, and mutations separate from Apple Ads campaign keywords.
+
 Validate every selected country's app availability, product-page localization,
 language, pricing, legal eligibility, and supported placement before creation.
 Do not translate keywords literally or assume that a supported app localization
@@ -199,10 +204,13 @@ automatic decision. Apple notes that initial data can take 24–48 hours and maj
 changes need time, but low-volume terms may require longer. Change one material
 variable at a time and define the next review by both time and sample.
 
-Connect post-install value through AdServices, AdAttributionKit, or an approved
-measurement provider when the objective extends beyond a download. Apple and
-third-party reports can differ in install source, redownload treatment, and
-attribution windows. Never merge them as if they were identical measurements.
+Use the measurement path that matches the traffic. Use AdServices and Apple Ads
+reporting for Apple Ads campaign attribution; use AdAttributionKit for supported
+privacy-preserving attribution across participating ad networks; or use an
+approved measurement provider when the objective extends beyond a download.
+These paths are not interchangeable. Apple and third-party reports can differ in
+install source, redownload treatment, and attribution windows. Never merge them
+as if they were identical measurements.
 
 ## Execute the smallest verified mutation
 
@@ -239,6 +247,13 @@ claim completion until the requested state is read back on the approved account.
 
 ## Official sources
 
+- [Apple Ads Platform API](https://developer.apple.com/documentation/apple-ads-platform-api)
+- [Apple Ads Certification](https://ads.apple.com/app-store/certification)
+- [Get started with app discovery and marketing — Apple Tech Talks](https://developer.apple.com/videos/play/tech-talks/110358/)
+- [Enhance your presence on the App Store — WWDC26](https://developer.apple.com/videos/play/wwdc2026/205/)
+- [What’s new in App Store Connect — WWDC25](https://developer.apple.com/videos/play/wwdc2025/328/)
+- [What’s new in App Store Connect — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10063/)
+- [AdServices](https://developer.apple.com/documentation/adservices/)
 - [Structure campaigns](https://ads.apple.com/app-store/help/campaigns/0056-structure-campaigns)
 - [Understand Search Match](https://ads.apple.com/app-store/help/campaigns/0006-understand-search-match)
 - [Understand keyword match types](https://ads.apple.com/app-store/help/keywords/0059-understand-keyword-match-types)
