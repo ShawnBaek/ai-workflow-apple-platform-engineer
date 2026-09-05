@@ -19,6 +19,7 @@ Load one specialist for a small task. Use `native-app-lead` for a feature spanni
 | [apple-platform-testing](../skills/apple-platform-testing/SKILL.md) | Minimum sufficient Swift, XCTest, and UI verification |
 | [apple-platform-ui](../skills/apple-platform-ui/SKILL.md) | SwiftUI, UIKit, storyboard, and hybrid UI implementation |
 | [cicd](../skills/cicd/SKILL.md) | Apple build/test CI and gated release workflows |
+| [code-review](../skills/code-review/SKILL.md) | Independent evidence-backed findings and verified responses |
 | [commit-message](../skills/commit-message/SKILL.md) | Concise commit messages based on the staged diff |
 | [core-data](../skills/core-data/SKILL.md) | Core Data schemas, migration, concurrency, and mirroring |
 | [core-simulator-health](../skills/core-simulator-health/SKILL.md) | Scoped CoreSimulator diagnosis and recovery |
@@ -30,6 +31,7 @@ Load one specialist for a small task. Use `native-app-lead` for a feature spanni
 | [native-app-lead](../skills/native-app-lead/SKILL.md) | Task intake, architecture, specialist routing, and delivery |
 | [onepassword-environments](../skills/onepassword-environments/SKILL.md) | Official 1Password development environment connection, secrets and local mounts |
 | [screenshot](../skills/screenshot/SKILL.md) | Deterministic screenshots, recordings, and aligned comparisons |
+| [skill-maintenance](../skills/skill-maintenance/SKILL.md) | Report, investigate and fix collection skill or workflow problems |
 | [storekit-sandbox-testing](../skills/storekit-sandbox-testing/SKILL.md) | Verify StoreKit purchases, restoration, renewal and failure behavior in local and sandbox environments |
 | [swift-package-manager](../skills/swift-package-manager/SKILL.md) | Dependency resolution and compatible package/build reuse |
 | [xcode-preview-design](../skills/xcode-preview-design/SKILL.md) | Design in code before logic; Preview and motion review |
