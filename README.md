@@ -33,6 +33,8 @@ npx skills add ShawnBaek/ai-workflow-apple-platform-engineer
 
 Apple builds and Simulator work require macOS and Xcode. Follow the [getting-started guide](docs/getting-started.md) before running coordinated app tasks.
 
+Already installed? Follow the [update guide](docs/updating.md) for Skills CLI, linked-checkout or versioned-bundle installations.
+
 ## After installation
 
 Open your app repository in the client you installed for. Start with **`apple-platform-engineer`**, the main skill's name, and describe what you want to build.
@@ -80,7 +82,7 @@ Review when needed -> fix -> recheck
 Local result or approved PRs
 ```
 
-Small fixes skip unrelated stages. Independent tasks can run concurrently within shared resource limits. For approved PR delivery, split larger changes into focused or stacked PRs with relevant screenshots, recordings or JSON evidence.
+Small fixes skip unrelated stages. [Multiple tasks](skills/agent-harness/references/collaboration.md#delegate-a-batch-of-tasks) use a bounded worker pool with explicit checkout, folder and permission boundaries. Independent research/review can overlap; same-repository writes and heavy jobs follow their resource limits. For approved PR delivery, split larger changes into focused or stacked PRs with relevant screenshots, recordings or JSON evidence.
 
 ## Explore
 

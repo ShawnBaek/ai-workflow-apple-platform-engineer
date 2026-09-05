@@ -1,5 +1,7 @@
 # Codex, Claude, and local-LLM collaboration
 
+For several assignments, use the [batch delegation procedure](#delegate-a-batch-of-tasks) before launching workers.
+
 ## Mode contract
 
 Select mode from a fixed enum. Never derive a command, integration name, or
@@ -54,6 +56,50 @@ default. Require structured output containing known source or log-line IDs.
 
 All three modes use the same account/project guards, Apple official-first
 routing, test rubric, and PR completion predicate.
+
+## Delegate a batch of tasks
+
+The client supplies agent creation, messaging and waiting tools; this collection
+supplies guidance and resource enforcement. Installing five skills does not
+launch five agents, and the Swift verifier has no worker launcher or persistent
+task scheduler.
+
+1. Clarify each task's outcome and acceptance criteria. Record real dependencies,
+   the frozen input revision, expected output, and whether it needs source,
+   build or destination ownership. Bind checkout, path ownership, output folders
+   and actual permissions using [task workspaces](task-workspaces.md). Keep a
+   simple task list when it is sufficient.
+2. Inspect the effective client worker limit and current occupancy. Distinguish
+   total slots from child-agent slots; do not assume a configured value overrides
+   the current session's exposed limit. The host's `internal_workers` budget is
+   for admitted local tool workers, not an additional cap on read-only LLM
+   subagents. Use only available delegation tools.
+3. Launch independent ready assignments up to that limit only when their required
+   permissions/isolation are available. Record the returned
+   agent IDs and keep remaining work pending. A role name or planned assignment
+   is not evidence that a worker started. Keep model/context size proportional
+   to each bounded assignment.
+4. Refill free slots as workers finish. Maintain pending, running, blocked and
+   completed states in the task record. On contention, wait for a relevant
+   release; on failure/cancellation, account for owned children and leases before
+   reassignment. Do not bypass the limit with another task or coordinator.
+5. Integrate accepted results through one repository writer, recheck dependent
+   work when its inputs change, and use the normal focused verification and PR
+   process. Source/Xcode/build ownership conflicts across worktrees of the same
+   repository; see [host resources](host-resources.md).
+
+For example, five tasks with three available child-agent slots can have three
+independent research/review assignments running while two wait. Start the next
+ready assignment when a slot frees; do not wait for a whole wave to finish.
+Five same-repository implementation tasks still serialize their write phases.
+Five simultaneous writers would require a different reviewed ownership contract,
+not just more slots or worktrees. Builds and destinations have separate budgets.
+
+Codex documents `agents.max_concurrent_threads_per_session` as a child-agent cap,
+excluding the primary, in its [official subagent settings](https://learn.chatgpt.com/docs/agent-configuration/subagents#global-settings).
+Check the installed client and effective session capacity before changing any
+setting. Other clients may expose different limits. This is a configuration
+reference, not authorization to raise limits or a claim of five-worker execution.
 
 ## Cost-aware model routing
 
