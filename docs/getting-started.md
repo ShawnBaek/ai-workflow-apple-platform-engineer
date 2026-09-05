@@ -7,8 +7,10 @@ Apple Platform Engineer is a skill collection, not an app framework. Use an indi
 Use the [Skills CLI](https://skills.sh/docs/cli) to select the skills and client you need:
 
 ```sh
-npx skills add ShawnBaek/iOS-experts
+npx skills add ShawnBaek/ai-workflow-apple-platform-engineer
 ```
+
+After installing for your client, open your app repository and type `$native-app-lead <your task>` in [Codex](https://learn.chatgpt.com/docs/build-skills), or `/native-app-lead <your task>` in [Claude Code](https://code.claude.com/docs/en/skills). See the [README usage examples and workflow](../README.md#after-installation) and the [skill catalog](skills.md) for focused tasks.
 
 Keep one active copy of each skill in the client's configured search roots. Avoid loading duplicate Codex and Claude installations into the same client. Check the [catalog](skills.md) for individual entry points; install the harness and its selected dependencies only for coordinated work.
 

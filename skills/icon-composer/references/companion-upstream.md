@@ -24,7 +24,7 @@ blobs are recorded in
 
 The repository workflow performs a weekly and manual read-only HEAD comparison.
 When HEAD differs from the reviewed revision, it creates or updates one
-iOS-experts Issue containing the compare link, changed revision, selected
+Apple Platform Engineer Issue containing the compare link, changed revision, selected
 review surface, license state, and no-copy reminder.
 
 The watcher does not edit this skill, open a PR, execute generators, broaden a
@@ -34,7 +34,7 @@ token, or merge. A maintainer or approved harness run then:
 2. separates Apple-general guidance from product-specific implementation;
 3. updates the provenance manifest and any independently worded contract;
 4. adds only minimum tests for the changed safety/behavior boundary;
-5. uses the normal iOS-experts Issue → branch → review → PR path;
+5. uses the normal Apple Platform Engineer Issue → branch → review → PR path;
 6. closes the drift Issue only after merge or explicit accepted evidence.
 
 If GitHub cannot read the public upstream, report the watcher as degraded and

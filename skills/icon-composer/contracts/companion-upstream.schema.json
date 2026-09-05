@@ -51,7 +51,7 @@
         "execute_upstream": {"const": false},
         "vendored_files": {"const": []},
         "consumer_skill": {"const": "icon-composer"},
-        "consumer_repository": {"const": "ShawnBaek/iOS-experts"},
+        "consumer_repository": {"const": "ShawnBaek/ai-workflow-apple-platform-engineer"},
         "drift_action": {"const": "create_or_update_review_issue"},
         "auto_merge": {"const": false}
       },

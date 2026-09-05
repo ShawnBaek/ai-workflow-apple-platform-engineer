@@ -115,11 +115,12 @@ private final class CompanionFixture: CompanionGitHubClient {
   var publicRepository = true
   var duplicateIssues = false
   var writeCount = 0
+  var consumerRepository = "example/consumer"
   func request(method: String, path: String, body: [String: Any]?) throws -> Any {
     calls.append((method, path))
     if method != "GET" {
       writeCount += 1
-      return ["html_url": "https://github.com/example/consumer/issues/1"]
+      return ["html_url": "https://github.com/\(consumerRepository)/issues/1"]
     }
     if path == "repos/example/upstream" {
       return [
@@ -186,5 +187,35 @@ private final class CompanionFixture: CompanionGitHubClient {
     try CompanionWatcher.reconcileIssue(
       manifest, targetRepository: "example/consumer", client: fixture)
   }
+  #expect(fixture.writeCount == 1)
+}
+
+@Test func shippedCompanionTargetsRenamedRepositoryAndRejectsOldTarget() throws {
+  var manifest = try HarnessRuntime.object(
+    deliveryContext().repositoryRoot.appendingPathComponent(
+      "skills/icon-composer/contracts/companion-upstream.json"))
+  #expect(ContractValidation.validateCompanionUpstream(manifest).isEmpty)
+  // Keep the shipped consumer binding; upstream responses are isolated fixtures.
+  manifest["upstream"] = [
+    "repository": "example/upstream", "visibility": "public", "default_branch": "main",
+    "reviewed_revision": String(repeating: "a", count: 40),
+    "reviewed_tree": String(repeating: "b", count: 40),
+  ]
+  manifest["sources"] = [["path": "README.md", "blob_sha": String(repeating: "c", count: 40)]]
+  let fixture = CompanionFixture()
+  fixture.consumerRepository = "ShawnBaek/ai-workflow-apple-platform-engineer"
+  fixture.observed = String(repeating: "d", count: 40)
+  let result = try CompanionWatcher.reconcileIssue(
+    manifest, targetRepository: fixture.consumerRepository, client: fixture)
+  #expect(result["issue_action"] as? String == "created")
+  #expect(result["issue_url"] as? String == "https://github.com/\(fixture.consumerRepository)/issues/1")
+  #expect(fixture.calls.contains { $0 == ("POST", "repos/\(fixture.consumerRepository)/issues") })
+  #expect(fixture.writeCount == 1)
+  fixture.calls.removeAll()
+  #expect(throws: VerificationError.self) {
+    try CompanionWatcher.reconcileIssue(
+      manifest, targetRepository: "ShawnBaek/iOS-experts", client: fixture)
+  }
+  #expect(fixture.calls.isEmpty)
   #expect(fixture.writeCount == 1)
 }
