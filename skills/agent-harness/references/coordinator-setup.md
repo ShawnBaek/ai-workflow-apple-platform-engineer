@@ -84,6 +84,10 @@ Do not infer quiescence from one empty run ledger. Do not silently migrate an
 old state, create a second state after contention, or use a symlinked state,
 harness, or runtime executable.
 
+Review the [host budget](host-resources.md). The default capacity is one heavy
+job, one active destination and two internal workers. Change it explicitly with
+`resources <state> configure-host-policy --policy '<exact-json>'`; increases
+require `--operator-confirmed` and decreases cannot undercut active usage.
 
 ## Normal use
 

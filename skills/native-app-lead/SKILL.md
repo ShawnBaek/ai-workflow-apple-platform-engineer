@@ -10,6 +10,14 @@ Locate the task, choose the smallest safe path, and hand each concern to its
 owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 `agent-harness`. Do not reimplement specialist guidance here.
 
+## Understand the task first
+
+Use the shared [task intake](../agent-harness/references/task-intake.md): establish
+what the user wants to build, meaningful constraints, and observable acceptance.
+Reuse prior answers, ask only about material ambiguity, and proceed when the
+request is clear. Read relevant [ADRs](../agent-harness/references/architecture-decisions.md)
+before architecture and task breakdown. Routine work does not need a new ADR.
+
 ## Mandatory gates
 
 - Any Xcode project action starts with `xcode-project-workflow`.
@@ -20,9 +28,10 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 - Signing/App Store actions load the private Apple account/team policy before
   account discovery.
 - Broad work uses one writer lease and evidence-backed bounded attempts.
-- Preserve an explicit model choice. Otherwise keep planning/architecture on a
-  deep-capability lead and route only independently bounded mechanical work to
-  a current cost-efficient model under `agent-harness/references/cost-and-usage.md`.
+- Preserve an explicit model choice. Otherwise use the [shared model policy](../agent-harness/references/cost-and-usage.md):
+  efficient models for bounded mechanical work, balanced models for routine
+  implementation/review, and stronger reasoning for demonstrated risk or ambiguity.
+  Lead and reviewer roles do not automatically require the highest model.
 - For cross-layer features, the repository writer owns final integration across
   UI, package, persistence, and navigation boundaries. Specialists advise or
   change their layer; none may declare the feature complete from an isolated
@@ -64,10 +73,12 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 
 ## Typical flow
 
-1. Freeze acceptance criteria and affected tradeoffs.
+1. Clarify the user outcome, acceptance criteria, and affected tradeoffs.
 2. Resolve authoritative repository/Xcode/account boundaries.
-3. Plan only real dependencies, assign a justified model class per node, and
-   parallelize frozen-snapshot read-only research.
+3. Read applicable ADRs and record significant new decisions. Use a simple plan
+   by default; add graph structure only when actual dependencies justify it.
+   Split broad work into coherent reviewable PRs. Assign justified model classes
+   and parallelize independent frozen-snapshot research when useful and authorized.
 4. Implement with one repository writer and scoped Apple resource leases.
 5. Run the minimum checks justified by impact and risk.
 6. Review a frozen patch, converge with bounded attempts, and preserve failures.

@@ -1,0 +1,15 @@
+# Bound host work and storage
+
+Start with one active writer per checkout, one heavy build/test job, and one active destination. Independent readers can run alongside useful writer work; use isolated worktrees for separate writers. Delegate only a concrete independent task and send its acceptance criteria, owned paths, frozen base and resource constraints. A worker must finish or release ownership before another writes those paths.
+
+The version 2 coordinator admits host-wide `heavy_jobs`, `active_devices`, and `internal_workers` atomically across tasks. Defaults are 1, 1 and 2: one build plus its destination fits without allowing two heavy jobs. Requested admission cannot understate the resource's minimum. Internal Xcode workers count too; `-parallel-testing-worker-count`, `-maximum-concurrent-test-simulator-destinations`, `-jobs`, Swift `-j` and compiler jobs must fit the accepted host budget. Increase host policy explicitly from observed capacity; do not let every subagent choose its own limit.
+
+Queue on contention. Do not duplicate a coordinator, steal an expired lease, kill unrelated processes, or turn on maximum parallel testing to make progress. Prefer a lower-cost model for bounded extraction/formatting, a balanced model for ordinary implementation, and stronger reasoning for uncertain architecture or authorization review. The [shared routing policy](cost-and-usage.md) separates model cost from host resource limits.
+
+Check relevant memory pressure, free disk, active builds/destinations and output sizes before admitting heavy work. Reduce concurrency before deleting caches. Capture only bounded logs and short recordings; stream large hashes, process images sequentially, and keep raw evidence only as long as the accepted retention policy needs it. Preserve original hashes and the final reviewable proof before cleaning task-owned temporary output.
+
+Reuse DerivedData and package artifacts only for a matching build tuple. Give concurrent incompatible builds separate task-owned paths; avoid copying whole package caches into every worktree. Prefer `build-for-testing` followed by selected `test-without-building` runs when inputs match. Do not blindly reset package caches, erase all Simulators, delete archives, or remove global DerivedData. Route an actual storage-pressure cleanup to [xcode-storage](../../xcode-storage/SKILL.md), inventory candidates and obey its destructive-action scope.
+
+For Simulator, bind an exact UDID/runtime and use [core-simulator-health](../../core-simulator-health/SKILL.md). Registry discovery uses a short host registry admission; release it before acquiring an incompatible destination lease. Never hold one lease while waiting indefinitely for a conflicting one. Shut down only a destination this task booted and owns, when no dependent work remains. A simulator screenshot validates appearance and flow; sustained performance claims usually need a real device.
+
+Release owned leases on success, failure and cancellation. Cancel owned child processes first, preserve actionable diagnostics, then apply bounded task-output retention. Expiry alone is not cleanup or proof that a process died.

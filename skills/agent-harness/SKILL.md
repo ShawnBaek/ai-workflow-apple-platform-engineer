@@ -12,6 +12,11 @@ visible. A fluent answer is not evidence.
 
 ## Start every run
 
+First clarify the intended outcome using [task intake](references/task-intake.md).
+Reuse prior answers and distinguish confirmed requirements from assumptions.
+Read relevant [architecture decisions](references/architecture-decisions.md)
+before task breakdown; routine fixes need no new ADR.
+
 1. Resolve the authoritative repository and, for Xcode work, the exact
    first-opened project or workspace directory and container.
 2. Load current user/project guards. Fail closed on account, repository,
@@ -23,8 +28,10 @@ visible. A fluent answer is not evidence.
 5. Freeze the task acceptance criteria and relevant tradeoffs. Select a
    cost/capability class for each graph node without overriding an explicit
    user model choice.
-6. Build an acyclic execution plan. Rework creates a new bounded attempt; it is
-   not a back-edge that erases the previous attempt.
+6. Use a simple plan by default. Add an acyclic execution graph only when actual
+   dependencies justify it: name the dependency and the scheduling, correctness,
+   or evidence problem it resolves. Skill/agent/file counts are not justification.
+   Rework creates a new bounded attempt without erasing previous evidence.
 7. Bind an exact run authorization for every delivery run. Interactive runs
    may create a short-lived envelope from the latest explicit action approval;
    unattended runs may reuse one unchanged finite envelope across its granted
@@ -35,7 +42,7 @@ visible. A fluent answer is not evidence.
    otherwise stop with `coordination_required`. A run cannot opt out by calling
    itself sequential.
 
-Select `local_verified` for a local result, `pr_ready` for authorized PR delivery, or an explicitly authorized TestFlight continuation. A local outcome does not require a PR. Read [Swift runtime setup](references/swift-verification.md) before using private state.
+Select `local_verified` for a local result, `pr_ready` for authorized PR delivery, or an explicitly authorized TestFlight continuation. A local outcome does not require a PR. Read [Swift runtime setup](references/swift-verification.md) before using private state. Apply the [host resource limits](references/host-resources.md) before assigning concurrent work.
 
 Read [private coordinator setup](references/coordinator-setup.md) before first
 use, schema migration, installed-skill update, or cross-client collaboration.
