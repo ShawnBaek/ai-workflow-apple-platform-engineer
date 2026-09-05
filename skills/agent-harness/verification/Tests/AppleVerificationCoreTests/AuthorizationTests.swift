@@ -90,6 +90,59 @@ final class AuthorizationTests: XCTestCase {
       })
   }
 
+  func testCurrentSchemaAcceptsLocalAuthorizationWithoutRemoteGrantsAndWithImplementationLeasePlan()
+    throws
+  {
+    var envelope = try currentApprovedEnvelope()
+    envelope["delivery_target"] = "local_verified"
+    envelope["health_profile"] = "local_verified"
+    var health = envelope["health_attestation"] as! [String: Any]
+    health["profile"] = "local_verified"
+    envelope["health_attestation"] = health
+    envelope["github"] = NSNull()
+    envelope["apple"] = NSNull()
+    envelope["spec_kit"] = NSNull()
+    envelope["local_requirements"] = ["review_required": false, "spec_kit_required": false]
+    envelope["action_grants"] = []
+    envelope["resource_plan"] = []
+    let currentContext = context
+    XCTAssertEqual(Authorization.validateAuthorization(envelope, context: currentContext), [])
+
+    let fingerprint = (envelope["repository"] as! [String: Any])["fingerprint"]!
+    let descriptor: [String: Any] = [
+      "identity_version": "github_remote_v2", "repository_fingerprint": fingerprint,
+    ]
+    envelope["resource_plan"] = [
+      [
+        "plan_id": "local-writer", "resource": "source_checkout_writer",
+        "resource_key": try ResourceCoordinator.canonicalResourceKey(
+          resource: "source_checkout_writer", descriptor: descriptor),
+        "descriptor_sha256": try ResourceCoordinator.descriptorSHA256(
+          resource: "source_checkout_writer", descriptor: descriptor),
+        "resource_descriptor": descriptor, "owner_actor": envelope["selected_writer"]!,
+        "protects": ["implement"],
+      ]
+    ]
+    XCTAssertEqual(Authorization.validateAuthorization(envelope, context: currentContext), [])
+
+    let original = try currentApprovedEnvelope()["action_grants"] as! [[String: Any]]
+    var commit = original.first { $0["action"] as? String == "git.commit" }!
+    commit["phase"] = "local_delivery"
+    envelope["action_grants"] = [commit]
+    XCTAssertEqual(Authorization.validateAuthorization(envelope, context: currentContext), [])
+
+    var specEnvelope = envelope
+    specEnvelope["local_requirements"] = ["review_required": false, "spec_kit_required": true]
+    let repository = envelope["repository"] as! [String: Any]
+    specEnvelope["spec_kit"] = [
+      "release": "v1.0.1", "feature_id": "001-example", "feature_directory": "specs/001-example",
+      "approved_git_branch": repository["branch"]!,
+      "snapshot_sha256": String(repeating: "a", count: 64),
+      "artifact_hashes": ["specs/001-example/spec.md": String(repeating: "b", count: 64)],
+      "workflow_run_id": "run",
+    ]
+    XCTAssertEqual(Authorization.validateAuthorization(specEnvelope, context: currentContext), [])
+  }
 
   func testGrantIdentityPhaseProducerAndTopologyMutationsFailClosedWithoutTrapping() throws {
     let envelope = try currentApprovedEnvelope()

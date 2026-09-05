@@ -1,4 +1,4 @@
-# Minimum-sufficient verification and PR delivery
+# Minimum-sufficient verification and delivery
 
 ## Select the smallest defensible checks
 
@@ -34,6 +34,11 @@ show the ordered stack map, base/head, dependency, checks, and evidence in every
 PR. Re-evaluate the split when scope grows during implementation or feedback.
 Do not create artificial micro-PRs, and do not infer merge or retarget authority
 from approval to build the stack.
+
+A local result can finish at `local_verified` without a commit or GitHub scope.
+The accepted plan binds whether review and Spec Kit evidence are required; record
+an accepted omission reason when review is not selected. The PR path retains its
+remote publication, independent review, and readback requirements.
 
 ## Evidence bundle
 

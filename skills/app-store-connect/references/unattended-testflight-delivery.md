@@ -26,7 +26,7 @@ and a fresh guarded read-only ASC observation immediately before each Apple
 action. This does not rewrite the original authorization.
 
 Before every Apple action, re-evaluate the current request with
-`agent-harness/scripts/check_authorization.py`. A cached login, Xcode selection,
+`apple-verify authorize`. A cached login, Xcode selection,
 profile name, environment variable, or previous successful run cannot override
 an account mismatch.
 

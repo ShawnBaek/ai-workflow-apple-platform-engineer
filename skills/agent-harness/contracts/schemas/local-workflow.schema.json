@@ -1,0 +1,256 @@
+{
+  "$id" : "urn:ios-experts:schema:local-workflow:1.0.0",
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties" : false,
+  "properties" : {
+    "attempt_policy" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "default_active_wall_minutes" : {
+          "minimum" : 1,
+          "type" : "integer"
+        },
+        "identical_failure_stop_count" : {
+          "const" : 2
+        },
+        "max_implementation_attempts" : {
+          "const" : 3
+        },
+        "max_review_cycles" : {
+          "const" : 2
+        },
+        "max_transient_retries" : {
+          "const" : 1
+        },
+        "pause_while_awaiting_human_or_ci" : {
+          "const" : true
+        }
+      },
+      "required" : [
+        "max_implementation_attempts",
+        "max_review_cycles",
+        "max_transient_retries",
+        "identical_failure_stop_count",
+        "default_active_wall_minutes",
+        "pause_while_awaiting_human_or_ci"
+      ],
+      "type" : "object"
+    },
+    "cleanup" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "mode" : {
+          "const" : "finally"
+        },
+        "release_active_resources" : {
+          "const" : [
+            "source_checkout_writer",
+            "xcode_project_mutation",
+            "build_tuple",
+            "simulator_or_device",
+            "coresimulator_runtime_registry",
+            "macos_gui_session",
+            "signing_or_app_store_connect",
+            "github_external_mutation"
+          ]
+        },
+        "triggers" : {
+          "const" : [
+            "blocked",
+            "failed_terminal",
+            "cancelled",
+            "success_terminal"
+          ]
+        }
+      },
+      "required" : [
+        "mode",
+        "triggers",
+        "release_active_resources"
+      ],
+      "type" : "object"
+    },
+    "completion_requires" : {
+      "const" : [
+        "required_nodes_passed",
+        "required_health_profile_satisfied",
+        "run_authorization_current",
+        "spec_kit_snapshot_current_or_not_applicable",
+        "latest_evidence_matches_patch_identity",
+        "no_active_resource_lease",
+        "review_current_or_not_required_by_accepted_plan",
+        "acceptance_evidence_complete"
+      ]
+    },
+    "identity_policy" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "algorithm" : {
+          "const" : "patch_identity_v1"
+        },
+        "base" : {
+          "const" : "base_sha"
+        },
+        "commit_equivalence" : {
+          "const" : "commit_tree_and_changed_paths_match_reviewed_identity"
+        },
+        "digest" : {
+          "const" : "sha256"
+        },
+        "path_order" : {
+          "const" : "utf8_bytewise"
+        },
+        "path_record_fields" : {
+          "const" : [
+            "path",
+            "mode",
+            "state",
+            "content_sha256_or_deletion"
+          ]
+        }
+      },
+      "required" : [
+        "algorithm",
+        "digest",
+        "base",
+        "path_order",
+        "path_record_fields",
+        "commit_equivalence"
+      ],
+      "type" : "object"
+    },
+    "nodes" : {
+      "items" : {
+        "additionalProperties" : false,
+        "allOf" : [
+          {
+            "if" : {
+              "required" : [
+                "resource"
+              ]
+            },
+            "then" : {
+              "required" : [
+                "lease_action",
+                "protects"
+              ]
+            }
+          },
+          {
+            "if" : {
+              "required" : [
+                "lease_action"
+              ]
+            },
+            "then" : {
+              "required" : [
+                "resource"
+              ]
+            }
+          }
+        ],
+        "properties" : {
+          "id" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "lease_action" : {
+            "enum" : [
+              "acquire",
+              "release"
+            ]
+          },
+          "protects" : {
+            "items" : {
+              "minLength" : 1,
+              "type" : "string"
+            },
+            "minItems" : 1,
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "requires" : {
+            "items" : {
+              "minLength" : 1,
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "resource" : {
+            "enum" : [
+              "source_checkout_writer",
+              "xcode_project_mutation",
+              "build_tuple",
+              "simulator_or_device",
+              "coresimulator_runtime_registry",
+              "macos_gui_session",
+              "signing_or_app_store_connect",
+              "github_external_mutation"
+            ]
+          },
+          "terminal" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "id",
+          "requires"
+        ],
+        "type" : "object"
+      },
+      "maxItems" : 8,
+      "minItems" : 8,
+      "type" : "array"
+    },
+    "runtime_edge_types" : {
+      "const" : [
+        "attempt_of",
+        "supersedes",
+        "produced_by",
+        "validates",
+        "invalidates",
+        "feedback_on",
+        "promoted_to",
+        "authorized_by",
+        "tracks",
+        "continues_from",
+        "derived_from"
+      ]
+    },
+    "schema_version" : {
+      "const" : "1.0.0"
+    },
+    "terminal_outcomes" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "non_success" : {
+          "const" : [
+            "blocked",
+            "failed_terminal",
+            "cancelled"
+          ]
+        },
+        "success" : {
+          "const" : "local_verified"
+        }
+      },
+      "required" : [
+        "success",
+        "non_success"
+      ],
+      "type" : "object"
+    }
+  },
+  "required" : [
+    "schema_version",
+    "nodes",
+    "attempt_policy",
+    "runtime_edge_types",
+    "terminal_outcomes",
+    "identity_policy",
+    "completion_requires",
+    "cleanup"
+  ],
+  "type" : "object"
+}
