@@ -25,6 +25,9 @@ one.
 
 ## Ordered state changes
 
+Apply only the steps for artifacts in scope. An issue-only report ends with
+issue readback; it does not require a Project, branch or PR.
+
 1. Discover and identify the exact repository, Project owner/number, Issue,
    status field, and option IDs.
 2. With approval, create or update the Issue if it is the agreed work unit.

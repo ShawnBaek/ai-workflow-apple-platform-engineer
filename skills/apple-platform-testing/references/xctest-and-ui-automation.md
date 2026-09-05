@@ -44,6 +44,15 @@ any documented coordinate fallback.
 
 Keep the test focused on the changed user contract. Prefer an assertion on the visible outcome over implementation details, and avoid recording-based selectors without reviewing and stabilizing them.
 
+For a state-changing action, verify its meaningful postcondition before the next
+dependent step. An element's existence or a successful tap does not prove that
+saving, navigation or deletion occurred. When practical, establish that the
+postcondition was not already satisfied. Keep waits tied to observable state and
+capture the first failing step with its relevant screenshot or short recording.
+[Shopify's mobile testing experience](https://shopify.engineering/mobile-e2e-testing)
+supports this principle; reuse native XCTest and the app's existing helpers
+instead of importing its custom OCR/Appium framework.
+
 ## Gesture contracts
 
 For a detented sheet, slider, scrubber, reorder handle, or other continuous
@@ -64,6 +73,6 @@ not pinch runtime evidence; report it as unrun when the target is excluded.
 
 ## Build reuse and results
 
-`test-without-building` is valid only after `build-for-testing` for the identical project/container, scheme, destination, configuration, toolchain, and test selection. Any change to that tuple requires a fresh build-for-testing.
+Reuse `build-for-testing` products when the source/dependency identity, project/container, scheme, configuration, toolchain, destination compatibility, and required built test targets match. A narrower or different `-only-testing` filter may reuse those products when the selected tests were already built. Rebuild for changed inputs or a missing test target; preserve the compatible `.xctestrun` and build manifest.
 
 When a run fails, retain the raw `.xcresult`, extract a concise summary with the supported Xcode result tooling, and lead with the first actionable failure. Treat sandbox/CoreSimulator permission failures as host-environment problems, not failing application tests.

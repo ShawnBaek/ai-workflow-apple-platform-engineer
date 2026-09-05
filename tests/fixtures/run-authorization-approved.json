@@ -2,7 +2,7 @@
   "$schema": "../../skills/agent-harness/contracts/schemas/run-authorization.schema.json",
   "schema_version": "1.0.0",
   "contract_schema_id": "urn:ios-experts:schema:run-authorization:1.0.0",
-  "contract_schema_sha256": "sha256:67ab99e9848d90d0a03b3fbf9589a2eaa8511f8c07781703c3d76d5c37532911",
+  "contract_schema_sha256": "sha256:342084c5fa660e0fc9832b59011a6dcd2d9a17e919f292482e7e9dc03defc136",
   "run_id": "fixture-run-001",
   "authorization_id": "fixture-pr-ready-001",
   "decision": "approved",
@@ -168,5 +168,6 @@
   "app_review_submit": false,
   "credential_scope_expansion": false,
   "signing_resource_mutation": false,
-  "destructive_cleanup": false
+  "destructive_cleanup": false,
+  "local_requirements": null
 }

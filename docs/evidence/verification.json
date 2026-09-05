@@ -1,0 +1,37 @@
+{
+  "scope": "Swift runtime migration, skill workflows and contributor reporting",
+  "base_commit": "06cf8f8e7a1a2ab7d950f3464c8b2fe88e98f534",
+  "verification_date": "2026-09-05",
+  "custom_runtime": "Swift",
+  "commands": [
+    "swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1",
+    "skills/agent-harness/verification/.build/debug/apple-verify repository --root ."
+  ],
+  "local_result": {"xctest_cases": 64, "swift_testing_cases": 11, "failures": 0, "repository_errors": 0},
+  "maintenance_evaluation": {
+    "method": "Independent agent walkthrough with simulated tool responses",
+    "cases": 3,
+    "passed": 3,
+    "live_external_writes": 0,
+    "evidence": "maintenance-walkthrough.md",
+    "scope_note": "Reporting cases remain simulated; the full 75-test Swift suite was rerun during the functional audit"
+  },
+  "ci_result": "not_run: no published candidate commit or pull request",
+  "external_health_probes": "Injected fixtures; real accounts, MCP services and Simulator not exercised",
+  "image_proof": "Synthetic fixtures with 3 pt horizontal and 6 pt vertical offsets",
+  "functional_audit": {
+    "evidence": "skill-functional-audit.md",
+    "skill_entries_assessed": 34,
+    "all_skills_end_to_end_verified": false,
+    "native_framework_probes_executed": 5,
+    "foundation_models_generation": "blocked: modelNotReady",
+    "evaluation_result": "framework-probes/evaluation-result.json",
+    "comparison_cli": "generated and visually inspected both PNGs; collision denied without overwrite",
+    "read_only_github": "public repository and issue-list reads succeeded",
+    "simulator_and_preview": "not_run: no selected app container/destination",
+    "live_figma_export": "not_run: no selected file/node",
+    "icon_composer": "blocked: first-run license agreement",
+    "comparison_resource_sample": {"elapsed_seconds": 0.05, "maximum_rss_bytes": 32325632, "swaps": 0}
+  },
+  "app_performance_claim": false
+}

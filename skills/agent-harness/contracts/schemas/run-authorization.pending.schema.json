@@ -30,7 +30,8 @@
     "app_review_submit",
     "credential_scope_expansion",
     "signing_resource_mutation",
-    "destructive_cleanup"
+    "destructive_cleanup",
+    "local_requirements"
   ],
   "properties": {
     "$schema": {"type": "string"},
@@ -50,9 +51,9 @@
     "issued_at": {"const": null},
     "expires_at": {"const": null},
     "delivery_target": {
-      "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+      "enum": ["local_verified", "pr_ready", "testflight_uploaded", "testflight_distributed"]
     },
-    "health_profile": {"const": "pr_ready"},
+    "health_profile": {"enum": ["local_verified", "pr_ready", "runtime_ui", "testflight_uploaded", "testflight_distributed", "icon_upstream"]},
     "health_attestation": {"const": null},
     "resource_plan": {"const": []},
     "repository": {"const": null},
@@ -87,7 +88,57 @@
     "app_review_submit": {"const": false},
     "credential_scope_expansion": {"const": false},
     "signing_resource_mutation": {"const": false},
-    "destructive_cleanup": {"const": false}
+    "destructive_cleanup": {"const": false},
+    "local_requirements": {
+      "additionalProperties": false,
+      "properties": {
+        "review_required": {
+          "type": "boolean"
+        },
+        "spec_kit_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "review_required",
+        "spec_kit_required"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "else": {
+        "properties": {
+          "local_requirements": {
+            "const": null
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "delivery_target": {
+            "const": "local_verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "health_profile": {
+            "enum": [
+              "local_verified",
+              "runtime_ui"
+            ]
+          },
+          "local_requirements": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ]
 }

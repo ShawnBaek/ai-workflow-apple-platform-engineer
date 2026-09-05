@@ -17,11 +17,14 @@ bounded, single-owner, evidence-backed, and non-destructive.
 1. Follow the repository's Xcode host-execution policy before any xcrun,
    Simulator, Xcode MCP, or Apple-tooling command. A sandbox permission failure
    is not an app or Simulator result.
-2. Resolve the exact opened Xcode container, selected Xcode build, runtime,
-   destination UUID, and task owner before probing.
-3. Acquire the shared simulator_or_device lease for exact device UUIDs.
-   Acquire coresimulator_runtime_registry for runtime discovery or repair; it
-   conflicts with every device lease on that host.
+2. Resolve the authoritative app container when applicable, selected Xcode
+   build and task owner. Infrastructure diagnosis or destination discovery does
+   not require an app container or a UUID known in advance.
+3. Before any runtime discovery or repair, acquire the shared
+   coresimulator_runtime_registry lease, then perform the bounded inventory.
+   Release that registry lease before acquiring a device lease: it conflicts
+   with every device lease on the host. Bind the resulting exact runtime and
+   UUID, then acquire simulator_or_device for those UUIDs before device work.
 4. Use one Simulator-capable provider and one mutation at a time. Do not overlap
    boot, shutdown, install, launch, screenshot, runtime inventory, or repair.
 5. Never reboot the Mac as a CoreSimulator recovery step or recommendation.

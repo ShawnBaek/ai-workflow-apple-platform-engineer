@@ -171,7 +171,7 @@ offline lifecycle validation and action authorization.
 The private project registry discovers candidates; each append-only ledger
 records one run. Neither is a cross-run lock. Real serialization across separate
 Codex/Claude processes or ledgers uses the configured host-shared state file and
-`scripts/resource_coordinator.py`, which holds one file lock while it compares,
+`apple-verify resources`, which holds one file lock while it compares,
 records, flushes, and issues a fenced receipt. Every mutating acquisition uses
 it because independent runs cannot reliably know whether another run is active.
 If the state path or live receipt is unavailable, enter `blocked` with reason

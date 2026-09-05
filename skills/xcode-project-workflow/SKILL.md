@@ -11,13 +11,20 @@ happen; `xcodebuild` and other specialists define what to run there.
 
 ## Authoritative project gate
 
-1. Resolve the exact existing directory and `.xcworkspace` or `.xcodeproj` the
-   developer opened first. The opened container type is authoritative.
+1. For an existing Xcode app, resolve the exact directory and `.xcworkspace`
+   or `.xcodeproj` the developer opened first. The opened container type is authoritative.
 2. If unknown, stop and ask. Do not search for a convenient checkout, substitute
    a project for a workspace, copy the project, or create a worktree.
 3. Record the real path, repository root, branch, HEAD, remote, dirty state,
    selected Xcode build, and opened container.
 4. Return to that directory before every Xcode-related operation.
+
+Repository documentation and standalone Swift-package work use the explicitly
+selected repository and `Package.swift`; they do not require an invented Xcode
+app container. For a requested new app, establish its destination, platform,
+minimum OS and intended project format before creating the first container.
+There is no previously opened container to recover in that case. Existing
+account, signing, generation and ownership rules still apply to their actions.
 
 If an Xcode provider returns the same container path for multiple windows or
 tabs, record each session/workspace identifier. Do not choose the first result
@@ -36,6 +43,11 @@ explicitly opts in for this exact task; if approved, it must become a separate
 authoritative Xcode session rather than borrowing the original open window.
 
 ## Host execution gate
+
+Before choosing APIs, follow [API availability](references/api-availability.md):
+resolve each affected target's minimum OS, SDK/compiler, and runtime/hardware
+capabilities. Prefer suitable latest APIs when the accepted support range allows
+them; isolate newer optional paths and preserve supported fallbacks otherwise.
 
 Xcode, `xcodebuild`, Simulator, signing, archive, export, and Apple CLI commands
 must run in the logged-in host environment. Never try them in a sandbox first.

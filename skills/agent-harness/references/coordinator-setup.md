@@ -10,7 +10,13 @@ must not depend on the caller's working directory:
 
 ```sh
 AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
+# Build once as described in the Swift verification setup.
+APE="$AGENT_HARNESS_ROOT/verification/.build/release/apple-verify"
 ```
+
+Build the [Swift verifier](swift-verification.md) first. For a local outcome use
+`templates/harness-local.json`; set its review/Spec Kit flags from the accepted
+plan and keep GitHub/Apple scope null. Use the PR template only for PR delivery.
 
 ## First setup or schema migration
 
@@ -21,7 +27,7 @@ AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
 3. Bootstrap one state with the installed copy of the skill:
 
    ```sh
-   python3 "$AGENT_HARNESS_ROOT/scripts/resource_coordinator.py" '<absolute-private-state-path>' \
+   "$APE" resources '<absolute-private-state-path>' \
      bootstrap --legacy-leases-quiesced
    ```
 
@@ -30,37 +36,35 @@ AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
    resolvable installed-schema URIs, validates them, and writes mode `0600`:
 
    ```sh
-   python3 "$AGENT_HARNESS_ROOT/scripts/materialize_private_template.py" \
+   "$APE" materialize \
      --template '<installed-agent-harness>/templates/private-policy-overlay.json' \
      --schema '<installed-agent-harness>/contracts/schemas/private-policy-overlay.schema.json' \
      --output '<absolute-private-policy-path>'
-   python3 "$AGENT_HARNESS_ROOT/scripts/materialize_private_template.py" \
+   "$APE" materialize \
      --template '<absolute-installed-skill>/templates/harness.json' \
      --schema '<absolute-installed-skill>/contracts/schemas/harness.schema.json' \
      --output '<absolute-private-harness-path>'
    ```
 
-   Populate the policy's approved GitHub owner and optional Apple guard. Fill
+   Populate only the policy's approved GitHub owner and optional Apple guard when those scopes apply; use null for a local outcome. Fill
    every harness field, including absolute private paths, exact coordinator
    binding, selected client roots, profile/components, repository, and Xcode
    container when applicable. For a TestFlight run, also configure
    `apple_observation_probe` with one absolute private executable, its exact
    `sha256:` digest, output contract `apple_observation_v1`, and a timeout no
    greater than 30 seconds. Never commit either file.
-5. Put the bootstrap result's `coordinator_instance_id`, exact state path,
-   `sha256:` plus the SHA-256 of that installed `resource_coordinator.py`, and
-   the result of this read-only command into `resource_coordinator`:
+5. Run `"$APE" runtime-identity`. Populate `authorization_runtime` from the
+   observed contract, executable path/hash and source-bundle hash. Populate
+   `resource_coordinator` with runtime kind `swift`, contract
+   `apple-verification-core.resources.v1`, those same executable/source hashes,
+   the exact state path and bootstrap instance ID. The binary and installed
+   Swift/JSON enforcement sources must match; build products are excluded from
+   the source digest. This read-only command never approves a changed binding.
 
-   ```sh
-   python3 "$AGENT_HARNESS_ROOT/scripts/resource_coordinator.py" '<absolute-private-state-path>' bundle-digest
-   ```
-
-   The bundle digest covers all installed harness Python and JSON enforcement
-   contracts, so a mixed or partially updated copy fails closed.
 6. Derive the client-visible skill bundle before trusting the placeholder hash:
 
    ```sh
-   python3 '<installed-apple-development-health>/scripts/evaluate_health.py' \
+   "$APE" health \
      --harness '<absolute-private-harness-path>' --observe-agent-skills
    ```
 
@@ -69,8 +73,8 @@ AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
    missing skills, broken symlinks, and an evaluator outside the selected roots.
 7. Run `status`, materialize and populate `health-observations.json`, then run
    the `apple-development-health` gate. Both clients must
-   observe the same canonical state path, instance ID, state schema, script
-   hash, and contract-bundle hash before any acquisition.
+   observe the same canonical state path, instance ID, state schema, executable
+   hash, and source-bundle hash before any acquisition.
 
 Use the matching installed schema when materializing the optional private
 registry or health report. Do not copy a repository-relative `$schema` value
@@ -78,7 +82,12 @@ unchanged.
 
 Do not infer quiescence from one empty run ledger. Do not silently migrate an
 old state, create a second state after contention, or use a symlinked state,
-harness, or coordinator script.
+harness, or runtime executable.
+
+Review the [host budget](host-resources.md). The default capacity is one heavy
+job, one active destination and two internal workers. Change it explicitly with
+`resources <state> configure-host-policy --policy '<exact-json>'`; increases
+require `--operator-confirmed` and decreases cannot undercut active usage.
 
 ## Normal use
 
@@ -117,16 +126,16 @@ final; do not reuse another run's harness hash.
 Then run:
 
 ```sh
-python3 "$AGENT_HARNESS_ROOT/scripts/materialize_private_template.py" \
+"$APE" materialize \
   --template '<installed-agent-harness>/templates/run-authorization.json' \
   --schema '<installed-agent-harness>/contracts/schemas/run-authorization.pending.schema.json' \
   --output '<run-root>/authorization.json'
 # Populate and explicitly approve authorization.json after review.
-python3 "$AGENT_HARNESS_ROOT/scripts/materialize_private_template.py" \
+"$APE" materialize \
   --template '<run-root>/authorization.json' \
   --schema '<installed-agent-harness>/contracts/schemas/run-authorization.schema.json' \
   --output '<run-root>/authorization.json' --replace
-python3 "$AGENT_HARNESS_ROOT/scripts/initialize_run.py" \
+"$APE" initialize-run \
   --authorization '<run-root>/authorization.json' \
   --ledger '<run-root>/ledger.jsonl' --run-root '<run-root>' \
   --harness '<run-root>/private-harness.json' \
@@ -136,7 +145,7 @@ python3 "$AGENT_HARNESS_ROOT/scripts/initialize_run.py" \
 Every protected coordinator CLI operation supplies the private harness:
 
 ```sh
-python3 "$AGENT_HARNESS_ROOT/scripts/resource_coordinator.py" '<absolute-private-state-path>' acquire \
+"$APE" resources '<absolute-private-state-path>' acquire \
   --harness '<absolute-private-harness-path>' \
   --authorization '<run-root>/authorization.json' --plan-id '<resource-plan-id>' \
   --resource '<resource>' --descriptor '<canonical-json>' \
@@ -147,7 +156,7 @@ Store only the returned exact `result` receipt as a private JSON file and record
 it in the run ledger. Heartbeat before expiry,
 never beyond the contract's bounded TTL, and replace the prior receipt with the
 new one. Reverify the private harness binding and live receipt when reserving an
-external action, then run `verify_reservation.py` immediately adjacent
+external action, then run `apple-verify verify-reservation` immediately adjacent
 to the actual tool call. The fence is local ownership evidence; GitHub, Apple,
 and Git remotes do not automatically enforce it.
 
@@ -157,7 +166,7 @@ target established by the earlier successful external-write record. Apple
 grants additionally provide private action/artifact and ASC observation files:
 
 ```sh
-python3 "$AGENT_HARNESS_ROOT/scripts/prepare_action_request.py" \
+"$APE" prepare-action \
   --authorization '<run-root>/authorization.json' --grant-id '<grant-id>' \
   --receipt '<run-root>/receipt.json' \
   --resource-descriptor '<run-root>/descriptor.json' \
@@ -176,13 +185,13 @@ commit/push/PR dispatch rechecks the reserved repository observation; Spec Kit
 and Apple actions also re-read their selected live state:
 
 ```sh
-python3 "$AGENT_HARNESS_ROOT/scripts/check_authorization.py" --authorization '<run-root>/authorization.json' \
+"$APE" authorize --authorization '<run-root>/authorization.json' \
   --request '<run-root>/request.json' --ledger '<run-root>/ledger.jsonl' \
   --run-root '<run-root>' --policy-overlay '<private-policy.json>' \
   --authoritative-root '<repository-root>' --harness '<private-harness.json>' \
   --coordinator-state '<private-state.json>' \
   --health-report '<run-root>/health.json'
-python3 "$AGENT_HARNESS_ROOT/scripts/verify_reservation.py" --ledger '<run-root>/ledger.jsonl' \
+"$APE" verify-reservation --ledger '<run-root>/ledger.jsonl' \
   --reservation-id '<returned-reservation-id>' --run-root '<run-root>' \
   --harness '<private-harness.json>' --coordinator-state '<private-state.json>' \
   --health-report '<run-root>/health.json' --request '<run-root>/request.json'
@@ -221,9 +230,9 @@ approval because the selected agents are inside this cooperative boundary.
 ## Skill update
 
 An updated coordinator or enforcement contract intentionally fails the old
-script/bundle binding. Do not auto-rehash it. First finish or safely recover all
+executable/source binding. Do not auto-rehash it. First finish or safely recover all
 active leases, review the installed change and state-schema compatibility,
-compute the new script hash and `bundle-digest`, update the private harness, and
+observe the new `runtime-identity`, update the private harness, and
 rerun health. If status cannot read
 the old state, stop for an explicit migration decision; never replace it with a
 fresh parallel coordinator to keep working.

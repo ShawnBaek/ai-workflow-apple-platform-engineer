@@ -43,7 +43,19 @@ Read [XCTest and UI automation practice](references/xctest-and-ui-automation.md)
 
 ## Run and report
 
-Never run Xcode, simulator, device, signing, or related commands from a sandboxed process. Use the authorized host environment and repository project-root rules. For the same scheme, destination, configuration, and test selection, `build-for-testing` once may be followed by `test-without-building`; otherwise rebuild.
+Use the authorized host environment and repository project-root rules for Xcode,
+Simulator, device, and signing operations. Reuse `build-for-testing` products
+with `test-without-building` when source/dependency identity, toolchain, scheme,
+configuration, destination compatibility, and built test targets still match.
+Changing an `-only-testing` filter to a test already present in those products
+does not itself require another build. Rebuild when a required target was not
+built or a compatibility input changed.
+
+Write repository-owned verification in Swift (Foundation, Swift Testing,
+XCTest, ImageIO, CoreGraphics, or AVFoundation as appropriate). Apple tools such
+as `xcodebuild`, `simctl`, `xcresulttool`, and Instruments remain the execution
+surface. Do not add a Python or Node helper for parsing or evidence composition.
+Third-party tool internals are not a claim that the entire toolchain is Swift.
 
 Preserve the `.xcresult` and report toolchain, project/container, scheme, destination, command, test selection, attachments, and the first actionable failure. A platform-appropriate screenshot or video proves a UI flow; it does not replace functional test evidence.
 

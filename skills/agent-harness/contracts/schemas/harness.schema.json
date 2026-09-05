@@ -3,27 +3,29 @@
   "$id": "urn:ios-experts:schema:harness:1.0.0",
   "type": "object",
   "required": [
-    "schema_version",
-    "mode",
-    "selected_writer",
-    "reviewer",
-    "platforms",
-    "delivery_target",
-    "health_profile",
-    "health_components",
     "agent_skills",
-    "authoritative_root",
-    "xcode_container",
-    "private_policy_overlay",
-    "run_authorization",
-    "run_ledger",
-    "resource_coordinator",
     "apple_observation_probe",
-    "spec_kit",
+    "authoritative_root",
+    "authorization_runtime",
+    "delivery_target",
     "github_tracking",
+    "health_components",
+    "health_profile",
+    "local_requirements",
     "max_active_repository_writers",
     "max_implementation_attempts",
-    "max_review_cycles"
+    "max_review_cycles",
+    "mode",
+    "platforms",
+    "private_policy_overlay",
+    "resource_coordinator",
+    "reviewer",
+    "run_authorization",
+    "run_ledger",
+    "schema_version",
+    "selected_writer",
+    "spec_kit",
+    "xcode_container"
   ],
   "properties": {
     "$schema": {"type": "string"},
@@ -38,10 +40,10 @@
       "items": {"enum": ["ios", "ipados", "watchos", "macos"]}
     },
     "delivery_target": {
-      "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+      "enum": ["local_verified", "pr_ready", "testflight_uploaded", "testflight_distributed"]
     },
     "health_profile": {
-      "enum": ["pr_ready", "runtime_ui", "testflight_uploaded", "testflight_distributed", "icon_upstream"]
+      "enum": ["local_verified", "pr_ready", "runtime_ui", "testflight_uploaded", "testflight_distributed", "icon_upstream"]
     },
     "health_components": {
       "type": "array",
@@ -138,13 +140,13 @@
       "additionalProperties": false
     },
     "authoritative_root": {"type": "string", "minLength": 1},
-    "xcode_container": {"type": "string", "minLength": 1},
+    "xcode_container": {"type": ["string", "null"], "minLength": 1},
     "private_policy_overlay": {"type": "string", "minLength": 1},
     "run_authorization": {"type": "string", "minLength": 1},
     "run_ledger": {"type": "string", "minLength": 1},
     "resource_coordinator": {
       "type": "object",
-      "required": ["state_path", "coordinator_instance_id", "script_sha256", "contract_bundle_sha256"],
+      "required": ["state_path", "coordinator_instance_id", "runtime_kind", "runtime_contract", "executable_sha256", "source_bundle_sha256"],
       "properties": {
         "state_path": {
           "type": "string",
@@ -152,8 +154,20 @@
           "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"
         },
         "coordinator_instance_id": {"type": "string", "minLength": 1},
-        "script_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-        "contract_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        "executable_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "runtime_contract": {
+          "const": "apple-verification-core.resources.v1"
+        },
+        "runtime_kind": {
+          "const": "swift"
+        },
+        "source_bundle_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },
@@ -209,7 +223,130 @@
     },
     "max_active_repository_writers": {"const": 1},
     "max_implementation_attempts": {"const": 3},
-    "max_review_cycles": {"const": 2}
+    "max_review_cycles": {"const": 2},
+    "authorization_runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "executable_path": {
+          "pattern": "^/[^\\u0000-\\u001f\\u007f]+$",
+          "type": "string"
+        },
+        "executable_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "runtime_contract": {
+          "const": "apple-verification-core.authorization.v1"
+        },
+        "runtime_kind": {
+          "const": "swift"
+        },
+        "source_bundle_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "executable_path",
+        "executable_sha256",
+        "runtime_contract",
+        "runtime_kind",
+        "source_bundle_sha256"
+      ],
+      "type": "object"
+    },
+    "local_requirements": {
+      "additionalProperties": false,
+      "properties": {
+        "review_required": {
+          "type": "boolean"
+        },
+        "spec_kit_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "review_required",
+        "spec_kit_required"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "runtime_probe_scope": {
+      "additionalProperties": false,
+      "properties": {
+        "descriptor": {
+          "additionalProperties": false,
+          "properties": {
+            "coordinator_instance_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "destination_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "platform": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "registry_scope": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "runtime_identifier": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "coordinator_instance_id",
+            "registry_scope",
+            "platform",
+            "destination_id",
+            "runtime_identifier"
+          ],
+          "type": "object"
+        },
+        "owner_actor": {
+          "enum": [
+            "codex",
+            "claude"
+          ]
+        },
+        "owner_run_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "run_authority": {
+          "minProperties": 1,
+          "type": "object"
+        },
+        "state_path": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "ttl_seconds": {
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "state_path",
+        "descriptor",
+        "owner_run_id",
+        "owner_actor",
+        "ttl_seconds",
+        "run_authority"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    }
   },
   "allOf": [
     {
@@ -324,6 +461,35 @@
       "then": {
         "properties": {
           "health_components": {"contains": {"const": "github_project"}}
+        }
+      }
+    },
+    {
+      "else": {
+        "properties": {
+          "local_requirements": {
+            "const": null
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "delivery_target": {
+            "const": "local_verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "health_profile": {
+            "enum": [
+              "local_verified",
+              "runtime_ui"
+            ]
+          },
+          "local_requirements": {
+            "type": "object"
+          }
         }
       }
     }

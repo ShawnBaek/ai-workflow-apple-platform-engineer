@@ -30,7 +30,8 @@
     "app_review_submit",
     "credential_scope_expansion",
     "signing_resource_mutation",
-    "destructive_cleanup"
+    "destructive_cleanup",
+    "local_requirements"
   ],
   "properties": {
     "$schema": {"type": "string"},
@@ -45,10 +46,11 @@
     "issued_at": {"type": "string", "format": "date-time"},
     "expires_at": {"type": "string", "format": "date-time"},
     "delivery_target": {
-      "enum": ["pr_ready", "testflight_uploaded", "testflight_distributed"]
+      "enum": ["local_verified", "pr_ready", "testflight_uploaded", "testflight_distributed"]
     },
     "health_profile": {
       "enum": [
+        "local_verified",
         "pr_ready",
         "runtime_ui",
         "testflight_uploaded",
@@ -73,6 +75,7 @@
         "observed_at": {"type": "string", "format": "date-time"},
         "profile": {
           "enum": [
+            "local_verified",
             "pr_ready",
             "runtime_ui",
             "testflight_uploaded",
@@ -205,7 +208,7 @@
       "additionalProperties": false
     },
     "github": {
-      "type": "object",
+      "type": ["object", "null"],
       "required": ["owner", "repository", "issue_number", "project"],
       "properties": {
         "owner": {"type": "string", "minLength": 1},
@@ -276,7 +279,7 @@
     },
     "action_grants": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "type": "object",
         "required": [
@@ -299,7 +302,7 @@
           "operation_input": {"type": "object", "minProperties": 1},
           "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
           "resource_key": {"type": "string", "minLength": 1},
-          "phase": {"enum": ["pr_delivery", "testflight_upload", "testflight_distribution"]},
+          "phase": {"enum": ["local_delivery", "pr_delivery", "testflight_upload", "testflight_distribution"]},
           "target": {"type": "string", "minLength": 1},
           "target_from_grant_id": {"type": "string", "minLength": 1},
           "produces_target_kind": {"enum": ["github_issue", "github_pr"]},
@@ -335,7 +338,66 @@
     "app_review_submit": {"const": false},
     "credential_scope_expansion": {"const": false},
     "signing_resource_mutation": {"const": false},
-    "destructive_cleanup": {"const": false}
+    "destructive_cleanup": {"const": false},
+    "local_requirements": {
+      "additionalProperties": false,
+      "properties": {
+        "review_required": {
+          "type": "boolean"
+        },
+        "spec_kit_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "review_required",
+        "spec_kit_required"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "else": {
+        "properties": {
+          "action_grants": {
+            "minItems": 1
+          },
+          "local_requirements": {
+            "const": null
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "delivery_target": {
+            "const": "local_verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "apple": {
+            "const": null
+          },
+          "github": {
+            "const": null
+          },
+          "health_profile": {
+            "enum": [
+              "local_verified",
+              "runtime_ui"
+            ]
+          },
+          "local_requirements": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -18,6 +18,7 @@
     "schema_version": {"const": "1.0.0"},
     "profile": {
       "enum": [
+        "local_verified",
         "pr_ready",
         "runtime_ui",
         "testflight_uploaded",
@@ -107,18 +108,32 @@
         "coordinator_instance_id",
         "state_schema_version",
         "migration_bootstrap_confirmed",
-        "script_sha256",
-        "contract_bundle_sha256",
-        "active_lease_count"
+        "active_lease_count",
+        "runtime_kind",
+        "runtime_contract",
+        "executable_sha256",
+        "source_bundle_sha256"
       ],
       "properties": {
         "state_path_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "coordinator_instance_id": {"type": "string", "minLength": 1},
-        "state_schema_version": {"const": 1},
+        "state_schema_version": {"const": 2},
         "migration_bootstrap_confirmed": {"const": true},
-        "script_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-        "contract_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-        "active_lease_count": {"type": "integer", "minimum": 0}
+        "active_lease_count": {"type": "integer", "minimum": 0},
+        "executable_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "runtime_contract": {
+          "const": "apple-verification-core.resources.v1"
+        },
+        "runtime_kind": {
+          "const": "swift"
+        },
+        "source_bundle_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },

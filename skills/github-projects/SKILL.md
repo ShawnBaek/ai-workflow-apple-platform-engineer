@@ -10,11 +10,17 @@ tracker. Treat the tracker as delivery metadata: it must describe the source,
 branch, PR, verification evidence, and any blocked state without becoming a
 second source of truth for code.
 
+For a problem in this skill collection, use `skill-maintenance` to prepare and
+triage the report. Its upstream issue destination is separate from a consuming
+app's remote; this skill owns the supported GitHub publication operations.
+
 ## Guard before mutation
 
-1. Confirm the intended GitHub account, repository, checkout path, current
-   branch, and redacted `origin` URL. Follow the repository's explicit
-   commit/push confirmation rule separately.
+1. Confirm the intended GitHub account and repository, reusing current-session
+   answers. For branch/PR-linked work, also verify the checkout path, current
+   branch and redacted `origin` URL. An issue-only report needs no checkout or
+   branch. Follow explicit commit/push confirmation rules when those actions
+   are in scope.
 2. Start with read-only discovery. Check `gh auth status`, `gh repo view`, and
    the availability of the needed `gh issue`, `gh project`, and `gh pr`
    subcommands before proposing a write.

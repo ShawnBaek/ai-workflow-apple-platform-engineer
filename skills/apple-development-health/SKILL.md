@@ -16,17 +16,18 @@ authorized external delivery continuation. It answers a narrow question:
 **does the selected delivery profile have the connections and evidence it needs
 right now?** It does not repair the machine.
 
-This skill requires `agent-harness` from the same installed `iOS-experts`
-collection because health hashes and reads that sibling's coordinator. If the
-sibling is unavailable, report `installed resource coordinator script is
-unavailable`; do not copy an arbitrary script or create a new state as repair.
+This skill requires `agent-harness` from the same installed Apple Platform
+Engineer collection. Health binds its exact Swift executable, source bundle,
+coordinator contract and state. A missing or mismatched runtime blocks; do not
+substitute an arbitrary executable or create a new coordinator as repair.
 
 ## Choose one profile
 
 | Profile | Required surfaces |
 | --- | --- |
+| `local_verified` | authoritative Git repository, selected agent skills, Git CLI and shared coordinator; no GitHub/Apple scope |
 | `pr_ready` | authoritative Git repository, selected agent skills, Git/GitHub CLI and account, Issue/PR capability, Spec Kit only when selected |
-| `runtime_ui` | `pr_ready` plus authoritative Xcode container, host Apple tools, exact destination/session, required runtime capabilities |
+| `runtime_ui` | local repository/skills/coordinator plus authoritative Xcode container, host Apple tools and exact destination/session; GitHub checks apply only to a PR delivery target |
 | `testflight_uploaded` | `pr_ready` plus authoritative Xcode/archive path, private Apple account guard, `asc`, signing/upload/read-back readiness; no Simulator unless selected separately |
 | `testflight_distributed` | uploaded profile plus exact pre-authorized internal TestFlight group IDs |
 | `icon_upstream` | `pr_ready` plus public companion-upstream provenance and Icon Composer handoff tools that the task actually needs |
@@ -39,25 +40,25 @@ it.
 ## Rules
 
 1. Resolve the authoritative repository, exact Xcode container when applicable,
-   current GitHub identity, private Apple account guard, and delivery target
-   before probing tools.
+   delivery target, and only the GitHub identity or private Apple account guard
+   required by that profile before probing tools.
 2. Materialize the private report, then let the installed evaluator collect and
    reconcile high-risk GitHub, Xcode, Simulator, ASC, and selected MCP facts
    using [health-matrix.md](references/health-matrix.md). Run Apple host-only
    observations only in the logged-in host environment.
 3. Emit one structured report matching
    [health-report.schema.json](contracts/health-report.schema.json), then pass it
-   through `scripts/evaluate_health.py` for aggregation and redaction.
+   through `apple-verify health` for aggregation and redaction.
 4. Keep component status separate: `healthy`, `degraded`, `blocked`, or
    `not_applicable`. Never collapse a passing app test, degraded runtime, and
    failed MCP capability into one “healthy” statement.
 5. A required `blocked` component stops the affected graph node. An optional
    failure makes the report `degraded`; it never silently expands scope.
 
-Evaluate a populated private report from the installed skill folder:
+Set `APE` using the [Swift setup](../agent-harness/references/swift-verification.md), then evaluate a populated private report:
 
 ```sh
-python3 scripts/evaluate_health.py '<health-observations.json>' \
+"$APE" health '<health-observations.json>' \
   --harness '<authoritative-harness.json>'
 ```
 
@@ -70,7 +71,7 @@ required non-healthy result block. Unselected optional MCPs are not probed.
 `active_lease_count` is a time-scoped observation, not coordinator identity.
 Unrelated tasks may change it between collection and evaluation; binding uses
 only canonical state-path hash, instance, schema/bootstrap state, and installed
-script plus complete executable/JSON contract-bundle hashes.
+Swift executable and source-bundle hashes.
 
 When `apple_sample_code_mcp` is selected, require the exact
 `mcp.apple_sample_code` check. For each client selected by the harness, observe

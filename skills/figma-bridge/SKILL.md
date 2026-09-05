@@ -25,7 +25,9 @@ not raise a deployment target just to make generated or Preview code compile.
 
 ## The 5-step bridge in one line
 
-> **MCP set up → file reviewed → formal Code Connect mapped → frame generated → `// figma:` code-connect-map committed → hand off to `apple-platform-ui` → optional `xcode-preview-design` review.**
+> **Resolve the exact design state → inspect relevant components → implement at the existing UI seam → preview → compare the integrated runtime capture.**
+
+Reuse existing Code Connect mappings. Add or publish mappings only when recurring component sync justifies them or the task requests them; one screen does not require a mapping infrastructure or a separate commit. Keep a useful source link in the existing design record or touched view, without adding comments everywhere.
 
 Each step has a sub-doc. Walk through whichever steps are missing for the engineer's project.
 
@@ -41,7 +43,7 @@ For depth on any topic, `Read` the matching file under [`./`](./):
 | Wiring Code Connect for SwiftUI — CLI vs the GitHub plugin UI; `Figma.connect(...)` SwiftUI syntax; publishing mappings | [`code-connect.md`](./code-connect.md) |
 | Adding `// figma: <url>` comments to source files as a lightweight code-connect map (file-level, complements the formal Code Connect API above); placement; grep workflow | [`code-connect-map.md`](./code-connect-map.md) |
 | Reviewing a Figma file for dev-friendliness (auto-layout, components, variants, naming, frame size, styles); the punch list to send back to the designer | [`figma-review.md`](./figma-review.md) |
-| Generating SwiftUI from a Figma frame with `generate_figma_design`; the "avoid large frames" rule; selecting a node when the frame is too big | [`generate-from-frame.md`](./generate-from-frame.md) |
+| Reading a Figma frame with `get_design_context` and implementing SwiftUI; selecting smaller nodes when needed | [`generate-from-frame.md`](./generate-from-frame.md) |
 | Comparing an exact Figma state with Simulator screenshots, hierarchy, safe areas, and component geometry | [`simulator-parity.md`](./simulator-parity.md) |
 
 Read the sub-doc **before** answering — don't paraphrase from memory.
@@ -53,16 +55,16 @@ Read the sub-doc **before** answering — don't paraphrase from memory.
 When the engineer brings you a task:
 
 1. **Detect what's already in place.**
-   - Is the Figma MCP server connected? (Tools named `mcp__figma*` or `mcp__Figma*` available?) If not → [`mcp-setup.md`](./mcp-setup.md).
+   - Is a Figma provider exposed with the needed read tools? Inspect capability descriptions and schemas; connector prefixes vary. If absent → [`mcp-setup.md`](./mcp-setup.md).
    - Does the repo have a `.codeconnect/` directory and a `figma.config.json`? If not, but the engineer wants ongoing sync → [`code-connect.md`](./code-connect.md).
    - Are there `// figma:` URL comments on the existing view files? If not → suggest adding them when you generate / touch a file ([`code-connect-map.md`](./code-connect-map.md)).
    - Does the engineer want code right now, or a Figma audit? Pick the path.
-2. **For a generate-this-frame request:** confirm the Figma URL, check frame size, run `generate_figma_design`, write the SwiftUI to the right place, leave a `// figma:` code-connect-map comment at the top ([`code-connect-map.md`](./code-connect-map.md)), then hand off to `apple-platform-ui` for HIG polish.
+2. **For a generate-this-frame request:** resolve the Figma URL, load any provider-required skill, read `get_design_context`, and implement at the existing UI seam. Use metadata to narrow an oversized selection. Preserve the design source link and continue through Preview/runtime verification. `generate_figma_design` writes interfaces into Figma; it is not the design-to-code read path.
 3. **For a Figma-file review:** use `get_metadata` to walk the file, score it against the [`figma-review.md`](./figma-review.md) checklist, return a punch list grouped by severity.
 4. **For runtime parity:** lock exact Figma and app states, then follow
    [`simulator-parity.md`](./simulator-parity.md); an outer frame match is not
    proof that internal anchors or interaction states match.
-5. **Always offer the next step.** After generating code: "want me to wire this into the existing `RootView`, hand off to `apple-platform-ui`, and then run a code-first Preview review?" After a Figma review: "want me to share this list with the designer as a Figma comment via the MCP server?"
+5. **Continue the authorized implementation.** Carry the view through the relevant preview, integration, and evidence checks. Ask only for missing design intent that materially changes the result. Publishing a message to a designer is a separate external action and needs explicit authorization.
 
 ---
 
@@ -92,7 +94,7 @@ This keeps each skill doing one thing well. Don't try to do the HIG polish yours
 - Reinvent the HIG polish that `apple-platform-ui` already does — hand off instead.
 - Generate code from a "too big" Figma frame in one MCP call. Always check size first and select a smaller node if needed ([`generate-from-frame.md`](./generate-from-frame.md)).
 - Recommend deprecated `Figma.connect` syntax — always use the current SwiftUI Code Connect API ([`code-connect.md`](./code-connect.md)).
-- Drop the `// figma:` comment on a generated file. Sitemap discipline is cheap; losing the link is expensive.
+- Lose the exact reference state. Preserve the node/version link in the project's existing source or design record.
 - Skip the Figma-file review when the design clearly has problems. Surfacing "this file is hard to work from" early is more valuable than another button rendering.
 - Run any MCP tool on a Figma file you don't have permission to read — the MCP server will refuse, surface the error to the engineer, don't retry.
 - Suggest design changes the engineer didn't ask for. Your job is to faithfully bridge Figma → code, not to redesign.

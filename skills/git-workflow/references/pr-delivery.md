@@ -1,19 +1,10 @@
-# Pull Request Delivery
+# Pull request delivery
 
-Use this after implementation is ready, not as authorization to commit, push, or publish.
+1. Review the exact diff against the accepted task and choose coherent slices. Split unrelated work; keep incompatible runtime/schema migrations together. For dependent PRs, verify each intended base and link its immediate predecessor.
+2. Run checks that cover the changed behavior. Have an independent reviewer examine the current patch, reproduce relevant edge cases, and provide code locations or references. Evaluate the findings before applying them; use [code-review](../../code-review/SKILL.md).
+3. Prepare a short PR body from the repository template: problem/result, checks with outcomes, and accessible proof. Link the detailed evidence report rather than copying its full matrix or usage accounting.
+4. Satisfy the applicable commit/push/PR approvals at the point required by project policy. Reuse already confirmed account and destination facts. A request for implementation does not override an explicit first-commit approval rule.
+5. Publish through supported GitHub tooling. Check the installed CLI's attachment support; use a browser attachment or CI artifact when needed. Inspect screenshots/trimmed video/JSON for private data, and verify the uploaded evidence renders for the intended reviewer.
+6. Read back the remote head, PR base and body. Report required CI as passed, failed, pending or unavailable exactly as observed. Do not infer merge authority. If a predecessor merges, retarget only within authorization and recheck the resulting diff.
 
-1. Confirm the approved repository/branch and the required first-commit or first-push gate.
-2. Review the exact diff and select minimum-sufficient checks. Do not add redundant tests merely to increase count.
-3. Compare the diff with the approved phase map. If it now contains another independently reviewable contract or crosses the review-size checkpoint, stop and split it before publication.
-4. Commit and push only after their required approvals. Verify the pushed commit via the remote branch or PR, especially when linked-worktree tracking refs are stale.
-5. Open or update the PR with scope, verification, omitted checks, and residual risk.
-6. For requested visual proof, capture the applicable platform flow after functional verification. Put the screenshot/video where PR reviewers can open it through a supported GitHub UI or CI artifact link, then verify the rendered PR body or comment. State whether the evidence is permanent or retention-limited.
-7. Check required CI and review status before declaring delivery complete. Preserve a failing result and its first actionable cause rather than blindly retrying the same input.
-
-For a stack, title each PR `Phase N/M: <reviewer outcome>` and include the same
-ordered stack map: phase, branch, PR link or pending marker, base, dependency,
-scope, and checks. The first phase targets the repository default branch; each
-later phase targets its predecessor branch until the predecessor merges. Verify
-the GitHub base/head read-back for every PR. After a predecessor merges, retarget
-only with authority and reverify the resulting diff; never hide stack state with
-a force push.
+Use a shared stack plan for broad work; do not repeat a complete stack map in every body or force arbitrary phase titles. A local verification task need not create a PR. See [delivery guidance](../../agent-harness/references/delivery.md) for evidence and runtime boundaries.

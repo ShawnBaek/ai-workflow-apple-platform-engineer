@@ -1,0 +1,68 @@
+{
+  "durationInMilliseconds" : 0,
+  "endTime" : "2026-09-05T10:35:04.507Z",
+  "evaluationID" : "DeterministicEvaluation",
+  "evaluationInfo" : {
+    "dataset" : "three-reviewed-deterministic-cases",
+    "dataset_sha256" : "fa382e080ba6ceb0ad9e9fdbebad54f9af606741640664f42b69d8cc2991d253",
+    "revision" : "audit-v1",
+    "rubric_revision" : "exact-uppercase-v1"
+  },
+  "resultID" : "FFC9326B-C93B-42FA-A226-BCD1E3D78620",
+  "results" : [
+    {
+      "exact_match" : {
+        "evaluatorKind" : "custom",
+        "kind" : "pass",
+        "rationale" : "normalized value matched",
+        "value" : true
+      },
+      "Expected" : "ALPHA",
+      "Input" : "{\n  \"input\" : {\n    \"instructions\" : \"null\",\n    \"prompt\" : \"alpha\"\n  },\n  \"output\" : {\n    \"value\" : \"ALPHA\"\n  }\n}",
+      "Response" : {
+        "typeName" : "String",
+        "value" : "ALPHA"
+      }
+    },
+    {
+      "exact_match" : {
+        "evaluatorKind" : "custom",
+        "kind" : "pass",
+        "rationale" : "normalized value matched",
+        "value" : true
+      },
+      "Expected" : "BETA",
+      "Input" : "{\n  \"input\" : {\n    \"instructions\" : \"null\",\n    \"prompt\" : \"Beta\"\n  },\n  \"output\" : {\n    \"value\" : \"BETA\"\n  }\n}",
+      "Response" : {
+        "typeName" : "String",
+        "value" : "BETA"
+      }
+    },
+    {
+      "exact_match" : {
+        "evaluatorKind" : "custom",
+        "kind" : "fail",
+        "rationale" : "normalized value differed",
+        "value" : false
+      },
+      "Expected" : "REFUSE",
+      "Input" : "{\n  \"input\" : {\n    \"instructions\" : \"null\",\n    \"prompt\" : \"misuse\"\n  },\n  \"output\" : {\n    \"value\" : \"REFUSE\"\n  }\n}",
+      "Response" : {
+        "typeName" : "String",
+        "value" : "MISUSE"
+      }
+    }
+  ],
+  "startTime" : "2026-09-05T10:35:04.507Z",
+  "summary" : [
+    {
+      "Mean of exact_match" : {
+        "operation" : {
+          "metric" : "exact_match",
+          "type" : "mean"
+        },
+        "value" : 0.66666666666666663
+      }
+    }
+  ]
+}

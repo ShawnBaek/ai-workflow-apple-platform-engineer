@@ -8,7 +8,7 @@
     "schema_version": {"const": "1.0.0"},
     "decision": {"const": "approved"},
     "github": {
-      "type": "object",
+      "type": ["object", "null"],
       "required": ["owner"],
       "properties": {
         "owner": {"type": "string", "minLength": 1}
