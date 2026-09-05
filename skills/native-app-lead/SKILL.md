@@ -37,6 +37,7 @@ owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 |---|---|
 | graph/loop/RAG, Codex/Claude collaboration, task-to-PR | `agent-harness` |
 | CLI/skill/MCP/account/Spec Kit readiness | `apple-development-health` |
+| 1Password development ENV connection, secrets, or local mounts | `onepassword-environments` |
 | project root/container, host Xcode, XcodeGen | `xcode-project-workflow` |
 | branches, explicit worktrees, index locks, PR Git state | `git-workflow` |
 | UI implementation without Figma | `apple-platform-ui` |
