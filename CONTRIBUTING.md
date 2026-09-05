@@ -69,7 +69,8 @@ From this repository root, with macOS and a full Xcode Swift 6 toolchain:
 ```sh
 # Build only if the verifier is not already built for the current source/toolchain.
 swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1
-skills/agent-harness/verification/.build/debug/apple-verify repository --root .
+APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
+"$APE_BIN_DIR/apple-verify" repository --root .
 
 # For runtime/shared-contract changes; CI runs this suite too.
 swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1

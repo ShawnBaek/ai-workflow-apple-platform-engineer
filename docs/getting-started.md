@@ -31,11 +31,22 @@ Build once from the installed `agent-harness` folder with Swift 6 and a full Xco
 ```sh
 AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
 swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1
-APE="$AGENT_HARNESS_ROOT/verification/.build/release/apple-verify"
+APE_BIN_DIR="$(swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
+APE="$APE_BIN_DIR/apple-verify"
 "$APE" --help
 ```
 
 If `xcode-select -p` points to Command Line Tools, select an existing full Xcode for this command using `DEVELOPER_DIR`; do not change the user's global toolchain automatically. Keep the built executable in its skill directory so it can locate the matching contracts.
+
+Use the same toolchain, configuration and build flags for the build and `--show-bin-path`; a guessed `.build/release` path may select an older executable. Check `--help` for `--app-root`, then observe `runtime-identity` before binding this executable in private setup.
+
+For an app outside the skill collection, pass its absolute authoritative root before the command:
+
+```sh
+"$APE" --app-root '<absolute-app-repository>' health '<private-report.json>' --harness '<private-harness.json>'
+```
+
+`--app-root` selects the app checked by health while schemas and source identity stay with the installed harness. `--repository-root` selects a **skills repository**, for example when the executable was copied; it is not the app-root option. Explicit flags go before the subcommand.
 
 For a single local task, run the applicable skill and focused verification. When several agents or tasks share build/Simulator resources, set up the [private host coordinator](../skills/agent-harness/references/coordinator-setup.md). Use `harness-local.json` for `local_verified`; its accepted plan explicitly selects whether independent review and Spec Kit are required. PR delivery uses the PR profile and stronger completion conditions.
 

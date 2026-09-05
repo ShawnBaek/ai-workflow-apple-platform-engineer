@@ -2,7 +2,7 @@ import AppleVerificationCore
 import Foundation
 
 let usage = """
-  apple-verify [--repository-root <skills-repository>] <command> [arguments]
+  apple-verify [--repository-root <skills-repository>] [--app-root <app-repository>] <command> [arguments]
 
     repository --root <repository> [--output <new-report.json>]
     compare --manifest <comparison.json> --output-dir <new-directory>
@@ -51,15 +51,32 @@ do {
     exit(0)
   }
   var explicitRoot: String?
-  if arguments.first == "--repository-root" {
+  var appRoot: String?
+  while let option = arguments.first, ["--repository-root", "--app-root"].contains(option) {
     guard arguments.count >= 3, !arguments[1].hasPrefix("--") else {
-      throw VerificationError.invalid("--repository-root requires a path and command")
+      throw VerificationError.invalid("\(option) requires a path and command")
     }
-    explicitRoot = arguments[1]
+    if option == "--repository-root" {
+      guard explicitRoot == nil else {
+        throw VerificationError.invalid("duplicate --repository-root")
+      }
+      explicitRoot = arguments[1]
+    } else {
+      guard appRoot == nil else { throw VerificationError.invalid("duplicate --app-root") }
+      guard arguments[1].hasPrefix("/") else {
+        throw VerificationError.invalid("--app-root requires an absolute app repository path")
+      }
+      appRoot = arguments[1]
+    }
     arguments.removeFirst(2)
   }
   let command = arguments.removeFirst()
-  let context = try runtimeContext(repositoryRoot: explicitRoot)
+  let installedContext = try runtimeContext(repositoryRoot: explicitRoot)
+  let context = appRoot.map {
+    RuntimeContext(
+      repositoryRoot: URL(fileURLWithPath: $0).standardizedFileURL.resolvingSymlinksInPath(),
+      harnessRoot: installedContext.harnessRoot)
+  } ?? installedContext
   let code: Int32
   switch command {
   case "repository":
