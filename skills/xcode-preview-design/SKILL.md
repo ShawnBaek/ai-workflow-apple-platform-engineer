@@ -19,6 +19,8 @@ capabilities.
 
 ## Authority and preflight
 
+For a new screen or substantial redesign, use [design discovery](../agent-harness/references/design-discovery.md) to resolve missing competitor/reference and style preferences before choosing the presentation. Carry forward supplied answers and the relevant research; a bounded refinement to an approved design does not restart this intake.
+
 1. Complete `xcode-project-workflow`; the exact opened project/container,
    selected Xcode toolchain, deployment targets, and repository conventions are
    authoritative.

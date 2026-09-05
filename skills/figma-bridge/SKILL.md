@@ -25,6 +25,8 @@ not raise a deployment target just to make generated or Preview code compile.
 
 ## The 5-step bridge in one line
 
+For open UX or design choices, use [design discovery](../agent-harness/references/design-discovery.md) to clarify the user's reference apps/services and preferred style, then research the relevant flow. An exact approved frame already settles its visual direction; reuse that decision and surface conflicts before proposing a change to it.
+
 > **Resolve the exact design state → inspect relevant components → implement at the existing UI seam → preview → compare the integrated runtime capture.**
 
 Reuse existing Code Connect mappings. Add or publish mappings only when recurring component sync justifies them or the task requests them; one screen does not require a mapping infrastructure or a separate commit. Keep a useful source link in the existing design record or touched view, without adding comments everywhere.
