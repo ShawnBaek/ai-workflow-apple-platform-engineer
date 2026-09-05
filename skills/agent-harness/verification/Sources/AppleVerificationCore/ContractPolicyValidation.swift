@@ -263,7 +263,7 @@ extension ContractValidation {
     }
     let expected: [String: Any] = [
       "mode": "reference-only", "execute_upstream": false, "vendored_files": [],
-      "consumer_skill": "icon-composer", "consumer_repository": "ShawnBaek/iOS-experts",
+      "consumer_skill": "icon-composer", "consumer_repository": "ShawnBaek/ai-workflow-apple-platform-engineer",
       "drift_action": "create_or_update_review_issue", "auto_merge": false,
     ]
     if !equal(integration, expected) {

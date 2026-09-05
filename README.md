@@ -1,4 +1,4 @@
-# Apple Platform Engineer
+# AI Workflow — Apple Platform Engineer
 
 ```text
   .-----------.
@@ -23,21 +23,64 @@ For new and existing iOS, iPadOS, watchOS, and macOS projects using SwiftUI or U
 - **Keep changes easy to review.** Break larger tasks into coherent PRs with relevant evidence.
 - **Keep development work organized.** Coordinate repository changes, Simulator use, and package/build resources.
 
-Use a specialist for a small task, or the lead skill (`native-app-lead`) for a broader feature. Load only the guidance your task needs.
-
 ## Get started
 
 Install with the [Skills CLI](https://www.skills.sh/docs/cli):
 
 ```sh
-npx skills add ShawnBaek/iOS-experts
+npx skills add ShawnBaek/ai-workflow-apple-platform-engineer
 ```
 
 Apple builds and Simulator work require macOS and Xcode. Follow the [getting-started guide](docs/getting-started.md) before running coordinated app tasks.
 
-Then open your app repository in your agent and try:
+## After installation
 
-> Use native-app-lead to build this screen. Start with a SwiftUI preview, keep tests focused, and show the result with a screenshot.
+Open your app repository in the client you installed for. Start with **`native-app-lead`**, the main skill's name, and describe what you want to build.
+
+| Client | Type in the chat |
+| --- | --- |
+| [Codex](https://learn.chatgpt.com/docs/build-skills) | `$native-app-lead Add a saved-items screen and verify the empty state.` |
+| [Claude Code](https://code.claude.com/docs/en/skills) | `/native-app-lead Add a saved-items screen and verify the empty state.` |
+
+Include your minimum OS, existing UI approach, and the proof you want. For a focused task, use the same client prefix with one of these skills:
+
+| Task | Skill name |
+| --- | --- |
+| Build or fix SwiftUI, UIKit or storyboard UI | `apple-platform-ui` |
+| Design a screen in Xcode Previews | `xcode-preview-design` |
+| Build, run or debug on Simulator | `xcodebuild` |
+| Choose and run focused tests | `apple-platform-testing` |
+
+See [all 34 skills](docs/skills.md). Each skill supplies guidance; it does not require a separate agent.
+
+## How the workflow works
+
+```text
+Describe what you want to build
+              |
+              v
+Clarify outcome + constraints
+              |
+              v
+Plan tasks + select skills
+              |
+              v
+Design in Preview / Figma (UI work)
+              |
+              v
+Implement + integrate
+              |
+              v
+Verify + capture evidence
+              |
+              v
+Review when needed -> fix -> recheck
+              |
+              v
+Local result or approved PRs
+```
+
+Small fixes skip unrelated stages. Independent tasks can run concurrently within shared resource limits. For approved PR delivery, split larger changes into focused or stacked PRs with relevant screenshots, recordings or JSON evidence.
 
 ## Explore
 

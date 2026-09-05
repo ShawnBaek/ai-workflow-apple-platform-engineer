@@ -17,7 +17,7 @@ Distinguish an instruction defect, runtime defect, missing capability, stale/dup
 
 ## File or reuse a GitHub issue
 
-The collection's public issue destination is **ShawnBaek/iOS-experts**, not the consuming app's `origin`. Confirm the target and publishing account when those facts are missing; reuse the current session's confirmed answers. Never rewrite the app's remote or use an app-scoped authorization as authority to publish upstream.
+The collection's public issue destination is **ShawnBaek/ai-workflow-apple-platform-engineer**, not the consuming app's `origin`. Confirm the target and publishing account when those facts are missing; reuse the current session's confirmed answers. Never rewrite the app's remote or use an app-scoped authorization as authority to publish upstream.
 
 1. Search open and closed upstream issues using the skill name and distinctive symptom. Inspect likely matches. Reuse a matching issue URL; add a comment only when authorized and new evidence is useful. A closed issue may need a new regression report linked to the old one; do not reopen or close it automatically.
 2. Draft a concise title and body with **Skill/version**, **Expected and actual**, **Reproduction**, **Relevant environment**, and **Evidence/workaround**. Use the repository's issue template when available. Separate observed facts from suspected cause, and link the applicable skill instruction, code or official API reference when it supports the claim.
@@ -25,7 +25,7 @@ The collection's public issue destination is **ShawnBaek/iOS-experts**, not the 
 4. Use an explicit destination and a body file, for example:
 
    ```sh
-   gh issue create --repo ShawnBaek/iOS-experts \
+   gh issue create --repo ShawnBaek/ai-workflow-apple-platform-engineer \
      --title '<skill>: <observable problem>' --body-file '<sanitized-report.md>'
    ```
 
