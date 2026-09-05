@@ -170,7 +170,7 @@ Replace the Image with a spinnable iPhone/iPad/Mac/Watch model. See `3d-devices.
 ## Section 4 — Download
 
 - **App Store badge** — Apple's official SVG from https://tools.applemediaservices.com/app-store/
-- **System requirements** in one line: "Requires iOS 26, iPadOS 26, macOS 26, or watchOS 26 or later."
+- **System requirements** in one line, using the app's actual supported platforms and minimum OS versions from its project and store listing. Do not advertise unsupported platforms or replace the minimum with the current SDK version.
 - Optional: **TestFlight beta link** if you have one ("Try the beta on TestFlight →")
 - Future: Google Play badge when the planned `android-ui` skill ships
 
@@ -184,7 +184,7 @@ function DownloadSection() {
       .frame({ height: 54 })
       .onTapGesture(() => window.open(APP_STORE_URL, '_blank', 'noopener,noreferrer'))
       .modifier(attrs({ alt: 'Download on the App Store', role: 'link', tabindex: '0' })),
-    caption('Requires iOS 26, iPadOS 26, macOS 26, or watchOS 26 or later.')
+    caption(SYSTEM_REQUIREMENTS) // Verified app-specific platforms and minimum OS versions.
   ).padding({ vertical: SPACING.s4, horizontal: SPACING.containerPx })
     .modifier(cls('reveal'));
 }

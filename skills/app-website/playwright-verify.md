@@ -6,7 +6,7 @@ You do not say "done" until the page is loaded in a real browser, the console is
 
 Every time you change web code:
 
-1. **Start a static server** in the project root with **no-cache headers** (critical — see "Cache discipline" below). `python3 -m http.server 8000` does NOT send no-cache headers; use the no-cache snippet below or `npx serve -c serve.json` with `"headers": [{ "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }]`.
+1. **Start a static server** in the project root with **no-cache headers** (critical — see "Cache discipline" below). Use the project's development server or `npx serve -c serve.json` with `"headers": [{ "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }]`.
 2. **Load the page** in a browser via Playwright MCP / Chrome MCP (or whichever browser-automation MCP your host exposes), in a **fresh tab**.
 3. **Read the console** for errors and exceptions. Module resolution errors (`Failed to resolve module specifier`), SyntaxErrors (`does not provide an export named ...`), and 404s on assets all fail silently if you only look at the screenshot.
 4. **Scroll through every section** and screenshot each. Every section. Don't stop at the hero — the failure mode you're trying to catch is "section 4 doesn't render".
@@ -37,26 +37,17 @@ A page can return 200, have a clean console, and still be broken in ways a singl
 
 ## Cache discipline (the lesson learned the hard way)
 
-ES modules cache aggressively. Python's `http.server` doesn't send `Cache-Control`. The result: you change code, the server sees the change, but the browser keeps running the old module. You'll spend an hour wondering why your edit doesn't apply.
+Use explicit cache headers during development and inspect the served response when edits appear stale.
 
 ### Always serve with no-cache headers during development
 
-Drop this into your project as `tools/nocache-server.py`:
+Use the existing development server where available. For a static site, put this in `serve.json`:
 
-```python
-import http.server, socketserver, sys
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-class H(http.server.SimpleHTTPRequestHandler):
-    def end_headers(self):
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-        self.send_header('Pragma', 'no-cache')
-        super().end_headers()
-with socketserver.TCPServer(("", PORT), H) as httpd:
-    print(f"serving with no-cache on http://localhost:{PORT}")
-    httpd.serve_forever()
+```json
+{"headers": [{"source": "**", "headers": [{"key": "Cache-Control", "value": "no-store"}]}]}
 ```
 
-Run with `python3 tools/nocache-server.py 8000`. Verify the header lands with `curl -sI http://localhost:8000/main.js | grep -i cache`.
+Run `npx serve -c serve.json -l 8000`. Verify with `curl -sI http://localhost:8000/main.js` and inspect `Cache-Control`. No custom server helper is needed.
 
 ### When the cache still bites
 
