@@ -9,7 +9,7 @@
   "health_profile": "pr_ready",
   "health_components": [],
   "agent_skills": {
-    "task_skills": ["native-app-lead"],
+    "task_skills": ["apple-platform-engineer"],
     "expected_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
     "installations": {
       "codex": {"collection_root": "/absolute/path/to/installed/skills"},

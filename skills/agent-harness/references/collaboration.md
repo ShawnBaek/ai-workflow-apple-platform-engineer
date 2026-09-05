@@ -63,10 +63,10 @@ ownership. A lead or ordinary reviewer does not automatically need deep capabili
 
 ## Naming
 
-The collection's display name is **Apple Platform Engineer**. Its existing lead
-invocation is `native-app-lead`; this display rebrand does not rename installed
-paths, schema identifiers, repository URLs, or stored state. A skill is reusable
-guidance, not a request to spawn a permanent specialist.
+The collection's display name and entry skill are **Apple Platform Engineer**
+and `apple-platform-engineer`. The entry skill replaces `native-app-lead`; other
+skill IDs, schema identifiers and historical run records retain their identities.
+A skill is reusable guidance, not a request to spawn a permanent specialist.
 
 Use responsibilities such as Lead, Reviewer, Researcher, and Test Runner only
 when needed. Name assignments concretely (`review_storyboard_wiring`, for

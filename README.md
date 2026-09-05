@@ -35,12 +35,12 @@ Apple builds and Simulator work require macOS and Xcode. Follow the [getting-sta
 
 ## After installation
 
-Open your app repository in the client you installed for. Start with **`native-app-lead`**, the main skill's name, and describe what you want to build.
+Open your app repository in the client you installed for. Start with **`apple-platform-engineer`**, the main skill's name, and describe what you want to build.
 
 | Client | Type in the chat |
 | --- | --- |
-| [Codex](https://learn.chatgpt.com/docs/build-skills) | `$native-app-lead Add a saved-items screen and verify the empty state.` |
-| [Claude Code](https://code.claude.com/docs/en/skills) | `/native-app-lead Add a saved-items screen and verify the empty state.` |
+| [Codex](https://learn.chatgpt.com/docs/build-skills) | `$apple-platform-engineer Add a saved-items screen and verify the empty state.` |
+| [Claude Code](https://code.claude.com/docs/en/skills) | `/apple-platform-engineer Add a saved-items screen and verify the empty state.` |
 
 Include your minimum OS, existing UI approach, reference apps and preferred style when known, and the proof you want. For open design choices, the agent clarifies missing preferences and researches useful references. For a focused task, use the same client prefix with one of these skills:
 
