@@ -1,4 +1,4 @@
-# iOS-experts maintainer guidance
+# Apple Platform Engineer maintainer guidance
 
 This repository publishes agent-neutral skills for Apple-platform development.
 Before changing it, read `skills/agent-harness/SKILL.md` and the reference it

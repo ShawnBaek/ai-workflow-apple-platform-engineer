@@ -1,119 +1,41 @@
-# Minimum-sufficient verification and delivery
+# Focused verification and reviewable delivery
 
-## Select the smallest defensible checks
+## Choose checks by risk
 
-| Change | Required baseline |
+| Change | Useful baseline |
 |---|---|
-| prose/format only | skill/schema and relative-link validation |
-| skill routing/metadata | baseline plus one positive and nearest-collision negative route |
-| deterministic graph/schema | one valid, one malformed, one terminal-state case |
-| bug fix | one regression that reproduces the original failure |
-| pure logic | changed branches and material boundary/failure only |
-| visible UI | affected build, one critical flow, relevant visual evidence |
-| interaction/motion | affected build/flow plus trimmed video or UI-test recording |
-| data migration | representative old-to-new store and clean install |
-| external mutation/safety | static allow and deny contract; no live destructive eval |
+| Prose or metadata | Relevant schema, routing and link checks |
+| Logic or bug fix | Observable changed behavior and a regression for the original failure |
+| Authorization, lifecycle or shared contracts | Valid flow plus meaningful denial, expiry, race or terminal cases |
+| Visible UI | Affected build, relevant states, and screenshot comparison |
+| Interaction or motion | Critical flow plus trimmed recording; a durable UI test when justified |
+| Data migration | Representative existing store and clean install |
+| Performance | Reproducible before/after metric on the same toolchain and destination |
 
-Do not duplicate the same observable contract at unit, integration, and UI
-layers. Do not add a test whose infrastructure is larger than the change unless
-the risk rationale says why. Do not use a blanket coverage percentage as a gate.
+Do not mirror implementation details, duplicate one assertion at several layers, or require a coverage percentage. Use Swift Testing for new suitable logic tests; retain XCTest where the existing project or UI/performance APIs need it. Prefer existing fixtures and test targets. Record material omitted checks and limits once in the evidence report. Full suites and device matrices need shared impact, release risk, or an explicit request.
 
-For every new test record `observable_contract`, `prevented_failure`, and
-`unique_path`. Record omitted checks and the residual risk in evidence and the
-PR body. Full suites/device matrices are reserved for shared core, release, an
-explicit request, or an impact graph that justifies them.
+## Split the work
 
-## Phase the review surface
+Before implementing broad work, identify slices that each answer one reviewer question and leave a valid state. Separate unrelated changes. Stack genuinely dependent PRs and link a shared ordered plan; each PR needs only its immediate dependency, intended base and focused checks. Keep a migration atomic when a split would leave incompatible runtime/contracts or broken consumers. Avoid artificial micro-PRs and repetitive phase bookkeeping.
 
-Map the dependency graph into the smallest coherent PR phases before the writer
-starts. Each phase should answer one reviewer question, own a bounded path set,
-have minimum-sufficient checks, and leave a valid intermediate state. Split
-independently reviewable contracts instead of publishing one accumulating diff.
-If a later phase depends on an earlier one, use approved stacked branches and
-show the ordered stack map, base/head, dependency, checks, and evidence in every
-PR. Re-evaluate the split when scope grows during implementation or feedback.
-Do not create artificial micro-PRs, and do not infer merge or retarget authority
-from approval to build the stack.
+Review the split when scope changes. Complete all authorized implementation and evidence preparation before any required publication approval. Existing account/destination answers remain valid within their approved scope. Commit, push, PR creation, merge and retarget permissions are distinct; obey the repository's actual policy.
 
-A local result can finish at `local_verified` without a commit or GitHub scope.
-The accepted plan binds whether review and Spec Kit evidence are required; record
-an accepted omission reason when review is not selected. The PR path retains its
-remote publication, independent review, and readback requirements.
+A local deliverable can finish at `local_verified`. Do not create a GitHub issue or PR merely to complete a preview. The PR profile uses its configured Issue/Project tracking and requires current independent review and external readback; a failed Project update does not undo a successfully created PR.
 
-## Evidence bundle
+## Capture useful proof
 
-Record base SHA, `patch_identity_v1`, and commit-tree equivalence; Xcode build,
-SDK, platform, OS, and architecture; project/workspace, scheme, configuration,
-test plan, destination;
-tool/provider/version; normalized command or tool call; start/end/exit state;
-`.xcresult`, screenshot, and video path plus SHA-256; and an observed result for
-each acceptance criterion.
+Keep detailed provenance in a linked report: base/head or patch identity, relevant Xcode/SDK/OS/destination tuple, command, outcome, acceptance criterion, artifact hash, and meaningful limits. Build-for-testing products are reusable only for a matching toolchain, package resolution, configuration and test destination. Do not label a Catalyst check as native macOS or iOS coverage.
 
-For video evidence, publish only the shortest trimmed acceptance window. Exclude
-SpringBoard/Home, icon tap, app launch, unrelated navigation/setup, loading, and
-idle tail unless launch/startup is the acceptance criterion. Record the raw
-source hash, trim start/duration/tool, final duration and hash, and any
-re-encode; verify full playback plus the first and last meaningful frames before
-publication.
+For UI, show the actual changed state. For Figma parity, use [clean and aligned comparisons](../../screenshot/references/aligned-comparison.md). For motion, trim setup and idle time unless launch is the feature. Inspect playback and the meaningful first/last frames; preserve the original hash, trim window, output hash and any re-encoding in the report. JSON requests/responses are useful proof for data behavior when sanitized and tied to the related logic.
 
-Keep platform claims separate: iPad window/size class, watchOS Crown/button and
-pairing state, macOS native versus Catalyst, and iOS destination are not one
-generic “Apple build passed.” Reuse a built-for-testing product only when the
-entire toolchain/destination/package/test-plan tuple matches.
+Before publication, inspect artifacts for private account details, tokens, notifications and personal data. Keep private harness files and raw run ledgers out of attachments. Use supported GitHub attachments or CI artifacts. Check the installed `gh pr create --help`: use `--attach` only if that version supports the required media. Otherwise use GitHub's browser attachment flow, a small intentional committed evidence file, or an artifact link. Record retention/expiry for temporary artifacts. Verify links and remote SHA after publication; after an ambiguous upload, inspect the existing PR before retrying.
 
-## PR publication
+## Review and publish
 
-Separate `prepare evidence`, repository confirmation, writer claim/commit/release,
-GitHub claim/push/create PR/publish evidence/`await checks`/release. The bounded
-checks read-back uses the same active GitHub lease as its single-use grant;
-release only after the required state is observed or the run blocks.
-Reverify the current patch identity before repository confirmation and verify
-the remote SHA after publication. Do not treat one approval as permission to
-merge.
+Use [code-review](../../code-review/SKILL.md) on an immutable patch. A different agent or independent perspective should reproduce relevant edge cases, cite code or authoritative references, and distinguish findings from uncertainty. For a UI issue, attach a focused screenshot or recording when Simulator access is available. Verify reviewer findings before changing code; record accepted, disputed, or deferred findings with reasons. Recheck changed behavior and invalidate stale evidence after a fix.
 
-When a valid one-shot run authorization is in use, its immutable hash may back
-the derived plan, branch, and phase-scoped external-write records where project
-policy permits. The later first-commit/push repository confirmation still binds
-the exact fingerprint, branch, and remote. Re-run the action checker immediately
-before each single-use grant; it must atomically reserve the structured
-operation descriptor while the canonical lease is active. Any repository, base,
-branch, live staged/outgoing path, Spec Kit snapshot/checkpoint, target,
-operation digest, expiry, lease, or idempotency drift blocks; do not rewrite the
-envelope.
+Use the repository PR template. Keep the body short: the problem and resulting behavior, checks with outcomes, a proof link, and a material limitation or dependency when needed. Put the full platform matrix, resource/token report, and review disposition in linked evidence rather than expanding every PR description. Never invent unavailable token counts or billing data.
 
-Create or resolve the feature Issue before the implementation writer begins,
-and move it to In Review only after the PR exists. A Project v2 permission
-failure is recorded independently and does not erase a valid Issue, push, or PR.
+When the guarded runtime is selected, revalidate the exact request, live lease, repository state and current evidence immediately before each external operation. Read back the accepted remote state and release resources after completion or a recorded failure. An ambiguous response requires action-specific readback before a fresh authorized attempt; the local fence is not remote exactly-once delivery.
 
-`gh pr create` has no documented arbitrary local-attachment flag. Use:
-
-- small, policy-approved permanent images committed at an evidence path and
-  linked by full commit SHA;
-- GitHub's browser attachment flow for human-facing screenshots/videos;
-- Actions artifacts for `.xcresult`, videos, and large logs, with digest,
-  retention, and expiry stated in the PR.
-
-Never use an undocumented upload endpoint or an expiring URL as permanent proof.
-Before publication, scan media for accounts, tokens, email, location,
-notifications, and personal status-bar data; decode images; verify video codec
-and playback; then verify the PR preview/link from the intended viewer context.
-
-The PR body must include summary, acceptance criteria, checks with results,
-evidence links/digests, omitted checks and risk, platform/toolchain matrix, and
-known limitations. Add the completion report's resource-usage summary: models,
-collection scope, provider/client-reported input/output/cached/reasoning tokens,
-informational cross-provider total, missing sources, and whether any cost is a
-client estimate. Never infer tokens from text or turn an estimate into billing
-truth. Use [cost-and-usage.md](cost-and-usage.md) and
-`../templates/completion-report.json`. A failed Project-board update is partial
-success and must not roll back a valid PR.
-
-When a private completion-message channel is configured, route the validated
-report through `delivery-report`. Rendering a preview is read-only. Configuration
-or an enabled flag is never authority to send: the active task authorization
-must satisfy the [delivery authorization contract](../../delivery-report/contracts/delivery-authorization.schema.json)
-and bind the exact channel, destination alias, report hash, reviewed media
-allowlist, transport, expiry, and idempotency key. Publish a `trimmed_video`, not
-the raw recording. Record provider acceptance separately from delivered/read;
-an uncertain response blocks blind retry, and media failure after accepted text
-is partial success rather than a reason to resend the text.
+Private completion messaging is separate from PR publication. Rendering `delivery-report` is read-only. Sending requires explicit authorization for the exact channel, destination, report, media and transport under the [delivery contract](../../delivery-report/contracts/delivery-authorization.schema.json). A configured channel is not permission to send.

@@ -1,9 +1,8 @@
 __pycache__/
 *.py[cod]
+.build/
+.swiftpm/
+.DS_Store
 .iosx/*.sqlite
 .iosx/*.sqlite-shm
 .iosx/*.sqlite-wal
-
-# SwiftPM generated state
-.build/
-.swiftpm/

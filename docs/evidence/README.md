@@ -1,5 +1,7 @@
 # Comparison example
 
+For the collection-wide execution status, see the [34-skill functional audit](skill-functional-audit.md).
+
 These images are **synthetic fixtures**, generated in Swift. They demonstrate the comparison tool; they are not Figma exports, Simulator captures, or proof that an app matches a design.
 
 ![Aligned comparison](comparison/comparison-annotated.png)

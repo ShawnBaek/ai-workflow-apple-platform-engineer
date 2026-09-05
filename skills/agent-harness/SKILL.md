@@ -42,8 +42,6 @@ before task breakdown; routine fixes need no new ADR.
    otherwise stop with `coordination_required`. A run cannot opt out by calling
    itself sequential.
 
-Select `local_verified` for a local result, `pr_ready` for authorized PR delivery, or an explicitly authorized TestFlight continuation. A local outcome does not require a PR. Read [Swift runtime setup](references/swift-verification.md) before using private state. Apply the [host resource limits](references/host-resources.md) before assigning concurrent work.
-
 Read [private coordinator setup](references/coordinator-setup.md) before first
 use, schema migration, installed-skill update, or cross-client collaboration.
 The populated harness is private host configuration, never a tracked app file.
@@ -58,6 +56,12 @@ Read [architecture.md](references/architecture.md) for graph, loop, leases, and
 completion rules. Use the machine-readable contracts in `contracts/` when a
 project needs deterministic orchestration.
 
+Select the outcome the user requested: `local_verified` for a local preview/fix,
+`pr_ready` for authorized PR delivery, or an explicitly authorized TestFlight
+continuation. Use the matching workflow and current evidence; do not invent a
+PR to complete a local task. See [Swift runtime setup](references/swift-verification.md)
+and [host resource limits](references/host-resources.md).
+
 Record human corrections and their invalidation edges during the run. Read
 [feedback and improvement](references/feedback-and-improvement.md) before
 promoting a correction into a reusable project/repository rule; durable changes
@@ -68,7 +72,8 @@ If the project already uses GitHub Spec Kit, read
 lifecycle, but it is not treated as a general DAG scheduler or test proof.
 
 For one explicit approval followed by bounded delivery, read
-[run-authorization.md](references/run-authorization.md). The selected target is `local_verified` or `pr_ready`; TestFlight upload or exact internal-group distribution is a separate
+[run-authorization.md](references/run-authorization.md). For a PR request the target is
+`pr_ready`; TestFlight upload or exact internal-group distribution is a separate
 pre-authorized continuation. Merge and App Review remain excluded.
 
 ## Keep three precedence axes separate
@@ -94,8 +99,9 @@ contract or the repository's actual architecture.
 - `codex`: Codex is the sole writer and owner.
 - `claude`: Claude is the sole writer and owner.
 - `collaborative`: either may write, never simultaneously. The other reviews a
-  frozen `patch_identity_v1 + paths + review diff` bundle without mutation
-  tools.
+  frozen `patch_identity_v1 + paths + review diff` bundle without source/index
+  mutation. Scoped build/Simulator execution can be granted independently under
+  resource ownership; `code-review` defines the evidence and response loop.
 - Local LLM: retrieval, reranking, entity extraction, or log clustering only.
   It is never a writer, reviewer of record, approver, or fourth owner.
 
@@ -125,7 +131,10 @@ Each added test must name a unique observable contract and prevented failure.
 Route test mechanics to `apple-platform-testing` and dependency resolution to
 `swift-package-manager`.
 
-Custom verification and adapters use Swift. Build and bind the exact `apple-verify` executable and source bundle; never auto-rehash an approved envelope.
+Write new custom verification helpers and tests in Swift. Reuse the shared
+package under `verification/`; do not add another runtime or a new XCUITest
+harness for small changes. The [migration reference](references/swift-verification.md)
+identifies remaining legacy paths and the limits of each verification phase.
 
 For an external write, reserve its exact single-use grant, then run
 `apple-verify verify-reservation` immediately before the tool call. Do not insert
@@ -144,11 +153,11 @@ enforce it. If hostile same-user bypass is in scope, stop until a separate
 signed, credential-holding one-shot broker is available. Never claim local
 exactly-once delivery for a remote API.
 
-A run is complete only when required graph nodes passed, reverified evidence
+A run is `passed` only when required graph nodes passed, reverified evidence
 matches the current patch identity, no resource lease remains active, every acceptance
-criterion is linked to an observation, and required evidence is viewable. A
-`local_verified` run records its accepted local evidence. A `pr_ready` run also
-requires the intended remote commit to back the PR. Retry caps are stop conditions, never
+criterion is linked to an observation, and required evidence is viewable.
+For PR delivery, the intended remote commit must also back the PR; a
+`local_verified` task has no remote-publication requirement. Retry caps are stop conditions, never
 success. Read [delivery.md](references/delivery.md) before commit, push, PR, or
 evidence publication. Finish with one completion report whose usage values come
 only from provider/client records; unavailable totals remain explicit unknowns.
@@ -161,12 +170,18 @@ only from provider/client records; unavailable totals remain explicit unknowns.
 | Git branch, worktree, index, and PR state | `git-workflow` |
 | Swift package resolution and cache | `swift-package-manager` |
 | Minimal Swift/XCTest/XCUITest evidence | `apple-platform-testing` |
+| Independent review and evidence-backed comment triage | `code-review` |
+| Language-model sessions, tools, guided generation | `apple-foundation-models` |
+| Stochastic AI quality evaluation | `apple-ai-evaluation` |
+| Custom model deployment and inference | `apple-model-integration` |
+| System actions and entities | `app-intents` |
 | Build, run, Simulator, debugger | `xcodebuild` |
 | App marketing/build versions | `app-versioning` |
 | Xcode/Simulator disk audit | `xcode-storage` |
 | Core Data, SwiftData, CloudKit | `apple-data` / `core-data` |
 | Code-first Xcode Preview and motion review | `xcode-preview-design` |
 | Issues and GitHub Projects | `github-projects` |
+| Report, investigate and fix collection problems | `skill-maintenance` |
 | setup/MCP/CLI/account readiness | `apple-development-health` |
 | QA screenshots/recordings and App Store assets | `screenshot` |
 | Apple Ads campaigns, paid keywords, spend, and attribution | `apple-ads` |

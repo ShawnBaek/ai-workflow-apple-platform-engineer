@@ -1,0 +1,79 @@
+{
+  "app_performance_claim" : false,
+  "base_commit" : "06cf8f8e7a1a2ab7d950f3464c8b2fe88e98f534",
+  "external_health_probes" : "Injected fixtures; real accounts, MCP services, and Simulator were not exercised by the runtime suite",
+  "historical_combined_candidate" : {
+    "ci" : {
+      "status" : "passed",
+      "url" : "https://github.com/ShawnBaek/iOS-experts/actions/runs/33965502424"
+    },
+    "commands" : [
+      "swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1",
+      "skills/agent-harness/verification/.build/debug/apple-verify repository --root ."
+    ],
+    "custom_runtime" : "Swift",
+    "functional_audit" : {
+      "all_skills_end_to_end_verified" : false,
+      "comparison_cli" : "generated and visually inspected both PNGs; collision denied without overwrite",
+      "comparison_resource_sample" : {
+        "elapsed_seconds" : 0.050000000000000003,
+        "maximum_rss_bytes" : 32325632,
+        "swaps" : 0
+      },
+      "evaluation_result" : "framework-probes/evaluation-result.json",
+      "evidence" : "skill-functional-audit.md",
+      "foundation_models_generation" : "blocked: modelNotReady",
+      "icon_composer" : "blocked: first-run license agreement",
+      "live_figma_export" : "not_run: no selected file/node",
+      "native_framework_probes_executed" : 5,
+      "read_only_github" : "public repository and issue-list reads succeeded",
+      "simulator_and_preview" : "not_run: no selected app container/destination",
+      "skill_entries_assessed" : 34
+    },
+    "head_commit" : "6a74a6c783827f8633a45c11d4b3de16ff7e7737",
+    "independent_publication_recheck" : {
+      "scope" : "three final functional-audit corrections and the published evidence boundary",
+      "url" : "https://github.com/ShawnBaek/iOS-experts/pull/22#pullrequestreview-5121267464"
+    },
+    "local_result" : {
+      "failures" : 0,
+      "repository_errors" : 0,
+      "swift_testing_cases" : 11,
+      "xctest_cases" : 64
+    },
+    "verification_date" : "2026-09-05"
+  },
+  "image_proof" : "Synthetic fixtures with 3 pt horizontal and 6 pt vertical offsets",
+  "maintenance_evaluation" : {
+    "cases" : 3,
+    "evidence" : "maintenance-walkthrough.md",
+    "live_external_writes" : 0,
+    "method" : "Independent agent walkthrough with simulated tool responses",
+    "passed" : 3
+  },
+  "native_probe_boundary" : {
+    "foundation_models_generation" : "blocked: modelNotReady",
+    "iphoneos" : "final sources typechecked only; no iOS binary ran",
+    "macos_nonmodel_paths" : "passed for five final probe sources",
+    "older_os_execution" : "not_run"
+  },
+  "replacement_split" : {
+    "ci_result" : "not_run: replacement branches and PRs await commit approval",
+    "documentation_review" : "Six focused PRs: intake, Apple AI, UI proof, testing/performance, review/reporting, and collection routing/rebrand",
+    "image_recheck" : "Swift fixture generation and comparison CLI rerun; annotated PNG visually inspected with +3 pt x and +6 pt y offsets",
+    "implementation_review" : "split by foundation, project/snapshot, resources, health, authorization, ledger, dispatch, and supporting tools",
+    "intermediate_validation" : {
+      "contract_and_documentation_slices_validated" : 8,
+      "repository_errors" : 0,
+      "runtime_slices_tested" : 9
+    },
+    "local_result" : {
+      "failures" : 0,
+      "repository_errors" : 0,
+      "swift_testing_cases" : 11,
+      "xctest_cases" : 64
+    },
+    "runtime_activation" : "atomic: executable, schemas, fixtures, templates, and trust bindings"
+  },
+  "scope" : "Historical combined-candidate evidence plus the boundary for its replacement split series"
+}
