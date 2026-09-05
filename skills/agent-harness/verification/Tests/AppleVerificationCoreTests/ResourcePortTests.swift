@@ -547,4 +547,25 @@ final class ResourcePortTests: XCTestCase {
     XCTAssertEqual(usage["internal_workers"] as? Int, 2)
   }
 
+  func testCoordinatorCLIRejectsUnknownAndDuplicateOptions() throws {
+    let base = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let context = RuntimeContext(repositoryRoot: base, harnessRoot: base)
+    let state = base.appendingPathComponent("state")
+    XCTAssertEqual(
+      try ResourceCoordinator.run(
+        arguments: [state.path, "status", "--unknown"], context: context), 2)
+    XCTAssertEqual(
+      try ResourceCoordinator.run(
+        arguments: [
+          state.path, "bootstrap", "--legacy-leases-quiesced", "--legacy-leases-quiesced",
+        ], context: context), 2)
+    XCTAssertThrowsError(
+      try ResourceCoordinator.configureHostPolicy(
+        statePath: state,
+        policy: [
+          "schema_version": "1.0.0", "max_heavy_jobs": 1.5, "max_active_devices": 1,
+          "max_internal_workers": 2,
+        ], operatorConfirmed: true))
+  }
 }
