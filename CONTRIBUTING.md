@@ -48,7 +48,9 @@ Consult existing ADRs. Record a new ADR for a consequential architectural or com
 
 ## Verify the change
 
-Use the commands in [verification](docs/verification.md) and select checks that cover the changed behavior.
+Use the [workflow test plan](docs/workflow-test-plan.md) for repeatable scenarios,
+pass criteria and a compact evidence record. Select the affected checks below;
+do not treat every scenario as mandatory for every PR.
 
 | Change | Smallest useful proof |
 |---|---|

@@ -61,6 +61,20 @@ Use the single [model and usage policy](cost-and-usage.md). Choose capability by
 behavioral risk, bind the effective model/effort, and preserve writer and resource
 ownership. A lead or ordinary reviewer does not automatically need deep capability.
 
+## Naming
+
+The collection's display name is **Apple Platform Engineer**. Its existing lead
+invocation is `native-app-lead`; this display rebrand does not rename installed
+paths, schema identifiers, repository URLs, or stored state. A skill is reusable
+guidance, not a request to spawn a permanent specialist.
+
+Use responsibilities such as Lead, Reviewer, Researcher, and Test Runner only
+when needed. Name assignments concretely (`review_storyboard_wiring`, for
+example), following the host's identifier rules. Keep immutable runtime agent ID,
+model/effort, client, and display role separate. Renaming a role changes neither
+permissions nor resource ownership. `agent-harness` names workflow infrastructure;
+it is not another worker to launch.
+
 ## At-desk and unattended permissions
 
 An agent running inside Xcode already receives Xcode's supported tool path; do

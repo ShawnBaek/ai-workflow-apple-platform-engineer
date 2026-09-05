@@ -12,4 +12,4 @@ The report draft used five short sections: skill/version, expected and actual, r
 
 Author review also clarified the issue-only path in the GitHub skill: a report does not require a checkout, branch, Project or PR. An active harness without authority for the upstream action must retain the draft and explain the limitation. These wording changes received source review and repository validation; they were not a fourth agent execution.
 
-This is one instruction-following walkthrough, not a live GitHub integration test or a guarantee across models..
+This is one instruction-following walkthrough, not a live GitHub integration test or a guarantee across models. The unchanged Swift runtime's separate regression results are in [verification.json](verification.json).

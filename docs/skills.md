@@ -38,3 +38,5 @@ Load one specialist for a small task. Use `native-app-lead` for a feature spanni
 | [xcode-project-workflow](../skills/xcode-project-workflow/SKILL.md) | Authoritative project, toolchain, target, and host preflight |
 | [xcode-storage](../skills/xcode-storage/SKILL.md) | Audit and safely reclaim owned Xcode storage |
 | [xcodebuild](../skills/xcodebuild/SKILL.md) | Official Xcode build, run, debug, and result tooling |
+
+[Setup](getting-started.md) · [Verification](verification.md) · [Workflow research](research-notes.md)
