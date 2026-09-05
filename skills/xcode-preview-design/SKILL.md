@@ -31,6 +31,8 @@ capabilities.
    architecture merely to enable a preview. Use the preview form supported by
    the selected compiler and project.
 
+Design the real presentation before adding new domain/network/persistence logic. Reuse existing behavior while iterating on a feature. A value fixture or one existing injection seam is usually enough; do not add repositories, use cases, coordinators, or protocols solely to make a preview possible. For storyboard/XIB screens, load the real scene/nib using its production identity and containment; see [construction and connections](../apple-platform-ui/references/storyboards-and-hybrid.md).
+
 ## Code-first preview loop
 
 1. Freeze one reviewer question and the observable states it needs. Use a
@@ -53,8 +55,7 @@ capabilities.
 7. Apply feedback to the acceptance decision and the affected fixture or motion
    spec. Durable workflow improvement is a reviewed repository change, never an
    unreviewed self-modifying rule.
-8. After visual approval, run only the integration/build/runtime evidence that
-   the changed contract requires.
+8. After the presentation meets the accepted intent, integrate the needed logic and run the relevant build/runtime checks. Compare the approved Preview or Figma state with the integrated capture using [aligned visual evidence](../screenshot/references/aligned-comparison.md). Label each evidence level; Preview success cannot substitute for app behavior.
 
 A preview fixture may use bundled development assets or an isolated
 ephemeral/in-memory Core Data or SwiftData store when the screen requires it;

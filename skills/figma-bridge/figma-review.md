@@ -7,7 +7,7 @@ This is the audit you run on a Figma file **before** anyone tries to write code 
 ## When to run
 
 - The designer says "the file's ready for handoff."
-- A new screen has been added and you're about to call `generate_figma_design`.
+- A selected screen needs design-to-code implementation through `get_design_context`.
 - A designer joins the team and you want to align on conventions.
 - Every quarter on the design-system file — components rot fast.
 
@@ -70,7 +70,9 @@ A hex value pasted into 80 layers becomes 80 places to fix when the brand colour
 
 ### 6. Frame size budget (🟡 medium — but blocks the MCP flow)
 
-The Figma MCP server has a context budget. Frames bigger than roughly **a single screen's worth of content** trip the "frame too large" error and `generate_figma_design` refuses. The fix is small frames.
+Large selections can exceed the provider's response budget. Use the observed
+response and metadata to select smaller relevant frames; do not assume a fixed
+pixel threshold or require restructuring the designer's file.
 
 - [ ] Each screen is one frame, sized to the device viewport (iPhone 16 Pro: 393 × 852).
 - [ ] Long scrollable screens are broken into stacked sub-frames (header, content, footer) on one parent, not one mega-frame at the full scrolled height.
@@ -108,9 +110,8 @@ When you return findings, group by the section above and lead with severity + th
 🟡 MEDIUM
 
 [Onboarding screens — entire page is one 4096×9000 frame]
-  Too large for the Figma MCP server (`generate_figma_design` will
-  refuse). Split into 3 separate screen frames (one per onboarding
-  step) on the same page.
+  Fetch the relevant screen children separately if design context is truncated.
+  Propose file restructuring only if the handoff task actually needs it.
 ```
 
 ## What you do NOT review

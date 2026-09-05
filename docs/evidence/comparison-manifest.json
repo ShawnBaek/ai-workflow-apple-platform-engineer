@@ -1,0 +1,11 @@
+{
+  "referencePath": "reference.png",
+  "actualPath": "actual.png",
+  "viewportWidthPoints": 280,
+  "viewportHeightPoints": 420,
+  "outputScale": 2,
+  "landmarks": [
+    {"name": "Title baseline", "referenceX": 24, "referenceY": 72, "actualX": 27, "actualY": 78},
+    {"name": "First card corner", "referenceX": 24, "referenceY": 110, "actualX": 27, "actualY": 116}
+  ]
+}

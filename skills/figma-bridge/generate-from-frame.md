@@ -1,20 +1,23 @@
 # Generating SwiftUI from a Figma frame
 
-The `generate_figma_design` MCP tool turns a selected Figma node into framework code (SwiftUI for this skill; the same tool can emit React, Vue, etc. for web). It's the highest-value MCP call in the whole workflow — but the one that fails most often if you call it carelessly.
+Use `get_design_context` to read the selected node, then implement the native
+view. Inspect the active provider's schema and required skill first. Returned
+reference code is context, not a guarantee of compiling SwiftUI.
 
 ## The whole flow
 
 1. **Get the URL.** Engineer pastes the Figma frame URL: `https://www.figma.com/design/<fileKey>/<file>?node-id=42-7`.
-2. **Check it's reachable.** `get_metadata(fileKey, nodeId)` returns size + type + name. If 404 / unauthorized, surface to the engineer.
-3. **Check the size budget.** If the node is too big (≈ multiple screens of content), `generate_figma_design` will refuse. See "Avoid large frames" below — pick a smaller child node instead.
-4. **Generate.** `generate_figma_design(fileKey, nodeId, framework: "swiftui")` returns Swift code.
-5. **Write to the right file.** New screen → new file in `Views/`. Existing screen → ask the engineer where to insert.
+2. **Read context.** Use `get_design_context` for the exact file/node. Supply a framework hint only through a supported field. Surface access failures.
+3. **Narrow when necessary.** For truncated or oversized context, use `get_metadata` to select relevant children and fetch those.
+4. **Implement.** Translate the observed layout, assets and constraints into the project's SwiftUI/UIKit conventions; reuse mapped components.
+5. **Write to the owning file.** Follow the actual project structure and existing screen, rather than inventing a `Views/` directory.
 6. **Add the `// figma:` code-connect-map comment** at the top of the file ([`code-connect-map.md`](code-connect-map.md)).
 7. **Hand off to `apple-platform-ui`** for the bounded production-view polish — semantic colors, Dynamic Type, architecture-compatible state boundaries, and SF Symbol substitution. Add `xcode-preview-design` only when Preview or motion review is requested.
 
 ## Avoid large frames — the rule and the recovery
 
-The MCP server has a context window. A 4096×9000 px frame full of nested content overflows it. When this happens, `generate_figma_design` returns an error like "frame too large for context" and produces nothing.
+Large selections can truncate or exceed a provider's response budget. Diagnose
+the actual response; pixel dimensions alone are not a fixed failure threshold.
 
 **The rule:** start with the smallest frame that captures the design unit you want.
 
@@ -34,7 +37,9 @@ Reference: https://developers.figma.com/docs/figma-mcp-server/avoid-large-frames
 
 ## What the generated SwiftUI looks like — and what's missing
 
-`generate_figma_design` emits structurally-faithful SwiftUI: `VStack`/`HStack`/`ZStack` matching the Figma Auto Layout, `Text` with the right font / weight / size, `Image`s referencing layer names, colour values pulled from styles where mapped (raw hex otherwise).
+Use the design payload and screenshot to assess structure, typography and assets.
+The agent authors and verifies the native draft; do not assume returned web code
+or unsupported effects map directly to native components.
 
 What it does **not** do well — these are why you hand off to `apple-platform-ui`:
 
@@ -51,7 +56,7 @@ What it does **not** do well — these are why you hand off to `apple-platform-u
 So a typical sequence is:
 
 ```
-generate_figma_design  →  ProfileView.swift (first draft, ~80% structurally right)
+get_design_context  →  ProfileView.swift (unverified native draft)
        ↓
 apple-platform-ui  →  production view refined without gratuitous architecture changes
        ↓
@@ -118,7 +123,7 @@ question; repeated captures without a changed hypothesis add noise.
 
 ## References
 
-- **`generate_figma_design` tool docs** → https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/#generate_figma_design
+- **Design read/write tool roles** → https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/
 - **Avoid large frames** → https://developers.figma.com/docs/figma-mcp-server/avoid-large-frames/
 - **All MCP tools** → https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/
 - **Figma + Codex: use cases** → https://developers.openai.com/codex/use-cases/figma-designs-to-code
