@@ -42,5 +42,3 @@ Set `APE` to the absolute built executable as shown in
 The coordinator is cooperative same-user process coordination, not remote
 exactly-once delivery or protection against a hostile local process. Never
 fabricate unavailable usage, Simulator evidence, or a passing CI result.
-
-Unused Python files remain solely for the following mechanical removal review; do not execute them against the activated contracts.

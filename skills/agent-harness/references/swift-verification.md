@@ -19,5 +19,3 @@ Custom verification and adapters should also use Swift. Existing external CLIs r
 A preview or local fix can select `local_verified`. Its authorization has no GitHub/Apple scope; a commit grant is optional and still requires the applicable explicit user approval. `local_requirements` binds whether review and Spec Kit are required by the accepted plan. Omitted review is recorded in acceptance evidence, not silently treated as passed. `runtime_ui` adds the actual build and destination checks when relevant.
 
 The PR profile retains its publication, independent review, current evidence, and external readback requirements. A simple task plan remains a list; these internal ownership and completion conditions do not require the user to maintain a task graph.
-
-Unused Python files remain solely for the following mechanical removal review; do not execute them against the activated contracts.
