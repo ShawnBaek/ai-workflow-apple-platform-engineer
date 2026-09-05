@@ -5,12 +5,16 @@ Load one specialist for a small task. Use `native-app-lead` for a feature spanni
 | Skill | Helps with |
 | --- | --- |
 | [agent-harness](../skills/agent-harness/SKILL.md) | Ownership, authorization, resources, knowledge, and evidence contracts |
+| [app-intents](../skills/app-intents/SKILL.md) | Expose meaningful app actions to system and agentic experiences |
 | [app-store-connect](../skills/app-store-connect/SKILL.md) | Guarded signing, TestFlight, App Store Connect, and distribution |
 | [app-versioning](../skills/app-versioning/SKILL.md) | Preserve the actual app version source of truth |
 | [app-website](../skills/app-website/SKILL.md) | Native app introduction websites |
 | [apple-ads](../skills/apple-ads/SKILL.md) | Apple Ads account, campaign, and reporting operations |
+| [apple-ai-evaluation](../skills/apple-ai-evaluation/SKILL.md) | Evaluate AI task quality, tool behavior, failure handling, and cost |
 | [apple-data](../skills/apple-data/SKILL.md) | Choose SwiftData, Core Data, and CloudKit approaches |
 | [apple-development-health](../skills/apple-development-health/SKILL.md) | Verify selected development capabilities and exact identities |
+| [apple-foundation-models](../skills/apple-foundation-models/SKILL.md) | Foundation Models readiness, sessions, guided generation, and agentic tools |
+| [apple-model-integration](../skills/apple-model-integration/SKILL.md) | Integrate custom model artifacts with supported Apple runtimes |
 | [apple-platform-performance](../skills/apple-platform-performance/SKILL.md) | Measure and improve responsiveness, memory, model, and audio work |
 | [apple-platform-testing](../skills/apple-platform-testing/SKILL.md) | Minimum sufficient Swift, XCTest, and UI verification |
 | [apple-platform-ui](../skills/apple-platform-ui/SKILL.md) | SwiftUI, UIKit, storyboard, and hybrid UI implementation |
