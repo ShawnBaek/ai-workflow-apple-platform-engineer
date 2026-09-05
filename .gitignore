@@ -3,3 +3,7 @@ __pycache__/
 .iosx/*.sqlite
 .iosx/*.sqlite-shm
 .iosx/*.sqlite-wal
+
+# SwiftPM generated state
+.build/
+.swiftpm/
