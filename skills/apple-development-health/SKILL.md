@@ -108,6 +108,10 @@ When a repair is required, report the exact failed layer and route to its owner:
 `app-store-connect`, `swift-package-manager`, `xcode-storage`, or
 `icon-composer`. Repair remains a separately authorized action.
 
+For 1Password development ENV setup, repair, secret migration, or local mounts,
+route to [`onepassword-environments`](../onepassword-environments/SKILL.md).
+It is optional and does not add a required check to this read-only health profile.
+
 ## Completion
 
 A useful report includes the profile, authoritative targets, timestamp, every

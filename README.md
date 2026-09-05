@@ -2,8 +2,7 @@
 
 **Version:** 2.0.0-beta.8
 
-Agent-neutral skills and a guarded task-to-PR harness for iOS, iPadOS, watchOS, and macOS. It supports Codex,
-Claude Code, or one-writer collaboration without duplicating Apple-authored Xcode skills.
+Agent-neutral skills and a guarded task-to-PR harness for iOS, iPadOS, watchOS, and macOS. It supports Codex, Claude Code, or one-writer collaboration without duplicating Apple-authored Xcode skills.
 
 ## How to Install
 
@@ -140,6 +139,7 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 | [`agent-harness`](skills/agent-harness/SKILL.md) | bounded graph/loop task-to-PR delivery |
 | [`native-app-lead`](skills/native-app-lead/SKILL.md) | broad Apple-platform routing |
 | [`apple-development-health`](skills/apple-development-health/SKILL.md) | read-only CLI, MCP, account, and runtime readiness |
+| [`onepassword-environments`](skills/onepassword-environments/SKILL.md) | official 1Password development ENV setup, permissions, secrets, and local mounts |
 | [`xcode-project-workflow`](skills/xcode-project-workflow/SKILL.md) | authoritative Xcode root, container, and branch preflight |
 | [`xcodebuild`](skills/xcodebuild/SKILL.md) | official-first build, test, run, debug, and capture |
 | [`core-simulator-health`](skills/core-simulator-health/SKILL.md) | bounded non-reboot Simulator diagnosis and recovery |
