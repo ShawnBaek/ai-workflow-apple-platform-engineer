@@ -171,6 +171,52 @@ final class AuthorizationTests: XCTestCase {
       })
   }
 
+  func testPrepareRequestCreatesExclusivePrivateFile() throws {
+    let run = try temporaryDirectory()
+    var envelope = try HarnessRuntime.object(
+      repositoryRoot.appendingPathComponent("tests/fixtures/run-authorization-approved.json"))
+    let schema = repositoryRoot.appendingPathComponent(
+      "skills/agent-harness/contracts/schemas/run-authorization.schema.json")
+    envelope["$schema"] = schema.absoluteString
+    envelope["contract_schema_sha256"] = "sha256:" + (try HarnessRuntime.sha256File(schema))
+    let grant = (envelope["action_grants"] as! [[String: Any]]).first {
+      $0["action"] as? String == "github.issue.update"
+    }!
+    let descriptor = try Authorization.canonicalResourceDescriptor(
+      envelope, action: grant["action"] as! String)
+    let receipt: [String: Any] = [
+      "coordinator_instance_id": "c", "receipt_id": "r", "lease_id": "l",
+      "owner_run_id": envelope["run_id"]!, "owner_actor": envelope["selected_writer"]!,
+      "resource": "github_external_mutation", "resource_key": grant["resource_key"]!,
+      "descriptor_sha256": "sha256:" + (try Authorization.canonicalSHA256(descriptor)),
+      "fencing_token": 1, "acquired_at": "2026-01-01T00:00:03Z",
+      "expires_at": "2097-01-01T00:00:00Z",
+    ]
+    let authURL = run.appendingPathComponent("authorization.json")
+    let receiptURL = run.appendingPathComponent("receipt.json")
+    let descriptorURL = run.appendingPathComponent("descriptor.json")
+    let healthURL = run.appendingPathComponent("health.json")
+    let output = run.appendingPathComponent("request.json")
+    try write(envelope, authURL)
+    try write(receipt, receiptURL)
+    try write(descriptor, descriptorURL)
+    try write(["ok": true], healthURL)
+    let request = try PrepareActionRequest.prepare(
+      authorizationPath: authURL, receiptPath: receiptURL, descriptorPath: descriptorURL,
+      healthReportPath: healthURL, outputPath: output, runRoot: run,
+      grantID: grant["grant_id"] as! String, target: grant["target"] as! String, paths: ["Sources"],
+      context: context)
+    XCTAssertEqual(Set(request.keys), Authorization.requestFields)
+    XCTAssertEqual(
+      (try FileManager.default.attributesOfItem(atPath: output.path)[.posixPermissions] as? NSNumber)?
+        .intValue, 0o600)
+    XCTAssertThrowsError(
+      try PrepareActionRequest.prepare(
+        authorizationPath: authURL, receiptPath: receiptURL, descriptorPath: descriptorURL,
+        healthReportPath: healthURL, outputPath: output, runRoot: run,
+        grantID: grant["grant_id"] as! String, target: grant["target"] as! String,
+        paths: ["Sources"], context: context))
+  }
 
   func testPrivateAuthorizationInputsRejectHardLinksOutsideRunRoot() throws {
     let run = try temporaryDirectory()
@@ -201,6 +247,58 @@ final class AuthorizationTests: XCTestCase {
     XCTAssertFalse(Authorization.validateRuntimeBinding(drifted, executable: executable).isEmpty)
   }
 
+  func testDispatchAppleProbeRevalidatesFreshStableState() throws {
+    let directory = try temporaryDirectory()
+    let executable = directory.appendingPathComponent("asc-probe")
+    let now = Date()
+    let observedAt = HarnessRuntime.timestamp(now)
+    let observation: [String: Any] = [
+      "source": "asc_read_only", "guard_verified": true, "observed_at": observedAt,
+      "account_guard_ref": "guard", "team_id": "TEAM", "app_id": "123",
+      "bundle_id": "com.example.app", "platform": "ios", "live_build": "41",
+      "internal_group_ids": ["group"],
+    ]
+    try writeProbe(observation, executable)
+    let apple: [String: Any] = [
+      "account_guard_ref": "guard", "team_id": "TEAM", "app_id": "123",
+      "bundle_id": "com.example.app", "platform": "ios",
+      "version_policy": ["mode": "exact", "value": "1.0"],
+      "build_policy": ["mode": "next_after_live", "baseline": "41"],
+      "artifact_policy": "fresh_archive_from_reviewed_pr_commit", "internal_group_ids": ["group"],
+    ]
+    let authorization: [String: Any] = ["apple": apple]
+    let reservation: [String: Any] = [
+      "action": "apple.testflight.upload",
+      "apple_observation_sha256": try Authorization.canonicalSHA256(observation),
+      "apple_observation_state_sha256": try Authorization.appleObservationStateSHA256(observation),
+    ]
+    let harness: [String: Any] = [
+      "apple_observation_probe": [
+        "executable": executable.path,
+        "executable_sha256": "sha256:" + (try HarnessRuntime.sha256File(executable)),
+        "output_contract": "apple_observation_v1", "timeout_seconds": 10,
+      ]
+    ]
+    XCTAssertEqual(
+      Authorization.dispatchAppleStateErrors(
+        authorization: authorization, reservation: reservation, trustedHarness: harness,
+        reservedAt: now.addingTimeInterval(-1), verifiedAt: now), [])
+    var drifted = observation
+    drifted["live_build"] = "42"
+    try writeProbe(drifted, executable)
+    let driftedHarness: [String: Any] = [
+      "apple_observation_probe": [
+        "executable": executable.path,
+        "executable_sha256": "sha256:" + (try HarnessRuntime.sha256File(executable)),
+        "output_contract": "apple_observation_v1", "timeout_seconds": 10,
+      ]
+    ]
+    let errors = Authorization.dispatchAppleStateErrors(
+      authorization: authorization, reservation: reservation, trustedHarness: driftedHarness,
+      reservedAt: now.addingTimeInterval(-1), verifiedAt: now)
+    XCTAssertTrue(
+      errors.contains { $0.contains("baseline drifted") || $0.contains("state drifted") })
+  }
 
   func testLedgerRejectsReservationReplayAndSecondDispatch() throws {
     let descriptor: [String: Any] = [
