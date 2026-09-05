@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     targets: [
         .target(name: "AppleVerificationCore"),
-        .testTarget(name: "AppleVerificationCoreTests", dependencies: ["AppleVerificationCore"])
+        .executableTarget(name: "ContentionProbe", dependencies: ["AppleVerificationCore"], path: "Tests/ContentionProbe"),
+        .testTarget(name: "AppleVerificationCoreTests", dependencies: ["AppleVerificationCore", "ContentionProbe"])
     ]
 )
