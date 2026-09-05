@@ -202,10 +202,372 @@ final class AuthorizationTests: XCTestCase {
   }
 
 
+  func testLedgerRejectsReservationReplayAndSecondDispatch() throws {
+    let descriptor: [String: Any] = [
+      "repository_fingerprint": "sha256:" + String(repeating: "a", count: 64),
+      "remote_repository": "example/repository",
+    ]
+    let digest = "sha256:" + String(repeating: "b", count: 64)
+    let health = "sha256:" + String(repeating: "c", count: 64)
+    let grant: [String: Any] = [
+      "grant_id": "g", "idempotency_key": "i", "system": "github", "action": "github.issue.update",
+      "operation": "transition_issue_ready", "operation_input": ["state": "Ready"],
+      "constraint_sha256": try Authorization.canonicalSHA256(["state": "Ready"]),
+      "resource_key": "github_external_mutation:sha256:" + String(repeating: "d", count: 64),
+      "phase": "pr_delivery", "target": "example/repository:issue:1",
+    ]
+    let receipt: [String: Any] = [
+      "coordinator_instance_id": "c", "receipt_id": "r", "lease_id": "l", "owner_run_id": "run",
+      "owner_actor": "codex", "resource": "github_external_mutation",
+      "resource_key": grant["resource_key"]!,
+      "descriptor_sha256": "sha256:" + (try Authorization.canonicalSHA256(descriptor)),
+      "fencing_token": 1, "acquired_at": "2026-01-01T00:00:02Z",
+      "expires_at": "2097-01-01T00:00:00Z",
+    ]
+    let approval = record(
+      1, "approval",
+      [
+        "kind": "run_authorization", "decision": "approved", "approval_id": "approval",
+        "authorization_hash": digest, "selected_writer": "codex",
+        "repository_fingerprint": "sha256:" + String(repeating: "a", count: 64),
+        "repository_base_sha": String(repeating: "1", count: 40), "allowed_paths": ["Sources"],
+        "acceptance_ids": ["AC-1"], "issued_at": "2026-01-01T00:00:00Z",
+        "expires_at": "2097-01-01T00:00:00Z", "action_grants": [grant],
+      ], second: 1)
+    let leasePayload: [String: Any] = [
+      "lease_id": "l", "action": "acquire", "owner": "codex", "approval_id": "approval",
+      "resource": "github_external_mutation", "resource_key": grant["resource_key"]!,
+      "resource_descriptor": descriptor, "coordinator_receipt": receipt,
+      "allowed_actions": ["github.issue.update"], "acquired_at": "2026-01-01T00:00:02Z",
+      "expires_at": "2097-01-01T00:00:00Z",
+    ]
+    let reservationPayload: [String: Any] = [
+      "reservation_id": "reservation", "authorization_hash": digest, "grant_id": "g",
+      "idempotency_key": "i", "system": "github", "action": "github.issue.update",
+      "operation": "transition_issue_ready", "operation_input": ["state": "Ready"],
+      "constraint_sha256": grant["constraint_sha256"]!, "resource_key": grant["resource_key"]!,
+      "phase": "pr_delivery", "target": grant["target"]!, "lease_id": "l", "lease_owner": "codex",
+      "writer_actor": "codex", "resource": "github_external_mutation",
+      "resource_descriptor": descriptor, "coordinator_receipt": receipt,
+      "health_report_sha256": health,
+    ]
+    let dispatchPayload: [String: Any] = [
+      "dispatch_id": "dispatch", "reservation_id": "reservation", "coordinator_receipt": receipt,
+      "health_report_sha256": health, "dispatch_deadline": "2026-01-01T00:00:50Z",
+    ]
+    let base = [
+      approval, record(2, "lease", leasePayload, second: 2),
+      record(3, "grant_reservation", reservationPayload, second: 3),
+      record(4, "grant_dispatch", dispatchPayload, second: 4),
+    ]
+    XCTAssertFalse(
+      Authorization.standaloneLedgerLifecycleErrors(base, context: context).contains {
+        $0.contains("unclaimed")
+      })
+    var secondDispatch = dispatchPayload
+    secondDispatch["dispatch_id"] = "dispatch-2"
+    let errors = Authorization.standaloneLedgerLifecycleErrors(
+      base + [record(5, "grant_dispatch", secondDispatch, second: 5)], context: context)
+    XCTAssertTrue(errors.contains { $0.contains("unclaimed exact reservation") })
+  }
 
+  func testDispatchAndExternalWriteRequireCurrentLeaseDeadlineAndProducedTarget() throws {
+    let fingerprint = "sha256:" + String(repeating: "a", count: 64)
+    let descriptor: [String: Any] = [
+      "repository_fingerprint": fingerprint, "remote_repository": "example/repository",
+    ]
+    let digest = "sha256:" + String(repeating: "b", count: 64)
+    let health = "sha256:" + String(repeating: "c", count: 64)
+    let input: [String: Any] = ["title_policy": "accepted_plan", "body_policy": "accepted_plan"]
+    let grant: [String: Any] = [
+      "grant_id": "producer", "idempotency_key": "producer-key", "system": "github",
+      "action": "github.issue.create", "operation": "ensure_feature_issue",
+      "operation_input": input, "constraint_sha256": try Authorization.canonicalSHA256(input),
+      "resource_key": "github_external_mutation:sha256:" + String(repeating: "d", count: 64),
+      "phase": "pr_delivery", "target": "example/repository:feature:branch",
+      "produces_target_kind": "github_issue",
+    ]
+    let receipt: [String: Any] = [
+      "coordinator_instance_id": "c", "receipt_id": "r", "lease_id": "l", "owner_run_id": "run",
+      "owner_actor": "codex", "resource": "github_external_mutation",
+      "resource_key": grant["resource_key"]!,
+      "descriptor_sha256": "sha256:" + (try Authorization.canonicalSHA256(descriptor)),
+      "fencing_token": 1, "acquired_at": "2026-01-01T00:00:02Z",
+      "expires_at": "2026-01-01T00:00:40Z",
+    ]
+    let approval = record(
+      1, "approval",
+      [
+        "kind": "run_authorization", "decision": "approved", "approval_id": "approval",
+        "authorization_hash": digest, "selected_writer": "codex",
+        "repository_fingerprint": fingerprint,
+        "repository_base_sha": String(repeating: "1", count: 40), "allowed_paths": ["Sources"],
+        "acceptance_ids": ["AC-1"], "issued_at": "2026-01-01T00:00:00Z",
+        "expires_at": "2026-01-01T00:00:40Z", "action_grants": [grant],
+      ], second: 1)
+    let lease: [String: Any] = [
+      "lease_id": "l", "action": "acquire", "owner": "codex", "approval_id": "approval",
+      "resource": "github_external_mutation", "resource_key": grant["resource_key"]!,
+      "resource_descriptor": descriptor, "coordinator_receipt": receipt,
+      "allowed_actions": ["github.issue.create"], "acquired_at": "2026-01-01T00:00:02Z",
+      "expires_at": "2026-01-01T00:00:40Z",
+    ]
+    let reservation: [String: Any] = [
+      "reservation_id": "reservation", "authorization_hash": digest, "grant_id": "producer",
+      "idempotency_key": "producer-key", "system": "github", "action": "github.issue.create",
+      "operation": "ensure_feature_issue", "operation_input": input,
+      "constraint_sha256": grant["constraint_sha256"]!, "resource_key": grant["resource_key"]!,
+      "phase": "pr_delivery", "target": grant["target"]!, "lease_id": "l", "lease_owner": "codex",
+      "writer_actor": "codex", "resource": "github_external_mutation",
+      "resource_descriptor": descriptor, "coordinator_receipt": receipt,
+      "health_report_sha256": health,
+    ]
+    let lateDispatch: [String: Any] = [
+      "dispatch_id": "dispatch", "reservation_id": "reservation", "coordinator_receipt": receipt,
+      "health_report_sha256": health, "dispatch_deadline": "2026-01-01T00:00:50Z",
+    ]
+    let lateErrors = Authorization.standaloneLedgerLifecycleErrors(
+      [
+        approval, record(2, "lease", lease, second: 2),
+        record(3, "grant_reservation", reservation, second: 3),
+        record(4, "grant_dispatch", lateDispatch, second: 4),
+      ], context: context)
+    XCTAssertTrue(
+      lateErrors.contains {
+        $0.contains("deadline is invalid or exceeds lease/authorization authority")
+      })
 
+    let dispatch: [String: Any] = [
+      "dispatch_id": "dispatch", "reservation_id": "reservation", "coordinator_receipt": receipt,
+      "health_report_sha256": health, "dispatch_deadline": "2026-01-01T00:00:30Z",
+    ]
+    var write = reservation
+    write["dispatch_id"] = "dispatch"
+    write["outcome"] = "succeeded"
+    write["output_target"] = "attacker/repository:issue:1"
+    let outputErrors = Authorization.standaloneLedgerLifecycleErrors(
+      [
+        approval, record(2, "lease", lease, second: 2),
+        record(3, "grant_reservation", reservation, second: 3),
+        record(4, "grant_dispatch", dispatch, second: 4),
+        record(5, "external_write", write, second: 5),
+      ], context: context)
+    XCTAssertTrue(outputErrors.contains { $0.contains("produced an invalid GitHub target") })
 
+    let noLeaseErrors = Authorization.standaloneLedgerLifecycleErrors(
+      [
+        approval, record(2, "grant_reservation", reservation, second: 3),
+        record(3, "grant_dispatch", dispatch, second: 4),
+      ], context: context)
+    XCTAssertTrue(noLeaseErrors.contains { $0.contains("lacks its exact active lease") })
+    XCTAssertTrue(
+      noLeaseErrors.contains { $0.contains("requires its exact active reservation lease") })
 
+    var unauthorizedLease = lease
+    unauthorizedLease["allowed_actions"] = []
+    unauthorizedLease["approval_id"] = "another-approval"
+    let unauthorizedErrors = Authorization.standaloneLedgerLifecycleErrors(
+      [
+        approval, record(2, "lease", unauthorizedLease, second: 2),
+        record(3, "grant_reservation", reservation, second: 3),
+      ], context: context)
+    XCTAssertTrue(unauthorizedErrors.contains { $0.contains("lease approval binding") })
+    XCTAssertTrue(unauthorizedErrors.contains { $0.contains("lacks its exact active lease") })
+
+    var driftedTimeLease = lease
+    driftedTimeLease["acquired_at"] = "2026-01-01T00:00:01Z"
+    XCTAssertTrue(
+      Authorization.standaloneLedgerLifecycleErrors(
+        [approval, record(2, "lease", driftedTimeLease, second: 2)], context: context
+      ).contains { $0.contains("acquisition times drifted") })
+
+    let expiredErrors = Authorization.standaloneLedgerLifecycleErrors(
+      [
+        approval, record(2, "lease", lease, second: 2),
+        record(3, "grant_reservation", reservation, second: 3),
+        record(4, "grant_dispatch", dispatch, second: 4),
+        record(5, "external_write", write, second: 41),
+      ], context: context)
+    XCTAssertTrue(expiredErrors.contains { $0.contains("outside authorization time bounds") })
+    XCTAssertTrue(expiredErrors.contains { $0.contains("expired lease") })
+  }
+
+  func testLocalVerifiedRequiresCurrentAcceptanceAndConditionalReviewOmission() throws {
+    let harness = try temporaryDirectory()
+    let contracts = harness.appendingPathComponent("contracts")
+    let schemas = contracts.appendingPathComponent("schemas")
+    try FileManager.default.createDirectory(at: schemas, withIntermediateDirectories: true)
+    let schema: [String: Any] = [
+      "$id": "https://example.invalid/run-authorization.schema.json", "type": "object",
+    ]
+    try write(schema, schemas.appendingPathComponent("run-authorization.schema.json"))
+    try write(
+      [
+        "nodes": [
+          ["id": "verify", "requires": []],
+          ["id": "local_verified", "requires": ["verify"], "terminal": true],
+        ]
+      ], contracts.appendingPathComponent("local-workflow.json"))
+    let localContext = RuntimeContext(repositoryRoot: repositoryRoot, harnessRoot: harness)
+    let manifest: [String: Any] = [
+      "version": "patch_identity_v1", "base_sha": String(repeating: "1", count: 40),
+      "records": [
+        [
+          "path": "Sources/App.swift", "mode": "100644", "state": "modified",
+          "content_sha256": "sha256:" + String(repeating: "c", count: 64),
+        ]
+      ],
+    ]
+    let patch = try Authorization.patchIdentityV1(manifest)
+    let fingerprint = "sha256:" + String(repeating: "a", count: 64)
+    let approval: [String: Any] = [
+      "kind": "run_authorization", "decision": "approved",
+      "authorization_hash": "sha256:" + String(repeating: "b", count: 64),
+      "selected_writer": "codex",
+      "repository_fingerprint": fingerprint,
+      "repository_base_sha": String(repeating: "1", count: 40), "allowed_paths": ["Sources"],
+      "acceptance_ids": ["AC-1"],
+      "issued_at": "2026-01-01T00:00:00Z", "expires_at": "2097-01-01T00:00:00Z",
+      "action_grants": [], "resource_plan": [], "delivery_target": "local_verified",
+      "contract_schema_id": schema["$id"]!,
+      "contract_schema_sha256": "sha256:"
+        + (try HarnessRuntime.sha256File(
+          schemas.appendingPathComponent("run-authorization.schema.json"))),
+      "local_requirements": ["review_required": false, "spec_kit_required": false],
+    ]
+    let tuple: [String: Any] = [
+      "provider": "xcode", "tool": "xcodebuild", "tool_version": "1", "command_or_call": "test",
+      "started_at": "2026-01-01T00:00:01Z", "ended_at": "2026-01-01T00:00:02Z", "exit_status": 0,
+      "verification_scope": "minimum-sufficient", "evidence_layer": "build", "platform": "ios",
+      "destination": "generic/platform=iOS Simulator",
+      "coverage": [
+        [
+          "acceptance_id": "AC-1", "observable_contract": "builds",
+          "prevented_failure": "compile regression", "unique_path": "swift test",
+          "result": "passed",
+        ]
+      ], "artifacts": [],
+      "omitted_checks": ["independent_review:not_required_by_accepted_plan"],
+    ]
+    let evidence: [String: Any] = [
+      "evidence_id": "e1", "evidence_kind": "acceptance", "outcome": "passed",
+      "patch_manifest": manifest, "patch_identity": patch, "repository_fingerprint": fingerprint,
+      "acceptance_ids": ["AC-1"], "tool_tuple": tuple,
+    ]
+    let node: [String: Any] = [
+      "status": "passed", "patch_manifest": manifest, "patch_identity": patch,
+    ]
+    let valid = [
+      record(1, "approval", approval, second: 1), record(2, "evidence", evidence, second: 3),
+      record(3, "node", node.merging(["node_id": "verify"]) { _, new in new }, second: 4),
+      record(4, "node", node.merging(["node_id": "local_verified"]) { _, new in new }, second: 5),
+    ]
+    XCTAssertFalse(
+      Authorization.standaloneLedgerLifecycleErrors(valid, context: localContext).contains {
+        $0.contains("local_verified")
+      })
+    var missingOmission = evidence
+    var missingTuple = tuple
+    missingTuple["omitted_checks"] = []
+    missingOmission["tool_tuple"] = missingTuple
+    let invalid = [valid[0], record(2, "evidence", missingOmission, second: 3), valid[2], valid[3]]
+    XCTAssertTrue(
+      Authorization.standaloneLedgerLifecycleErrors(invalid, context: localContext).contains {
+        $0.contains("record why independent review was omitted")
+      })
+
+    let acceptedArtifacts: [[String: Any]] = [
+      ["path": "specs/001-example/spec.md", "sha256": String(repeating: "d", count: 64), "size": 1]
+    ]
+    let immutableSnapshot: [String: Any] = [
+      "schema_version": "1.0.0", "spec_kit_release": "v1.0.1", "feature_id": "001-example",
+      "feature_directory": "specs/001-example", "accepted_artifacts": acceptedArtifacts,
+    ]
+    var snapshot = immutableSnapshot
+    snapshot["artifact_hashes"] = ["specs/001-example/spec.md": String(repeating: "d", count: 64)]
+    snapshot["snapshot_sha256"] = try Authorization.canonicalSHA256(immutableSnapshot)
+    snapshot["workflow_checkpoint"] = NSNull()
+    var specApproval = approval
+    specApproval["local_requirements"] = ["review_required": false, "spec_kit_required": true]
+    specApproval["spec_kit"] = [
+      "release": "v1.0.1", "feature_id": "001-example", "feature_directory": "specs/001-example",
+      "approved_git_branch": "branch", "snapshot_sha256": snapshot["snapshot_sha256"]!,
+      "artifact_hashes": snapshot["artifact_hashes"]!, "workflow_run_id": "run",
+    ]
+    let missingSpec = [
+      record(1, "approval", specApproval, second: 1), valid[1], valid[2], valid[3],
+    ]
+    XCTAssertTrue(
+      Authorization.standaloneLedgerLifecycleErrors(missingSpec, context: localContext).contains {
+        $0.contains("requires one current Spec Kit checkpoint")
+      })
+    let specTuple: [String: Any] = [
+      "provider": "speckit", "tool": "spec-kit", "tool_version": "v1.0.1",
+      "command_or_call": "snapshot", "started_at": "2026-01-01T00:00:01Z",
+      "ended_at": "2026-01-01T00:00:02Z", "exit_status": 0, "spec_kit_snapshot": snapshot,
+    ]
+    let specEvidence: [String: Any] = [
+      "evidence_id": "spec", "evidence_kind": "spec_kit_checkpoint", "outcome": "passed",
+      "patch_manifest": manifest, "patch_identity": patch, "repository_fingerprint": fingerprint,
+      "acceptance_ids": [], "tool_tuple": specTuple,
+    ]
+    let withSpec = [
+      record(1, "approval", specApproval, second: 1), valid[1],
+      record(3, "evidence", specEvidence, second: 3),
+      record(4, "node", node.merging(["node_id": "verify"]) { _, new in new }, second: 4),
+      record(5, "node", node.merging(["node_id": "local_verified"]) { _, new in new }, second: 5),
+    ]
+    XCTAssertFalse(
+      Authorization.standaloneLedgerLifecycleErrors(withSpec, context: localContext).contains {
+        $0.contains("local_verified Spec Kit") || $0.contains("requires one current Spec Kit")
+      })
+  }
+
+  func testKnowledgeAndFeedbackRecordsAreRecognizedAndValidated() {
+    let valid = [
+      record(
+        1, "knowledge",
+        [
+          "source_id": "source", "authority": "accepted_spec",
+          "content_hash": "sha256:" + String(repeating: "a", count: 64), "provenance": "repository",
+        ], second: 1),
+      record(
+        2, "feedback",
+        [
+          "feedback_id": "feedback", "actor": "reviewer", "scope": "current_run", "target": "patch",
+          "summary": "accepted", "disposition": "accepted", "invalidates": [],
+        ], second: 2),
+    ]
+    let errors = Authorization.standaloneLedgerLifecycleErrors(valid, context: context)
+    XCTAssertFalse(
+      errors.contains {
+        $0.contains("unsupported") || $0.contains("feedback record")
+          || $0.contains("knowledge record")
+      })
+    var duplicate = valid
+    duplicate.append(
+      record(
+        3, "feedback",
+        [
+          "feedback_id": "feedback", "actor": "reviewer", "scope": "current_run", "target": "patch",
+          "summary": "duplicate", "disposition": "accepted",
+        ], second: 3))
+    XCTAssertTrue(
+      Authorization.standaloneLedgerLifecycleErrors(duplicate, context: context).contains {
+        $0.contains("unique valid disposition")
+      })
+  }
+
+  func testLedgerRejectsFractionalSequence() {
+    let fractional: [String: Any] = [
+      "schema_version": "1.0.0", "run_id": "run", "sequence": 1.5,
+      "recorded_at": "2026-01-01T00:00:01Z", "record_type": "attempt", "payload": [:],
+    ]
+    XCTAssertTrue(
+      Authorization.standaloneLedgerLifecycleErrors([fractional], context: context).contains {
+        $0.contains("strictly increase")
+      })
+  }
 
   private func record(_ sequence: Int, _ type: String, _ payload: [String: Any], second: Int)
     -> [String: Any]
