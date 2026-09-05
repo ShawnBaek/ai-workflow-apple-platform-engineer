@@ -59,3 +59,11 @@ invariant, mismatch with the likely owning constraint, or not comparable with
 the recapture or acceptance threshold needed. Allowed artwork differences never
 hide a geometry or state mismatch. After a requested fix, recapture every
 affected state and rerun the same table.
+
+## Human-review artifacts
+
+Produce the clean and annotated side-by-side captures described in
+[aligned visual evidence](../screenshot/references/aligned-comparison.md): shared
+horizontal guides, matching panel-local vertical guides, and signed x/y point
+deltas. Connect each mismatch to the relevant layout owner when known. Preserve
+raw inputs; a guide overlay never substitutes for checking actual runtime state.

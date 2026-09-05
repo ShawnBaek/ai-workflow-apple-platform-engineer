@@ -16,6 +16,11 @@ It makes the live Apple HIG and Apple-authored Xcode exposure authoritative,
 records freshness/provenance, and avoids duplicating Apple's full HIG corpus in
 this repository.
 
+Before implementation, establish the user's intended screen behavior and proof
+using [task intake](../agent-harness/references/task-intake.md). Reuse supplied
+answers and ask only about material ambiguity; a precise small change does not
+need a new specification or architecture layer.
+
 ### When the developer has a Figma file
 
 This skill is the **no-designer / no-design-source** implementation path. If the developer supplies an exact Figma source, route to **`figma-bridge`** first; it handles MCP provenance, Code Connect, bounded frame generation, and then returns the draft for HIG and production-view polish. Without an exact Figma source, do not require Figma. Do not generate from a Figma URL yourself — `figma-bridge` owns its frame-size and source-link contracts.
@@ -94,7 +99,7 @@ When you're reviewing an existing app — auditing it for launch, App Store subm
 - [ ] **No unused capabilities** in `UIBackgroundModes`, entitlements, or required device capabilities. A `remote-notification` mode with no push-registration code is a privacy red flag and an App Review snag.
 - [ ] **`PrivacyInfo.xcprivacy` exists** for iOS 17+ submissions. Declares `NSPrivacyTracking` + any required-reason APIs (UserDefaults, FileTimestamp, DiskSpace, SystemBootTime are the common ones).
 - [ ] **App icon assets are complete** — `Assets.xcassets/AppIcon.appiconset/` has at least the 1024×1024 marketing icon for App Store Connect.
-- [ ] **Singletons are concurrency-safe** under Swift 6 strict concurrency. UIKit-touching singletons need `@MainActor` + `nonisolated` overrides for any protocol callback the framework delivers from a non-isolated context (MetricKit, WCSession, NSObject KVO, AVAudio completion handlers). macCatalyst builds catch this first — if Catalyst builds clean, iOS will too.
+- [ ] **Singletons are concurrency-safe** under Swift 6 strict concurrency. UIKit-touching singletons need `@MainActor` + `nonisolated` overrides for any protocol callback the framework delivers from a non-isolated context (MetricKit, WCSession, NSObject KVO, AVAudio completion handlers). Compile the actual affected target; a successful Catalyst build does not prove iOS compilation or runtime behavior.
 
 ---
 
@@ -319,7 +324,7 @@ final class StatsHostingController: UIHostingController<StatsView> {
 
 #### UIKit fallback patterns (when SwiftUI isn't enough yet)
 
-For mixed-framework projects, stay in SwiftUI for new screens. Reach for UIKit only when:
+For mixed-framework projects, inspect the affected screen's construction and ownership before choosing a framework. Continue the existing storyboard/XIB, programmatic UIKit, SwiftUI, or hybrid path when appropriate. Read [storyboards and hybrid UI](references/storyboards-and-hybrid.md) before editing nib/scene wiring or a framework boundary. UIKit is appropriate when:
 - You need behavior SwiftUI doesn't expose (custom keyboard accessory, fine-grained scroll control, TextKit 1 hit-testing).
 - You're maintaining an existing UIKit codebase where a full rewrite would be risky.
 

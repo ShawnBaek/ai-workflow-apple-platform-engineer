@@ -91,11 +91,14 @@ verification.
 
 ## PR evidence
 
-`gh pr create` does not provide a documented arbitrary local-attachment flag.
-Use a policy-approved committed image with a full-commit permalink, GitHub's
-browser attachment flow, or an Actions artifact with digest and retention/expiry
-stated. Verify the final PR preview/link for the intended viewer. Do not use an
-undocumented upload endpoint or present an expiring artifact as permanent proof.
+Inspect the installed `gh pr create --help`: when it exposes `--attach`, use
+that supported image/video upload path with the prepared body file. Some uploads
+can fail after the PR is created; inspect the returned URL and read back the PR
+before retrying. For clients without attachment support, use a policy-approved
+committed image with a full-commit permalink, GitHub's browser attachment flow,
+or an Actions artifact with digest and retention/expiry stated. Verify the final
+PR preview/link for the intended viewer. Do not use an undocumented upload
+endpoint or present an expiring artifact as permanent proof.
 
 ## App Store upload
 
@@ -118,3 +121,12 @@ References:
 - [App Store Connect screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/screenshot-specifications)
 - [Recording UI automation for testing](https://developer.apple.com/documentation/xcuiautomation/recording-ui-automation-for-testing)
 - [GitHub file attachments](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files)
+
+## Reference comparison
+
+When Figma or an approved Preview is the guideline, follow
+[aligned visual evidence](references/aligned-comparison.md). Keep clean and
+annotated pairs with horizontal and vertical reference guides, raw signed point
+deltas, and unchanged source captures. Use the installed Swift verification
+package for custom composition. A side-by-side render does not claim automated
+pixel parity, accessibility correctness, or animation performance.
