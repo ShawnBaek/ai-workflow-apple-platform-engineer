@@ -1,17 +1,26 @@
 # Human feedback and bounded self-improvement
 
-Treat feedback received during a run as a first-class graph event, not ephemeral
-chat text. Record its actor, timestamp, scope, target node/attempt/decision,
-concise redacted summary, disposition, and the plan, patch, review, or evidence
-IDs it invalidates. Preserve the superseded record; do not rewrite history.
+Keep actionable feedback in the existing task note or selected run ledger with
+its source, scope, concise redacted summary and disposition. Identify affected
+decisions and evidence. Add graph invalidation edges only when the run already
+uses a graph; a correction does not require introducing one. Preserve relevant
+superseded evidence instead of rewriting the earlier outcome.
+
+When a user reports incorrect or broken collection behavior, use
+[`skill-maintenance`](../../skill-maintenance/SKILL.md) to prepare a minimal
+reproduction, search existing upstream reports and file an authorized GitHub
+issue. A first failure can be reported without first approving a universal
+policy change. An assigned issue then follows investigation, a focused fix,
+verification and PR review. Keep the original app task's status separate.
 
 ## Apply feedback during the current run
 
 An explicit current-user correction is authoritative within its authorized
-scope. Pause affected ready/acting nodes, release a writer lease before changing
-owners, and re-evaluate acceptance criteria and the ready set. If source or test
-inputs change, create a new attempt linked by `feedback_on`, `attempt_of`, and
-`supersedes`; recompute patch identity and invalidate stale review/evidence.
+scope. Re-evaluate affected acceptance criteria and work; release a writer lease
+before changing owners. In a graph run, pause affected nodes and link the new
+attempt through `feedback_on`, `attempt_of` and `supersedes`. When source or test
+inputs change, recompute the applicable patch identity and invalidate stale
+review/evidence. Use the ordinary task record for a simple correction.
 
 Feedback does not silently grant a new account, repository, destructive action,
 external write, merge, or submission permission. Ask when its requested effect
@@ -28,7 +37,7 @@ it. Each candidate records:
 - the narrow rule, route, fixture, or validator change proposed;
 - expected benefit and possible regression/overfitting risk;
 - one focused before/after probe;
-- target: private project overlay or public iOS-experts repository;
+- target: private project overlay or the public Apple Platform Engineer collection;
 - proposal hash, approval, applied version/PR, and rollback reference.
 
 When repository policy allows it, route an approved candidate to
