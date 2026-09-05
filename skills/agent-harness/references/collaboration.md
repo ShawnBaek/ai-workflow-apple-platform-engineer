@@ -57,27 +57,9 @@ routing, test rubric, and PR completion predicate.
 
 ## Cost-aware model routing
 
-An explicit user-selected model or repository policy wins. Otherwise classify
-each graph node before dispatch and resolve a currently available model at run
-time:
-
-| Class | Use when | Current family examples, not permanent aliases |
-|---|---|---|
-| `simple` | deterministic lookup, formatting, small fixtures, bounded mechanical edits | Codex Luna; Claude `haiku` |
-| `standard` | routine feature work, scoped bug fixes, tests, and ordinary review | Codex Terra; Claude `sonnet` |
-| `deep` | planning, architecture, ambiguity, cross-cutting/high-risk changes, complex diagnosis, or final high-risk review | Codex Sol; Claude `opus` |
-
-Keep planning, authority decisions, ambiguity resolution, and final synthesis on
-the lead's capable model. Delegate only when the subtask is independently
-bounded and the expected saving exceeds coordination/context cost. Record the
-provider, resolved model/alias, effort, class, reason, and task boundary.
-
-Escalate one class only when evidence shows a capability, context, tool-use, or
-verification gap. A retry without changed input is not escalation evidence.
-Changing model never transfers writer ownership, changes approval, or expands
-tools. Do not run duplicate expensive reviews merely to compare providers.
-Refresh current provider documentation before relying on family names, prices,
-defaults, or availability.
+Use the single [model and usage policy](cost-and-usage.md). Choose capability by
+behavioral risk, bind the effective model/effort, and preserve writer and resource
+ownership. A lead or ordinary reviewer does not automatically need deep capability.
 
 ## At-desk and unattended permissions
 

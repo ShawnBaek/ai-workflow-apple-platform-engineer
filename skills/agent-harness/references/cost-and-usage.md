@@ -1,14 +1,59 @@
 # Cost-aware routing and completion usage
 
-Use the model the user explicitly selects when it is available. Otherwise choose
-only from models available in the current runtime, based on task risk: use an
-efficient model for mechanical, bounded work; a balanced model for ordinary
-implementation; and a deep model for planning, architecture, ambiguous or
-high-risk work, and final review. Current examples—not permanent mappings—are
-Codex Luna (efficient), Terra (balanced), Sol (flagship/deep), and Claude
-Haiku, Sonnet, Opus. Escalate only for recorded evidence (risk, uncertainty,
-failure, or review finding). Escalation changes neither the approved writer nor
-the authority boundary.
+## Select capability for the actual work
+
+Preserve an explicit user-selected model within its stated scope. Otherwise
+resolve available model IDs and supported effort settings at dispatch time:
+
+| Work | Initial class / effort | Execution |
+| --- | --- | --- |
+| Narrow lookup, formatting, bounded mechanical edits, fixture preparation | simple / low | Direct tools for tiny work; a lightweight worker for a useful independent batch |
+| Ordinary SwiftUI/UIKit implementation, scoped bug fix, focused test, normal review | standard / medium | One writer and, where required, one independent reviewer |
+| Actor reentrancy, data-loss risk, ambiguous crash, cross-layer performance diagnosis | deep / high | Stronger reasoning for this bounded risk; supporting work stays economical |
+| Unresolved unusually difficult reasoning | strongest suitable available capability | Escalate with the specific gap and supporting evidence |
+
+Lead, planner, and reviewer are responsibilities, not reasons to use the highest
+model. Risk follows behavior, not diff size. Loading a skill cannot change a
+model. Bind model **and** effort using the client's supported dispatch or agent
+configuration; inspect the effective resolved values. A full-history fork can
+inherit an expensive parent and may disallow overrides: use a supported bounded
+context handoff when available, otherwise report the actual fallback.
+
+Current family examples are Codex Luna / Terra / Sol and Claude Haiku / Sonnet /
+Opus. They are not permanent aliases or a pricing guarantee. Recheck the current
+runtime catalog; do not write unsupported global configuration keys. Changing a
+model never transfers writer ownership, approval, tools, or account authority.
+
+Start with one agent. Delegate only an independently bounded task while the lead
+can make different useful progress. One or two workers is a reasonable initial
+cap within the host limit, not a quota. Avoid nested delegation and a new agent
+per skill, file, or review lens. Give the exact revision, scope, relevant sources,
+allowed actions, deliverable, and stopping condition. Return findings/artifact
+pointers; keep full logs outside model context. An implementation worker writes
+only under the established writer transfer or into an explicitly isolated
+scratch checkout whose changes the writer reviews and integrates.
+
+Agent concurrency is separate from Xcode workers, test clones, booted devices,
+and local-model RAM. Admit heavy work through host resource budgets. A cheaper
+cloud model does not reduce Simulator memory or build storage. Queue work under
+pressure and reuse compatible evidence rather than repeating builds.
+
+Escalate for a supported finding or reasoning gap, then return routine work to
+its usual class. Access errors, missing SDKs, and identical retries need their
+actual cause fixed. Record provider, resolved model, effort, class, reason,
+boundary, outcome, and exposed usage privately. Judge routing by accepted
+outcomes, latency, and rework as well as tokens. Do not put this operational
+record into every PR description.
+
+For routing comparisons, use the same representative tasks and acceptance
+criteria. Report verified outcomes, failed attempts, retries and human rework.
+Compare quality, latency and total exposed cost including failures per verified
+outcome; the ratio is undefined with no successes. Record changed model/effort,
+prompt, tools and cache conditions. Keep unknown usage unknown and avoid changing
+defaults from one run. This adapts
+[Uber's outcome-based benchmarking](https://www.uber.com/us/en/blog/efficient-software-factory/).
+
+## Completion usage
 
 At task completion, emit `templates/completion-report.json` validated against
 `contracts/schemas/completion-report.schema.json`. Include PR links, checks,
