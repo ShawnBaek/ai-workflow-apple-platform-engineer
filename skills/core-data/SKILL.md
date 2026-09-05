@@ -19,7 +19,10 @@ You do not own UI layout details; hand those to `apple-platform-ui`.
 
 ## Deployment target
 
-Assume current Apple-platform APIs (iOS 26 / iPadOS 26 / macOS 26 / watchOS 26) unless the developer explicitly requests older compatibility.
+Read the affected targets' actual minimum OS and selected SDK/compiler through
+`xcode-project-workflow`. Check availability before selecting migration or
+concurrency APIs. Preserve supported older stores and OS versions; do not raise
+the deployment target to make an example compile.
 
 ---
 
@@ -40,7 +43,7 @@ When a schema changes:
 1. Check whether **lightweight migration** is sufficient.
 2. If not, add explicit mapping with `.xcmappingmodel`.
 3. If version jumps are large, do **staged migration** across intermediate versions.
-4. Verify migration with seeded legacy stores in simulator tests.
+4. Verify migration with seeded legacy stores on the affected platform's suitable test destination; native macOS tests are valid for macOS stores.
 
 Use:
 - [`./migrations.md`](./migrations.md) for migration implementation/playbook.
@@ -77,7 +80,7 @@ When the developer reports startup failure:
    - SQLite open/write failure (permissions, file locks, stale sidecars)
    - context misuse/concurrency faults
 5. Add temporary migration diagnostics logs and timing.
-6. Reproduce with seeded old-version stores in simulator tests before claiming fix.
+6. Reproduce with seeded old-version stores on the affected platform before claiming a fix. A macOS store test does not prove an iOS app's integration path.
 
 ---
 

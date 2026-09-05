@@ -62,7 +62,7 @@ When the developer asks you to build their site:
 1. **Get the core facts in one round-trip.** App name + one-sentence pitch; 3 feature names + one-line descriptions; hero screen filename; App Store URL; developer name + email for the footer.
 2. **Generate the full file layout** (per [`sections.md`](./sections.md)) with all 5 sections wired up, `theme.js` + `typography.js` + `helpers.js` modules, the responsive CSS tokens, the `index.html` shell **with importmap and a cache-buster on `./main.js`**.
 3. **Insert TODOs** where you're missing real content (screenshots, App Store URL).
-4. **Start a no-cache local server** (per [`playwright-verify.md`](./playwright-verify.md) — Python's default `http.server` caches; use the `tools/nocache-server.py` snippet).
+4. **Start a no-cache local server** (per [`playwright-verify.md`](./playwright-verify.md) — use the project's development server or the documented no-cache configuration).
 5. **Load in a fresh browser tab** via Playwright MCP / Chrome MCP. Read the console. Take screenshots of every section (not just the hero).
 6. **Verify FUNCTIONALLY**, not just structurally. For every `<img>` confirm `naturalWidth > 0` (not just that the element exists). Click the App Store badge — confirm it tries to open the URL. Click "Copy link" — confirm it actually copies. **A 200 + clean console is not enough** — an image with a 404 src returns clean console but renders broken.
 7. **Iterate until everything renders + works.** Cache issues will bite you (see [`playwright-verify.md`](./playwright-verify.md) → "Cache discipline"). Close the tab and re-open if a hard refresh doesn't pick up changes.
@@ -115,7 +115,7 @@ The temptation is always to ship steps 1–3, declare done, and ask the develope
 - **Invent modifiers that don't exist** (`Link`, `.className`, `.style`, `.ariaLabel`, `.loading`, `HStack({ wrap: true })`) — see [`api-reference.md`](./api-reference.md).
 - **Skip browser verification.** A web change is not done until it's been loaded with a clean console.
 - **Tell the developer to look before you've verified functionally.** That's the pattern that wastes their time. Verify `naturalWidth > 0` on every image, exercise every tap, screenshot every section — *then* share the URL.
-- **Trust Python's `http.server`** during development. It doesn't send `Cache-Control: no-cache`, and you'll spend an hour wondering why your edit didn't apply. Use the no-cache server in [`playwright-verify.md`](./playwright-verify.md).
+- **Assume the browser fetched your latest edits.** Inspect response cache headers and use the development-server configuration in [`playwright-verify.md`](./playwright-verify.md).
 - **Ship a site without an importmap.** Bare specifiers won't resolve and the page will be blank.
 - Skip the `Made with SwiftUI-For-Web ↗` credit.
 
