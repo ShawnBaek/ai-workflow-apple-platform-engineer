@@ -1,6 +1,6 @@
 # Get started
 
-Apple Platform Engineer is a skill collection, not an app framework. Use an individual skill for a focused task and `native-app-lead` when the work spans several areas. The collection name changed; existing skill names, repository URLs, and machine contract IDs remain compatible.
+Apple Platform Engineer is a skill collection, not an app framework. Use an individual skill for a focused task and `apple-platform-engineer` when the work spans several areas. The lead skill was renamed from `native-app-lead`; other skill names and machine contract IDs are unchanged.
 
 ## Install
 
@@ -10,17 +10,35 @@ Use the [Skills CLI](https://skills.sh/docs/cli) to select the skills and client
 npx skills add ShawnBaek/ai-workflow-apple-platform-engineer
 ```
 
-After installing for your client, open your app repository and type `$native-app-lead <your task>` in [Codex](https://learn.chatgpt.com/docs/build-skills), or `/native-app-lead <your task>` in [Claude Code](https://code.claude.com/docs/en/skills). See the [README usage examples and workflow](../README.md#after-installation) and the [skill catalog](skills.md) for focused tasks.
+After installing for your client, open your app repository and type `$apple-platform-engineer <your task>` in [Codex](https://learn.chatgpt.com/docs/build-skills), or `/apple-platform-engineer <your task>` in [Claude Code](https://code.claude.com/docs/en/skills). See the [README usage examples and workflow](../README.md#after-installation) and the [skill catalog](skills.md) for focused tasks.
 
 Keep one active copy of each skill in the client's configured search roots. Avoid loading duplicate Codex and Claude installations into the same client. Check the [catalog](skills.md) for individual entry points; install the harness and its selected dependencies only for coordinated work.
 
 Native builds, Previews, Simulator, and the Swift verifier need macOS and Xcode. Check the project's actual deployment targets and selected Xcode before choosing APIs. Follow the [official Xcode connection preflight](../skills/xcodebuild/references/xcode-mcp-provider-preflight.md); optional MCP integrations are selected per task, not mandatory installations. Apple documentation and Xcode's available tools come first.
 
+## Rename an existing lead installation
+
+Install `apple-platform-engineer` through your original installation method,
+preserving its supporting skills and local changes. Updating only the old
+`native-app-lead` name does not install the renamed entry. Validate the new
+folder and matching frontmatter. Stop admitting old-name work and let its active
+tasks finish or be safely cancelled before backing up and deactivating the old
+entry in the client's search roots. Retain it only for that transition, then keep
+one discoverable lead; an old-name link
+to new-name frontmatter is not a compatibility alias.
+
+Use `$apple-platform-engineer <task>` in Codex or
+`/apple-platform-engineer <task>` in Claude Code. Refresh skill discovery
+before using the new name. For an explicitly configured private harness,
+review any old `task_skills` references and collect fresh health evidence
+before its next authorized run. Do not rewrite historical ledgers or
+silently renew existing approvals.
+
 ## Start a task
 
 Describe the outcome, relevant constraints, and proof you want. For example:
 
-> Use native-app-lead to add a saved-items screen. Keep our storyboard navigation, design the component in a UIKit preview first, and verify empty and populated states on the minimum supported iOS version.
+> Use apple-platform-engineer to add a saved-items screen. Keep our storyboard navigation, design the component in a UIKit preview first, and verify empty and populated states on the minimum supported iOS version.
 
 The agent resolves material ambiguity, checks existing decisions, and chooses the smallest plan. A simple fix needs neither a new ADR nor a graph. Larger work gets coherent reviewable slices; use explicit dependencies when slices actually depend on one another.
 

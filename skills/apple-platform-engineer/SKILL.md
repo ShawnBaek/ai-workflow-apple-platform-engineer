@@ -1,5 +1,5 @@
 ---
-name: native-app-lead
+name: apple-platform-engineer
 description: >-
   Coordinates Apple-platform work from a clarified product outcome through design, implementation, focused verification, and reviewable delivery. Use for an app idea, cross-cutting feature, roadmap, architecture, or task-to-PR request. Selects only the specialists and orchestration needed by the task.
 ---
@@ -10,8 +10,9 @@ Locate the task, choose the smallest safe path, and hand each concern to its
 owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
 `agent-harness`. Do not reimplement specialist guidance here.
 
-The collection display name is Apple Platform Engineer; the compatible skill
-invocation remains `native-app-lead`. A skill is guidance, not a permanent agent.
+The entry skill is `apple-platform-engineer`: use `$apple-platform-engineer` in
+Codex or `/apple-platform-engineer` in Claude Code. It replaces `native-app-lead`.
+A skill is guidance, not a permanent agent.
 
 ## Understand the task first
 

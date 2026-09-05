@@ -6,6 +6,10 @@ a claim that all 34 completed an end-to-end task. The checks below separate
 executed behavior, read-only prerequisites, instruction review and unavailable
 integrations. No test issues, messages, purchases or releases were published.
 
+The lead was named `native-app-lead` when this audit ran. Its current entry point
+is [apple-platform-engineer](../../skills/apple-platform-engineer/SKILL.md); the
+historical row below does not imply that the renamed installation was re-tested.
+
 Environment: Apple silicon, macOS 27 beta, selected Xcode 27 beta, Swift 6.4,
 macOS/iPhoneOS 27 SDKs; GitHub CLI 2.99.0 and ASC CLI 2.2.0. Compiler work was
 serialized with `-j 1`; the global Xcode selection was unchanged. The optional

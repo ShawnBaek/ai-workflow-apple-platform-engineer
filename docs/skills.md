@@ -1,6 +1,6 @@
 # Skills
 
-Load one specialist for a small task. Use `native-app-lead` for a feature spanning several areas; skills are guidance, not a requirement to spawn agents.
+Load one specialist for a small task. Use `apple-platform-engineer` for a feature spanning several areas; skills are guidance, not a requirement to spawn agents.
 
 | Skill | Helps with |
 | --- | --- |
@@ -15,6 +15,7 @@ Load one specialist for a small task. Use `native-app-lead` for a feature spanni
 | [apple-development-health](../skills/apple-development-health/SKILL.md) | Verify selected development capabilities and exact identities |
 | [apple-foundation-models](../skills/apple-foundation-models/SKILL.md) | Foundation Models readiness, sessions, guided generation, and agentic tools |
 | [apple-model-integration](../skills/apple-model-integration/SKILL.md) | Integrate custom model artifacts with supported Apple runtimes |
+| [apple-platform-engineer](../skills/apple-platform-engineer/SKILL.md) | Task intake, architecture, specialist routing, and delivery |
 | [apple-platform-performance](../skills/apple-platform-performance/SKILL.md) | Measure and improve responsiveness, memory, model, and audio work |
 | [apple-platform-testing](../skills/apple-platform-testing/SKILL.md) | Minimum sufficient Swift, XCTest, and UI verification |
 | [apple-platform-ui](../skills/apple-platform-ui/SKILL.md) | SwiftUI, UIKit, storyboard, and hybrid UI implementation |
@@ -28,7 +29,6 @@ Load one specialist for a small task. Use `native-app-lead` for a feature spanni
 | [git-workflow](../skills/git-workflow/SKILL.md) | Branches, worktrees, Git recovery, and reviewable PR delivery |
 | [github-projects](../skills/github-projects/SKILL.md) | Issues and optional Projects tracking |
 | [icon-composer](../skills/icon-composer/SKILL.md) | Apple Icon Composer and app icon assets |
-| [native-app-lead](../skills/native-app-lead/SKILL.md) | Task intake, architecture, specialist routing, and delivery |
 | [onepassword-environments](../skills/onepassword-environments/SKILL.md) | Official 1Password development environment connection, secrets and local mounts |
 | [screenshot](../skills/screenshot/SKILL.md) | Deterministic screenshots, recordings, and aligned comparisons |
 | [skill-maintenance](../skills/skill-maintenance/SKILL.md) | Report, investigate and fix collection skill or workflow problems |

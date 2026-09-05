@@ -13,7 +13,7 @@ The agent searches existing issues, prepares a sanitized report and publishes wh
 | Concern | Owner |
 |---|---|
 | Trigger, routing or task instructions | The affected `skills/<name>/SKILL.md` and its relevant reference |
-| Collection entry points | `skills/native-app-lead/SKILL.md` and `docs/skills.md` |
+| Collection entry points | `skills/apple-platform-engineer/SKILL.md` and `docs/skills.md` |
 | Reporting and repair | `skills/skill-maintenance/SKILL.md` |
 | Enforced workflow, capability or authorization shape | `skills/agent-harness/contracts/`, its schemas, templates and fixtures |
 | Runtime behavior and regression tests | `skills/agent-harness/verification/Sources/` and `Tests/` |
@@ -36,7 +36,7 @@ Keep the entry point focused on decisions an agent could otherwise get wrong. Ad
 
 Use official Apple/Swift documentation and applicable WWDC sources for API claims. Check the selected SDK and the app's minimum OS separately; do not raise deployment targets to simplify an example. Preserve existing storyboard/code/hybrid approaches and project architecture unless the task justifies changing them.
 
-Add the skill to [the catalog](docs/skills.md) and the relevant lead route. Add it to health requirements only if that selected workflow truly needs it; installing one skill must not require every optional integration. Keep existing skill IDs stable. Update `VERSION` and the README version together only when preparing the agreed release.
+Add the skill to [the catalog](docs/skills.md) and the relevant lead route. Add it to health requirements only if that selected workflow truly needs it; installing one skill must not require every optional integration. Keep existing skill IDs stable by default. An explicitly approved rename must update callers/templates and document installed-state migration; never repurpose the retired ID. Update `VERSION` and the README version together only when preparing the agreed release.
 
 ## Fix or improve a workflow
 

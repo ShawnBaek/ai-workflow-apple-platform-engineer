@@ -15,7 +15,9 @@ and issue triage through a verified, reviewable fix.
 - Keep personal Apple/GitHub account IDs, team IDs, and private guards in a
   project overlay. Canonical coordinates for this public upstream repository
   may appear in installation commands and source references.
-- Preserve existing skill IDs and persisted schema/repository identities. Add a new skill only when it has a distinct
+- Preserve existing skill IDs by default and keep persisted schema/repository
+  identities stable. An explicitly approved skill rename must migrate callers,
+  templates and installations; never repurpose a retired ID. Add a new skill only when it has a distinct
   trigger and owner; otherwise update or route through the existing skill.
 - Prefer current Apple-authored Xcode skills, Documentation Search, and Xcode
   tools. Do not copy Apple skill bodies into this repository.
