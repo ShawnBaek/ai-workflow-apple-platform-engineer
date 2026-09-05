@@ -18,4 +18,17 @@ Custom verification and adapters should also use Swift. Existing external CLIs r
 
 A preview or local fix can select `local_verified`. Its authorization has no GitHub/Apple scope; a commit grant is optional and still requires the applicable explicit user approval. `local_requirements` binds whether review and Spec Kit are required by the accepted plan. Omitted review is recorded in acceptance evidence, not silently treated as passed. `runtime_ui` adds the actual build and destination checks when relevant.
 
+The local template has `github_tracking.issues: false` and `project: null`;
+PR and TestFlight profiles still require issue tracking. Existing private
+local harnesses that used `issues: true` to bypass the old schema contradiction
+need an explicit correction during migration. Rebuild and review the changed
+runtime/source identity before rebinding; do not rewrite active approvals.
+
+For an external app, run `apple-verify --app-root <absolute-app-repository>
+health ...`. This selects the app independently of the installed contracts.
+`--repository-root` retains its skills-repository meaning. Resolve the built
+executable with SwiftPM `--show-bin-path` using the same build flags, and check
+its `--help` and `runtime-identity`; an old `.build/release` alias is not proof
+that the updated runtime is running.
+
 The PR profile retains its publication, independent review, current evidence, and external readback requirements. A simple task plan remains a list; these internal ownership and completion conditions do not require the user to maintain a task graph.

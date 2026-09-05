@@ -216,7 +216,7 @@
       "type": "object",
       "required": ["issues", "project"],
       "properties": {
-        "issues": {"const": true},
+        "issues": {"type": "boolean"},
         "project": {"type": ["object", "null"]}
       },
       "additionalProperties": false
@@ -467,6 +467,9 @@
     {
       "else": {
         "properties": {
+          "github_tracking": {
+            "properties": {"issues": {"const": true}}
+          },
           "local_requirements": {
             "const": null
           }
@@ -481,6 +484,12 @@
       },
       "then": {
         "properties": {
+          "github_tracking": {
+            "properties": {
+              "issues": {"const": false},
+              "project": {"const": null}
+            }
+          },
           "health_profile": {
             "enum": [
               "local_verified",

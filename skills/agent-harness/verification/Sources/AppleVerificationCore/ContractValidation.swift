@@ -114,6 +114,10 @@ public enum ContractValidation {
         "skills/agent-harness/contracts/schemas/harness.schema.json"
       ),
       (
+        "skills/agent-harness/templates/harness-local.json",
+        "skills/agent-harness/contracts/schemas/harness.schema.json"
+      ),
+      (
         "skills/apple-development-health/templates/health-observations.json",
         "skills/apple-development-health/contracts/health-report.schema.json"
       ),
@@ -176,6 +180,11 @@ public enum ContractValidation {
     }
     if let template = object(root, "skills/agent-harness/templates/harness.json", errors: &errors),
       let workflow = object(root, "skills/agent-harness/contracts/workflow.json", errors: &errors)
+    {
+      errors += validateHarnessTemplate(template, workflow: workflow)
+    }
+    if let template = object(root, "skills/agent-harness/templates/harness-local.json", errors: &errors),
+      let workflow = object(root, "skills/agent-harness/contracts/local-workflow.json", errors: &errors)
     {
       errors += validateHarnessTemplate(template, workflow: workflow)
     }

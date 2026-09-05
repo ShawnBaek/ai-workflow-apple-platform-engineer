@@ -21,4 +21,6 @@ jobs:
       - name: Run Swift regression tests
         run: swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
       - name: Validate repository contracts and documentation
-        run: skills/agent-harness/verification/.build/debug/apple-verify repository --root .
+        run: |
+          APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1 --show-bin-path)"
+          "$APE_BIN_DIR/apple-verify" repository --root .

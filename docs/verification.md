@@ -13,12 +13,16 @@ Requirements: macOS 13 or later, Swift 6, and full Xcode for the test libraries.
 
 ```sh
 swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
-skills/agent-harness/verification/.build/debug/apple-verify repository --root .
+APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1 --show-bin-path)"
+"$APE_BIN_DIR/apple-verify" repository --root .
 ```
 
 The first command builds the executable and runs targeted regression tests. The second validates skill metadata, documentation links, JSON/schema pairs, workflow dependencies and lease intervals, terminal conditions, capability policies, fixtures, and the example ledger. It does not contact GitHub, boot Simulator, evaluate model quality, or measure an app's performance.
 
 CI runs the same checks on macOS. Keep worker counts bounded; do not add a second build just to repeat a passing result. Generated `.build` content is ignored and excluded from installed-source identity.
+
+The [local-runtime regression record](evidence/local-runtime-repair.json) covers
+the actual CLI, both harness templates and their before/after results.
 
 For adding skills or changing workflow decisions, use the focused behavioral
 evaluation guidance in [CONTRIBUTING.md](../CONTRIBUTING.md). Metadata validation
@@ -28,6 +32,8 @@ sanitized fixtures and mocked publication, not test issues in the live repositor
 ## Command map
 
 Set `APE` to the absolute built executable as shown in [setup](getting-started.md). A copied executable requires `--repository-root <skills-repository>` before its subcommand.
+For app health, use `"$APE" --app-root <absolute-app-repository> health ...`;
+the installed skill root still supplies trusted schemas and source identity.
 
 | Command | Purpose and reference |
 |---|---|

@@ -11,12 +11,20 @@ must not depend on the caller's working directory:
 ```sh
 AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
 # Build once as described in the Swift verification setup.
-APE="$AGENT_HARNESS_ROOT/verification/.build/release/apple-verify"
+APE_BIN_DIR="$(swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
+APE="$APE_BIN_DIR/apple-verify"
+APP_ROOT='<absolute-authoritative-app-repository>'
+HARNESS_TEMPLATE="$AGENT_HARNESS_ROOT/templates/harness-local.json"
+# For PR delivery, select "$AGENT_HARNESS_ROOT/templates/harness.json" instead.
 ```
 
 Build the [Swift verifier](swift-verification.md) first. For a local outcome use
 `templates/harness-local.json`; set its review/Spec Kit flags from the accepted
 plan and keep GitHub/Apple scope null. Use the PR template only for PR delivery.
+Use the same toolchain/configuration/build flags when resolving the executable
+path. Confirm `--help` includes `--app-root`; source edits alone do not update
+an older binary. For app health commands, use `"$APE" --app-root "$APP_ROOT"`
+so the checked repository stays separate from the installed contracts.
 
 ## First setup or schema migration
 
@@ -41,8 +49,8 @@ plan and keep GitHub/Apple scope null. Use the PR template only for PR delivery.
      --schema '<installed-agent-harness>/contracts/schemas/private-policy-overlay.schema.json' \
      --output '<absolute-private-policy-path>'
    "$APE" materialize \
-     --template '<absolute-installed-skill>/templates/harness.json' \
-     --schema '<absolute-installed-skill>/contracts/schemas/harness.schema.json' \
+     --template "$HARNESS_TEMPLATE" \
+     --schema "$AGENT_HARNESS_ROOT/contracts/schemas/harness.schema.json" \
      --output '<absolute-private-harness-path>'
    ```
 
@@ -64,7 +72,7 @@ plan and keep GitHub/Apple scope null. Use the PR template only for PR delivery.
 6. Derive the client-visible skill bundle before trusting the placeholder hash:
 
    ```sh
-   "$APE" health \
+   "$APE" --app-root "$APP_ROOT" health \
      --harness '<absolute-private-harness-path>' --observe-agent-skills
    ```
 

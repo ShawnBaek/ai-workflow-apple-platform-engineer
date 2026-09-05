@@ -16,6 +16,29 @@ final class ContractValidationTests: XCTestCase {
       repositoryRoot: root, harnessRoot: root.appendingPathComponent("skills/agent-harness"))
   }
 
+  func testLocalAndPRHarnessTemplatesPreserveTrackingModes() throws {
+    let schema = try object("skills/agent-harness/contracts/schemas/harness.schema.json")
+    for (name, local) in [("harness-local.json", true), ("harness.json", false)] {
+      var template = try object("skills/agent-harness/templates/\(name)")
+      XCTAssertEqual(JSONSchemaValidator.errors(instance: template, schema: schema), [], name)
+      var tracking = try XCTUnwrap(template["github_tracking"] as? [String: Any])
+      XCTAssertEqual(tracking["issues"] as? Bool, !local)
+      if local { XCTAssertTrue(tracking["project"] is NSNull) }
+
+      tracking["issues"] = local
+      template["github_tracking"] = tracking
+      XCTAssertFalse(JSONSchemaValidator.errors(instance: template, schema: schema).isEmpty, name)
+      if local {
+        tracking["issues"] = false
+        tracking["project"] = ["number": 1]
+        template["github_tracking"] = tracking
+        // Satisfy the existing project-component rule to isolate the local scope restriction.
+        template["health_components"] = (template["health_components"] as! [String]) + ["github_project"]
+        XCTAssertFalse(JSONSchemaValidator.errors(instance: template, schema: schema).isEmpty)
+      }
+    }
+  }
+
   func testShippedWorkflowsAndLeaseIntervalsAreExact() throws {
     let resources = Set(ContractValidation.resources)
     let main = try object("skills/agent-harness/contracts/workflow.json")
