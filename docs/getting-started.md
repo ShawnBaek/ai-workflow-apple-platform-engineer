@@ -16,6 +16,10 @@ Keep one active copy of each skill in the client's configured search roots. Avoi
 
 Native builds, Previews, Simulator, and the Swift verifier need macOS and Xcode. Check the project's actual deployment targets and selected Xcode before choosing APIs. Follow the [official Xcode connection preflight](../skills/xcodebuild/references/xcode-mcp-provider-preflight.md); optional MCP integrations are selected per task, not mandatory installations. Apple documentation and Xcode's available tools come first.
 
+## Update
+
+For an existing installation, use the [update guide](updating.md). Updating a repository checkout does not necessarily update the copy loaded by your agent.
+
 ## Rename an existing lead installation
 
 Install `apple-platform-engineer` through your original installation method,
@@ -41,6 +45,8 @@ Describe the outcome, relevant constraints, and proof you want. For example:
 > Use apple-platform-engineer to add a saved-items screen. Keep our storyboard navigation, design the component in a UIKit preview first, and verify empty and populated states on the minimum supported iOS version.
 
 The agent resolves material ambiguity, checks existing decisions, and chooses the smallest plan. A simple fix needs neither a new ADR nor a graph. Larger work gets coherent reviewable slices; use explicit dependencies when slices actually depend on one another.
+
+For several tasks, provide their acceptance criteria and ask the lead to inspect dependencies and the available worker slots. Five tasks do not imply five simultaneous agents: queue excess work, integrate same-repository edits through one writer, and bound builds and Simulator use. See [batch delegation](../skills/agent-harness/references/collaboration.md#delegate-a-batch-of-tasks).
 
 ## Run the verifier
 

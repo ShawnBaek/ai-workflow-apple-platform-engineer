@@ -14,6 +14,8 @@ The entry skill is `apple-platform-engineer`: use `$apple-platform-engineer` in
 Codex or `/apple-platform-engineer` in Claude Code. It replaces `native-app-lead`.
 A skill is guidance, not a permanent agent.
 
+For several assigned tasks, follow [batch delegation](../agent-harness/references/collaboration.md#delegate-a-batch-of-tasks): establish dependencies, effective worker slots and [workspace boundaries](../agent-harness/references/task-workspaces.md), launch only ready independent work, queue the rest, and retain one repository writer. Report actual worker IDs and completed evidence rather than treating a task list as running agents.
+
 ## Understand the task first
 
 Use the shared [task intake](../agent-harness/references/task-intake.md): establish
