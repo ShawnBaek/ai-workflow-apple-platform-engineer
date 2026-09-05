@@ -1,5 +1,7 @@
 # Knowledge graph and local RAG
 
+Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+
 ## Scoped trust ladders
 
 Authority remains outside retrieval: current user/system instruction and
@@ -99,17 +101,17 @@ embeddings are enabled, use the same model for indexing and querying and record
 its model digest. An answer without resolvable source IDs must abstain or route
 to live documentation; it must not guess.
 
-The bundled `scripts/rag_index.py` provides a dependency-free local SQLite FTS
+The bundled `apple-verify knowledge` provides a dependency-free local SQLite FTS
 baseline. It indexes only approved local text/source suffixes, rejects common
 secret/signing/build paths, records commit and hashes, and emits retrieved text
 with `trusted_as_instructions: false`:
 
 ```sh
-python3 scripts/rag_index.py index --database <local-untracked-db> \
+"$APE" knowledge index --database <local-untracked-db> \
   --root <approved-project-root> --source-id <source-id> \
   --authority repository_source --commit <commit-sha> \
   --include 'docs/**/*.md' --include 'Sources/**/*.swift'
-python3 scripts/rag_index.py query --database <local-untracked-db> \
+"$APE" knowledge query --database <local-untracked-db> \
   --commit <current-commit-sha> --query '<question>'
 ```
 

@@ -24,8 +24,10 @@
   "resource_coordinator": {
     "state_path": "/absolute/private/runtime/resource-coordinator.json",
     "coordinator_instance_id": "00000000-0000-4000-8000-000000000000",
-    "script_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-    "contract_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    "executable_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract": "apple-verification-core.resources.v1",
+    "runtime_kind": "swift",
+    "source_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
   },
   "apple_observation_probe": null,
   "spec_kit": {
@@ -38,5 +40,14 @@
   },
   "max_active_repository_writers": 1,
   "max_implementation_attempts": 3,
-  "max_review_cycles": 2
+  "max_review_cycles": 2,
+  "authorization_runtime": {
+    "executable_path": "/absolute/path/to/apple-verify",
+    "executable_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract": "apple-verification-core.authorization.v1",
+    "runtime_kind": "swift",
+    "source_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "local_requirements": null,
+  "runtime_probe_scope": null
 }

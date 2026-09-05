@@ -36,11 +36,13 @@
   "resource_coordinator_observation": {
     "state_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
     "coordinator_instance_id": "<configured-coordinator-instance-id>",
-    "state_schema_version": 1,
+    "state_schema_version": 2,
     "migration_bootstrap_confirmed": true,
-    "script_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-    "contract_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-    "active_lease_count": 0
+    "active_lease_count": 0,
+    "executable_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract": "apple-verification-core.resources.v1",
+    "runtime_kind": "swift",
+    "source_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
   },
   "selected_components": [],
   "required_check_ids": [

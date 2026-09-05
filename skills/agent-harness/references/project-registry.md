@@ -1,5 +1,7 @@
 # Optional private project registry
 
+Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+
 Use the registry only when a developer wants one local inventory to locate
 several Apple projects or several checkouts of one project. It is a read-only candidate adapter before the harness is frozen. It is never authority, a task
 database, or a resource lock.
@@ -50,7 +52,7 @@ write; registry contents are never proof that a checkout is still safe.
    its remote:
 
    ```sh
-   python3 scripts/resolve_project.py --fingerprint-path '<absolute-repository-path>'
+   "$APE" resolve-project --fingerprint-path '<absolute-repository-path>'
    ```
 
 4. Store the returned `remote_fingerprint`, absolute checkout path, checkout
@@ -58,7 +60,7 @@ write; registry contents are never proof that a checkout is still safe.
 5. Resolve a candidate and inspect the structured result before creating a run:
 
    ```sh
-   python3 scripts/resolve_project.py \
+   "$APE" resolve-project \
      --registry '<private-registry-path>' \
      --developer-id '<developer-id>' \
      --host-id '<host-id>' \

@@ -1,5 +1,7 @@
 # Private delivery-channel setup
 
+Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+
 Choose one channel first. Telegram is the simplest unattended option; iMessage
 Shortcuts suits a personal Mac; WhatsApp is appropriate only when its opt-in,
 template, webhook, and possible-cost requirements are accepted.
@@ -20,7 +22,7 @@ template, webhook, and possible-cost requirements are accepted.
 5. Render a local preview before any send:
 
    ```sh
-   python3 skills/delivery-report/scripts/render_report.py \
+   "$APE" delivery-report \
      <private-completion-report.json> --channel telegram
    ```
 
@@ -101,7 +103,7 @@ template and cannot replace one outside the service window.
 1. Save the exact preview bytes in a private file and calculate their digest:
 
    ```sh
-   python3 skills/delivery-report/scripts/render_report.py \
+   "$APE" delivery-report \
      <private-completion-report.json> --channel telegram > <private-report.txt>
    shasum -a 256 <private-report.txt>
    ```
@@ -119,7 +121,7 @@ template and cannot replace one outside the service window.
    consume it:
 
    ```sh
-   python3 skills/delivery-report/scripts/render_report.py \
+   "$APE" delivery-report \
      <private-completion-report.json> --channel telegram \
      --authorization <private-authorization.json> \
      --channel-id owner --destination-ref private.telegram.owner

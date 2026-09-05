@@ -35,6 +35,8 @@ visible. A fluent answer is not evidence.
    otherwise stop with `coordination_required`. A run cannot opt out by calling
    itself sequential.
 
+Select `local_verified` for a local result, `pr_ready` for authorized PR delivery, or an explicitly authorized TestFlight continuation. A local outcome does not require a PR. Read [Swift runtime setup](references/swift-verification.md) before using private state.
+
 Read [private coordinator setup](references/coordinator-setup.md) before first
 use, schema migration, installed-skill update, or cross-client collaboration.
 The populated harness is private host configuration, never a tracked app file.
@@ -59,8 +61,7 @@ If the project already uses GitHub Spec Kit, read
 lifecycle, but it is not treated as a general DAG scheduler or test proof.
 
 For one explicit approval followed by bounded delivery, read
-[run-authorization.md](references/run-authorization.md). The default target is
-`pr_ready`; TestFlight upload or exact internal-group distribution is a separate
+[run-authorization.md](references/run-authorization.md). The selected target is `local_verified` or `pr_ready`; TestFlight upload or exact internal-group distribution is a separate
 pre-authorized continuation. Merge and App Review remain excluded.
 
 ## Keep three precedence axes separate
@@ -117,8 +118,10 @@ Each added test must name a unique observable contract and prevented failure.
 Route test mechanics to `apple-platform-testing` and dependency resolution to
 `swift-package-manager`.
 
+Custom verification and adapters use Swift. Build and bind the exact `apple-verify` executable and source bundle; never auto-rehash an approved envelope.
+
 For an external write, reserve its exact single-use grant, then run
-`scripts/verify_reservation.py` immediately before the tool call. Do not insert
+`apple-verify verify-reservation` immediately before the tool call. Do not insert
 research, rendering, or another action between revalidation and dispatch. A
 dispatch claim must start invocation within 60 seconds and never beyond its
 authority or lease; long-running completion uses its approved async bound and
@@ -134,10 +137,11 @@ enforce it. If hostile same-user bypass is in scope, stop until a separate
 signed, credential-holding one-shot broker is available. Never claim local
 exactly-once delivery for a remote API.
 
-A run is `passed` only when required graph nodes passed, reverified evidence
+A run is complete only when required graph nodes passed, reverified evidence
 matches the current patch identity, no resource lease remains active, every acceptance
-criterion is linked to an observation, the intended remote commit backs the PR,
-and required evidence is viewable. Retry caps are stop conditions, never
+criterion is linked to an observation, and required evidence is viewable. A
+`local_verified` run records its accepted local evidence. A `pr_ready` run also
+requires the intended remote commit to back the PR. Retry caps are stop conditions, never
 success. Read [delivery.md](references/delivery.md) before commit, push, PR, or
 evidence publication. Finish with one completion report whose usage values come
 only from provider/client records; unavailable totals remain explicit unknowns.

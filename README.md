@@ -52,7 +52,10 @@ The health check verifies exact read-only tools and corpus provenance. The
 
 ### 4. Enable the task-to-PR harness in an app repository
 
-Installing a skill does not copy the root policy into an app. Keep `AGENTS.md` in the app, but materialize JSON templates with `scripts/materialize_private_template.py` so copied files retain a valid absolute installed-schema URI:
+Installing a skill does not copy the root policy into an app. Keep `AGENTS.md`
+in the app, build the bundled verifier with a full Xcode Swift 6 toolchain,
+and use `apple-verify materialize` so private copies retain a valid absolute
+installed-schema URI. See [Swift runtime setup](docs/getting-started.md).
 
 ```text
 templates/AGENTS.md              -> <app-repository>/AGENTS.md
@@ -61,16 +64,20 @@ templates/private-policy-overlay.json -> <private-untracked-host-path>/policy.js
 templates/run-authorization.json -> <private-untracked-run-root>/authorization.json
 ```
 
-Keep the populated harness, contract-bundle hash, account/team IDs, run ledger, receipts, and live authorizations private and untracked. Configure one shared
-Codex/Claude coordinator with the [step-by-step setup](skills/agent-harness/references/coordinator-setup.md), then start
-health checks from `apple-development-health/templates/health-observations.json`.
+Keep the populated harness, runtime hashes, account/team IDs, run ledger,
+receipts, and live authorizations private and untracked. Configure one shared
+Codex/Claude coordinator with the [step-by-step setup](skills/agent-harness/references/coordinator-setup.md),
+then start health checks from
+`skills/apple-development-health/templates/health-observations.json`.
 
 ### 5. Optional: add a private project registry
 
 If one developer or host has several project checkouts, materialize
-`agent-harness/templates/project-registry.local.example.json` to any private or ignored location and resolve it with
-`agent-harness/scripts/resolve_project.py`. Explicit paths and the exact opened Xcode container remain authoritative;
-multiple valid candidates require human selection. See the [registry contract](skills/agent-harness/references/project-registry.md).
+`skills/agent-harness/templates/project-registry.local.example.json` to a
+private or ignored location and resolve it with `apple-verify resolve-project`.
+Explicit paths and the exact opened Xcode container remain authoritative;
+multiple valid candidates require human selection. See the
+[registry contract](skills/agent-harness/references/project-registry.md).
 
 ## How to Use
 
@@ -179,15 +186,17 @@ Run the smallest test set that proves changed behavior; add regression tests onl
 
 ## Repository Validation
 
-This documentation/contract repository does not require an Xcode build:
+Build and test the Swift package, then run the repository validator:
 
 ```sh
-python3 scripts/validate_repository.py
-python3 -m unittest discover -s tests -p 'test_*.py'
-npx skills add ./ --list
+swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+skills/agent-harness/verification/.build/debug/apple-verify repository --root .
+npx skills-ref validate ./skills
+npx skills-ref list
 ```
 
-Also validate each changed skill. Documentation-only work does not justify a four-platform build matrix.
+See [Swift verification](docs/verification.md) for the runtime boundary and
+command map.
 
 ## References
 

@@ -13,7 +13,7 @@ a separate mutation with its own authority and receipt evidence.
 ## Preview-first flow
 
 1. Validate the completion report and its provider/client usage attribution.
-2. Render the selected preview format to stdout with `scripts/render_report.py`.
+2. Render the selected preview format to stdout with `apple-verify delivery-report`.
    Every `--channel` mode is preview-only and never invokes a transport.
 3. Confirm that every screenshot is reviewed and every recording is
    `trimmed_video`, never a raw recording.

@@ -176,6 +176,10 @@
         "testflight_distributed": {
           "terminal": "testflight_distributed",
           "continuation": "testflight-workflow.json"
+        },
+        "local_verified": {
+          "continuation": "local-workflow.json",
+          "terminal": "local_verified"
         }
       }
     },
@@ -361,7 +365,7 @@
         "max_ttl_seconds": 3600,
         "trusted_binding": {
           "source": "private_harness",
-          "required_fields": ["state_path", "coordinator_instance_id", "script_sha256", "contract_bundle_sha256"],
+          "required_fields": ["runtime_kind", "runtime_contract", "state_path", "coordinator_instance_id", "executable_sha256", "source_bundle_sha256"],
           "same_binding_for_all_clients": true
         },
         "receipt_binding_fields": [

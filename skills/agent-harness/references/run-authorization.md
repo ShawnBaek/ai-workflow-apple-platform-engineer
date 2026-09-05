@@ -43,7 +43,7 @@ artifact exists. This adapter cannot weaken that rule; satisfy it and link the
 new record. Never label a stricter two-gate repository as one-shot by silently
 skipping its second gate.
 
-Before each action, run `scripts/check_authorization.py` with the current exact
+Before each action, run `apple-verify authorize` with the current exact
 request. It recomputes live repository and Spec Kit state, verifies the private
 checkpoint remains append-only, matches the operation descriptor/digest and
 canonical lease, checks a fresh guarded ASC observation for Apple actions, and

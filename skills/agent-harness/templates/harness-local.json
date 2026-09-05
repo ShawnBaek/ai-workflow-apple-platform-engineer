@@ -1,0 +1,64 @@
+{
+  "$schema" : "../contracts/schemas/harness.schema.json",
+  "agent_skills" : {
+    "expected_bundle_sha256" : "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "installations" : {
+      "claude" : null,
+      "codex" : {
+        "collection_root" : "/absolute/path/to/installed/skills"
+      }
+    },
+    "task_skills" : [
+      "native-app-lead"
+    ]
+  },
+  "apple_observation_probe" : null,
+  "authoritative_root" : "<absolute-path>",
+  "authorization_runtime" : {
+    "executable_path" : "/absolute/path/to/apple-verify",
+    "executable_sha256" : "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract" : "apple-verification-core.authorization.v1",
+    "runtime_kind" : "swift",
+    "source_bundle_sha256" : "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "delivery_target" : "local_verified",
+  "github_tracking" : {
+    "issues" : false,
+    "project" : null
+  },
+  "health_components" : [
+
+  ],
+  "health_profile" : "local_verified",
+  "local_requirements" : {
+    "review_required" : false,
+    "spec_kit_required" : false
+  },
+  "max_active_repository_writers" : 1,
+  "max_implementation_attempts" : 3,
+  "max_review_cycles" : 2,
+  "mode" : "codex",
+  "platforms" : [
+    "ios"
+  ],
+  "private_policy_overlay" : "<local-untracked-path>",
+  "resource_coordinator" : {
+    "coordinator_instance_id" : "00000000-0000-4000-8000-000000000000",
+    "executable_sha256" : "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract" : "apple-verification-core.resources.v1",
+    "runtime_kind" : "swift",
+    "source_bundle_sha256" : "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "state_path" : "/absolute/private/runtime/resource-coordinator.json"
+  },
+  "reviewer" : null,
+  "run_authorization" : "<local-untracked-path>",
+  "run_ledger" : "/absolute/private/run/ledger.jsonl",
+  "runtime_probe_scope" : null,
+  "schema_version" : "1.0.0",
+  "selected_writer" : "codex",
+  "spec_kit" : {
+    "enabled" : false,
+    "release" : "v1.0.1"
+  },
+  "xcode_container" : null
+}

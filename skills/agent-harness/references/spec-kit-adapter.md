@@ -1,5 +1,7 @@
 # Optional GitHub Spec Kit adapter
 
+Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+
 Keep the provider-neutral workflow and ledger authoritative. This adapter is
 pinned to Spec Kit `v1.0.1`; a newer CLI is a detected migration candidate, not
 an implicit upgrade. Do not vendor Spec Kit or install/update `specify` during a
@@ -27,7 +29,7 @@ artifacts to the authorization snapshot:
 The pointer identifies that artifact set, but its raw JSON bytes are not an
 accepted product artifact. Missing required selected-feature files fail closed.
 Before implementation, review, resume, and every external write, run
-`scripts/spec_kit_snapshot.py` and bind `feature_directory`, `feature_id`,
+`apple-verify spec-snapshot` and bind `feature_directory`, `feature_id`,
 `artifact_hashes`, and `snapshot_sha256` to the harness ledger and run
 authorization.
 
@@ -42,7 +44,7 @@ entries; rewrite or truncation blocks resume and external writes.
 From the installed `agent-harness` folder, a deterministic snapshot looks like:
 
 ```sh
-python3 scripts/spec_kit_snapshot.py snapshot \
+"$APE" spec-snapshot snapshot \
   --root '<authoritative-repository>' \
   --release v1.0.1 \
   --feature-directory 'specs/<approved-feature>' \

@@ -15,17 +15,18 @@ concurrency:
 
 jobs:
   compare:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    runs-on: macos-15
+    timeout-minutes: 15
     steps:
       - name: Check out the reviewed consumer contracts
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
+      - name: Build the Swift verifier
+        run: swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1
       - name: Compare the public reference-only upstream
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
-          python3 skills/icon-composer/scripts/watch_companion_upstream.py
+          skills/agent-harness/verification/.build/debug/apple-verify companion
           --manifest skills/icon-composer/contracts/companion-upstream.json
           sync-issue
           --target-repository "$GITHUB_REPOSITORY"
