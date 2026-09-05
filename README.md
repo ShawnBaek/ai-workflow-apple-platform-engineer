@@ -42,7 +42,7 @@ Open your app repository in the client you installed for. Start with **`native-a
 | [Codex](https://learn.chatgpt.com/docs/build-skills) | `$native-app-lead Add a saved-items screen and verify the empty state.` |
 | [Claude Code](https://code.claude.com/docs/en/skills) | `/native-app-lead Add a saved-items screen and verify the empty state.` |
 
-Include your minimum OS, existing UI approach, and the proof you want. For a focused task, use the same client prefix with one of these skills:
+Include your minimum OS, existing UI approach, reference apps and preferred style when known, and the proof you want. For open design choices, the agent clarifies missing preferences and researches useful references. For a focused task, use the same client prefix with one of these skills:
 
 | Task | Skill name |
 | --- | --- |
@@ -59,10 +59,10 @@ See [all 34 skills](docs/skills.md). Each skill supplies guidance; it does not r
 Describe what you want to build
               |
               v
-Clarify outcome + constraints
+Clarify outcome + references + style
               |
               v
-Plan tasks + select skills
+Research as needed + plan tasks
               |
               v
 Design in Preview / Figma (UI work)

@@ -123,13 +123,13 @@ function FeatureRow({ title, body: bodyText, screenshot, alt, side }) {
 
 ---
 
-## Section 3 — Parallax product showcase
+## Section 3 — Product showcase
 
-**Goal:** one cinematic moment that earns scroll attention. Apple does this with the MacBook on the product page; you do it with your app's hero artifact (a key screen, a feature graphic, or a 3D model).
+**Goal:** explain the product with a key screen or feature graphic. Use a static visual by default. Add motion or an interactive model only when it serves the agreed design direction and fits the performance budget.
 
-Two implementation paths:
+If motion is selected, these are optional implementation paths. For a static page, render the image without animation classes or an interactive model.
 
-### Path A — Scroll-driven sticky section (recommended)
+### Path A — Scroll-driven showcase (optional)
 
 CSS scroll-driven animations (Chrome/Edge/Safari supported) declaratively:
 
@@ -163,7 +163,7 @@ function ParallaxShowcase() {
 
 Replace the Image with a spinnable iPhone/iPad/Mac/Watch model. See `3d-devices.md` for the full guide.
 
-**One parallax moment per page. Never two.** Visitors who scroll past two parallax sections leave.
+Use at most one parallax section when selected. A no-motion direction uses a static showcase.
 
 ---
 
@@ -297,7 +297,7 @@ my-app-website/
 
 ## Typography rules
 
-- **One typeface.** System font stack — feels native, zero CLS, zero web font HTTP requests
+- **Typography follows the approved brand.** Default to a system stack when none is specified. For an approved web font, verify its license, loading cost, fallback metrics and layout stability.
 - **Measure ≤ 38em** for body — never let paragraphs run the full viewport width
 - **One weight per role**: display = 700, headings = 600, body = 400
 - **Letter-spacing decreases as size increases:** display `-0.022em`, h1 `-0.020em`, h2 `-0.018em`, body 0
@@ -305,8 +305,10 @@ my-app-website/
 
 ## Animation rules
 
-- **Reveal on scroll** for each top-level section (`.reveal` class, fade up 30px, 600ms ease-out)
-- **Parallax** in Section 3 only — never two
-- **Hover** on the App Store badge: subtle scale (1 → 1.03) over 200ms
+Motion is optional. A no-motion preference keeps content visible and static without reveal, parallax or scaling effects. When motion is selected:
+
+- **Reveal on scroll** may support a section (`.reveal` class); keep content visible if animation is unavailable
+- **Parallax** belongs in Section 3 only, at most once
+- **Hover** may use a subtle badge scale (1 → 1.03) over 200ms
 - **No looping decorative animations** — they distract and burn mobile battery
-- **`prefers-reduced-motion: reduce`** disables `.reveal` and `.parallax-figure` entirely
+- **`prefers-reduced-motion: reduce`** removes reveals, parallax and scaling while keeping all content visible and usable

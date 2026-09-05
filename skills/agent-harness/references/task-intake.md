@@ -13,6 +13,7 @@ Resolve the following only to the depth the task needs:
 - **Scope and deliverable:** what this task should produce, such as a preview, working feature, local fix, or authorized PR; avoid silently adding adjacent features.
 - **Constraints:** relevant platform/minimum OS, existing SwiftUI/UIKit/storyboard approach, data/privacy boundary, compatibility, and meaningful performance requirements.
 - **Design source and acceptance:** the applicable Figma/reference or code-first preview, and observable evidence that will show the result meets the request.
+- **Competitors and preferred style:** for new UX/UI, an app website, an icon concept or a substantial visual/interaction redesign, ask about references and style when they would change the result. Follow [design discovery](design-discovery.md) for targeted research and a shared direction; reuse supplied answers and skip this for precise fixes or an already approved design.
 
 Use known project facts and previous user answers. Existing code explains current behavior; it does not by itself establish what the user wants changed.
 

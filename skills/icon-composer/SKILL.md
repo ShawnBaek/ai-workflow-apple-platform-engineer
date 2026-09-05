@@ -36,14 +36,17 @@ semantic cue, and a restrained product palette.
 
 ## Prepare the artwork
 
+For a new icon concept, use [design discovery](../agent-harness/references/design-discovery.md) to clarify reference apps/icons, likes/dislikes and preferred style, then research what should inform the mark. Reuse the product brief and approved brand direction. An export, size correction or packaging task does not need a fresh style interview.
+
 - Start from the latest template in
   [Apple Design Resources](https://developer.apple.com/design/resources/).
 - Prefer SVG layers for scalable flat artwork. Use PNG when the artwork relies
   on SVG features Icon Composer doesn't support.
 - Convert typography to outlines before SVG export because SVG doesn't preserve
   fonts reliably.
-- Use SF Pro for typography-first icons. Resolve the installed Apple font on the
-  current Mac instead of hardcoding another developer's font path.
+- For typography-first icons, preserve an approved brand typeface or use SF Pro
+  as a starting point. Verify the font is available and permitted for the asset;
+  resolve its local path instead of hardcoding another developer's font path.
 - Use SF Symbols or an Apple platform rendering API for system symbols. Do not
   redraw an SF Symbol by hand.
 - Keep colors, text, and graphics on separate, meaningfully named layers.
