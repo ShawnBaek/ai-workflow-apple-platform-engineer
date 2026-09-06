@@ -16,6 +16,12 @@ authorized external delivery continuation. It answers a narrow question:
 **does the selected delivery profile have the connections and evidence it needs
 right now?** It does not repair the machine.
 
+For first installation, missing dependency configuration or upgrade resumption,
+use [apple-platform-setup](../apple-platform-setup/SKILL.md). It prepares and carries
+authorized changes through existing specialists, then returns here for readiness.
+Do not turn a health probe into an installer or require working harness health
+before first-run dependency inventory can begin.
+
 This skill requires `agent-harness` from the same installed Apple Platform
 Engineer collection. Health binds its exact Swift executable, source bundle,
 coordinator contract and state. A missing or mismatched runtime blocks; do not

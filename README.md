@@ -37,6 +37,8 @@ Already installed? Follow the [update guide](docs/updating.md) for Skills CLI, l
 
 ## After installation
 
+For a new environment, run **`$apple-platform-setup Set up this app for local development and PR delivery`** in Codex (use `/apple-platform-setup` in Claude Code). The agent checks the needed tools, guides missing setup, and verifies connections. Optional integrations stay optional.
+
 Open your app repository in the client you installed for. Start with **`apple-platform-engineer`**, the main skill's name, and describe what you want to build.
 
 | Client | Type in the chat |
@@ -53,7 +55,7 @@ Include your minimum OS, existing UI approach, reference apps and preferred styl
 | Build, run or debug on Simulator | `xcodebuild` |
 | Choose and run focused tests | `apple-platform-testing` |
 
-See [all 34 skills](docs/skills.md). Each skill supplies guidance; it does not require a separate agent.
+See [all 35 skills](docs/skills.md). Each skill supplies guidance; it does not require a separate agent.
 
 ## How the workflow works
 

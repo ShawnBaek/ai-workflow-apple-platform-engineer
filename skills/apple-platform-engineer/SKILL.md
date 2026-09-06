@@ -51,7 +51,8 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 | Need | Skill |
 |---|---|
 | graph/loop/RAG, Codex/Claude collaboration, task-to-PR | `agent-harness` |
-| CLI/skill/MCP/account/Spec Kit readiness | `apple-development-health` |
+| first-run dependency setup, configuration or update | `apple-platform-setup` |
+| current CLI/skill/MCP/account/Spec Kit readiness | `apple-development-health` |
 | 1Password development ENV connection, secrets, or local mounts | `onepassword-environments` |
 | project root/container, host Xcode, XcodeGen | `xcode-project-workflow` |
 | branches, explicit worktrees, index locks, PR Git state | `git-workflow` |

@@ -17,6 +17,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [apple-model-integration](../skills/apple-model-integration/SKILL.md) | Integrate custom model artifacts with supported Apple runtimes |
 | [apple-platform-engineer](../skills/apple-platform-engineer/SKILL.md) | Task intake, architecture, specialist routing, and delivery |
 | [apple-platform-performance](../skills/apple-platform-performance/SKILL.md) | Measure and improve responsiveness, memory, model, and audio work |
+| [apple-platform-setup](../skills/apple-platform-setup/SKILL.md) | Guided dependency setup, authorized configuration, verification and update resumption |
 | [apple-platform-testing](../skills/apple-platform-testing/SKILL.md) | Minimum sufficient Swift, XCTest, and UI verification |
 | [apple-platform-ui](../skills/apple-platform-ui/SKILL.md) | SwiftUI, UIKit, storyboard, and hybrid UI implementation |
 | [cicd](../skills/cicd/SKILL.md) | Apple build/test CI and gated release workflows |
