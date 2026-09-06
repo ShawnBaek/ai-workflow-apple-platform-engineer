@@ -131,7 +131,10 @@ Each added test must name a unique observable contract and prevented failure.
 Route test mechanics to `apple-platform-testing` and dependency resolution to
 `swift-package-manager`.
 
-Write new custom verification helpers and tests in Swift. Reuse the shared
+Write new custom verification helpers and tests in Swift, including temporary
+scripts for JSON, Git-state checks and media processing. Use supported `git`,
+`gh`, `asc` and Apple CLI commands directly where sufficient; do not wrap them
+in ad hoc Python. Reuse the shared
 package under `verification/`; do not add another runtime or a new XCUITest
 harness for small changes. The [migration reference](references/swift-verification.md)
 identifies remaining legacy paths and the limits of each verification phase.
