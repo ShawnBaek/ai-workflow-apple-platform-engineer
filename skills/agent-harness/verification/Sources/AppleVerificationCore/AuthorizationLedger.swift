@@ -225,7 +225,7 @@ extension Authorization {
           runID: currentRun, leaseID: payload["lease_id"], owner: payload["owner"],
           resource: payload["resource"], resourceKey: payload["resource_key"],
           descriptor: payload["resource_descriptor"], receipt: payload["coordinator_receipt"],
-          now: recorded)
+          now: payload["action"] as? String == "release" ? nil : recorded)
         switch payload["action"] as? String {
         case "acquire":
           let protects = payload["protects"] as? [String] ?? []
@@ -342,6 +342,12 @@ extension Authorization {
           current["coordinator_receipt"] = payload["coordinator_receipt"]
           active[leaseKey] = current
         case "release":
+          guard let releasedAt = try? HarnessRuntime.parseTimestamp(text(payload["released_at"])),
+            let recorded, releasedAt <= recorded
+          else {
+            errors.append("lease release record precedes coordinator transition")
+            continue
+          }
           guard let current = active[leaseKey], same(current["lease_id"], payload["lease_id"]),
             same(current["owner"], payload["owner"]),
             same(current["resource_descriptor"], payload["resource_descriptor"]),
@@ -971,7 +977,8 @@ extension Authorization {
       let confirmation = release["recovery_confirmation"] as? [String: Any],
       ResourceCoordinator.validateRecoveryConfirmation(
         receipt: receipt, evidence: evidence, confirmation: confirmation,
-        statePath: coordinatorState)
+        statePath: coordinatorState),
+      same(confirmation["recovered_at"], release["released_at"])
     else { return ["expired lease release requires valid coordinator recovery evidence"] }
     return []
   }

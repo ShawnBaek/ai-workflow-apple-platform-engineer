@@ -156,6 +156,7 @@ extension ResourceCoordinator {
       let flagsByCommand: [String: Set<String>] = [
         "bootstrap": ["--legacy-leases-quiesced"],
         "configure-host-policy": ["--operator-confirmed"],
+        "recover": ["--preview"],
       ]
       guard let allowedValues = valuesByCommand[command] else {
         throw ResourceCoordinatorError("invalid_request")
@@ -227,27 +228,43 @@ extension ResourceCoordinator {
             ownerActor: actor, ttlSeconds: ttl, admission: admission, runAuthority: authority)
         } else {
           guard let receiptRaw = option("--receipt"), let data = receiptRaw.data(using: .utf8),
-            let supplied = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-            supplied["owner_actor"] as? String == writer
+            let supplied = try JSONSerialization.jsonObject(with: data) as? [String: Any]
           else { throw ResourceCoordinatorError("writer_mismatch") }
+          let recoveryEvidence: [String: Any]?
+          if command == "recover", let raw = option("--evidence"), let data = raw.data(using: .utf8)
+          {
+            recoveryEvidence = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+          } else {
+            recoveryEvidence = nil
+          }
+          let quiescent = recoveryEvidence?["mode"] as? String == "quiescent_release"
+          guard quiescent || supplied["owner_actor"] as? String == writer else {
+            throw ResourceCoordinatorError("writer_mismatch")
+          }
           if command == "verify" {
             result = try verify(statePath: statePath, receipt: supplied)
           } else {
-            let (_, authority) = try loadExistingRunAuthority(
-              authorizationPath: URL(fileURLWithPath: harness["run_authorization"] as! String),
-              harnessPath: harnessURL, harness: harness, runID: supplied["owner_run_id"] as! String,
-              context: context)
+            var authority: [String: Any]?
+            if !quiescent {
+              guard let runID = supplied["owner_run_id"] as? String else {
+                throw ResourceCoordinatorError("invalid_receipt")
+              }
+              (_, authority) = try loadExistingRunAuthority(
+                authorizationPath: URL(fileURLWithPath: harness["run_authorization"] as! String),
+                harnessPath: harnessURL, harness: harness, runID: runID, context: context)
+            }
             if command == "heartbeat", let ttl = option("--ttl-seconds").flatMap(Int.init) {
               result = try heartbeat(
                 statePath: statePath, receipt: supplied, ttlSeconds: ttl, runAuthority: authority)
             } else if command == "release" {
               result = try release(statePath: statePath, receipt: supplied, runAuthority: authority)
             } else if command == "recover" {
-              guard let evidenceRaw = option("--evidence"),
-                let evidenceData = evidenceRaw.data(using: .utf8),
-                let evidence = try JSONSerialization.jsonObject(with: evidenceData)
-                  as? [String: Any], let observerHarnessRaw = option("--observer-harness"),
-                let observerAuthorizationRaw = option("--observer-authorization"),
+              guard let evidence = recoveryEvidence,
+                let observerHarnessRaw = option("--observer-harness")
+                  ?? (quiescent ? harnessRaw : nil),
+                let observerAuthorizationRaw = option("--observer-authorization")
+                  ?? (quiescent && option("--observer-harness") == nil
+                    ? harness["run_authorization"] as? String : nil),
                 let observer = evidence["observer"] as? [String: Any],
                 let observerRunID = observer["observer_run_id"] as? String
               else { throw ResourceCoordinatorError("invalid_request") }
@@ -264,6 +281,11 @@ extension ResourceCoordinator {
                 context: context)
               var replacementRequest: [String: Any]?
               var replacementAuthority: [String: Any]?
+              if evidence["mode"] as? String == "quiescent_release",
+                parsedOptions.keys.contains(where: { $0.hasPrefix("--replacement") })
+              {
+                throw ResourceCoordinatorError("quiescent_release_cannot_replace")
+              }
               if let replacementRaw = option("--replacement") {
                 guard let replacementData = replacementRaw.data(using: .utf8),
                   let parsed = try JSONSerialization.jsonObject(with: replacementData)
@@ -295,7 +317,8 @@ extension ResourceCoordinator {
               result = try recover(
                 statePath: statePath, receipt: supplied, evidence: evidence,
                 runAuthority: authority, observerAuthority: observerAuthority,
-                replacement: replacementRequest, replacementAuthority: replacementAuthority)
+                replacement: replacementRequest, replacementAuthority: replacementAuthority,
+                preview: parsedFlags.contains("--preview"))
             } else {
               throw ResourceCoordinatorError("invalid_request")
             }

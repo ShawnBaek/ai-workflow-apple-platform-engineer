@@ -648,6 +648,12 @@ public enum ResourceCoordinator {
         }
         try validateRecoveryEvidence(
           evidence, receipt: receipt(lease, instance: instance), now: recovered)
+        if evidence["mode"] as? String == "quiescent_release",
+          !(lease["replacement_lease_id"] is NSNull)
+        {
+          throw ResourceCoordinatorError(
+            "invalid_state", "quiescent release cannot replace ownership")
+        }
         highest = max(highest, recoveryFence)
         replacements.append(
           (
@@ -1430,34 +1436,50 @@ public enum ResourceCoordinator {
   private static func validateRecoveryEvidence(
     _ evidence: [String: Any], receipt: [String: Any], now: Date
   ) throws {
-    let expected: Set<String> = [
+    let quiescent = evidence["mode"] as? String == "quiescent_release"
+    var expected: Set<String> = [
       "previous_receipt_id", "previous_fencing_token", "observer", "owner_liveness",
       "owner_tool_children", "dirty_state", "live_resource_revalidation",
     ]
+    if quiescent { expected.insert("mode") }
+    let ownerState = (evidence["owner_liveness"] as? [String: Any])?["state"] as? String
+    let dirtyState = (evidence["dirty_state"] as? [String: Any])?["state"] as? String
     guard Set(evidence.keys) == expected,
       jsonEqual(evidence["previous_receipt_id"], receipt["receipt_id"]),
       jsonEqual(evidence["previous_fencing_token"], receipt["fencing_token"]),
       let observer = evidence["observer"] as? [String: Any],
       Set(observer.keys) == ["observer_run_id", "observer_actor", "method", "observed_at"],
-      observer["method"] as? String == "bounded_read_only_host_probe",
-      observer["observer_run_id"] as? String != receipt["owner_run_id"] as? String
+      observer["method"] as? String == "bounded_read_only_host_probe"
+    else { throw ResourceCoordinatorError("invalid_recovery_evidence") }
+    let selfObserved = observer["observer_run_id"] as? String == receipt["owner_run_id"] as? String
+    guard quiescent ? ownerState == (selfObserved ? "quiescent" : "completed") : !selfObserved,
+      !quiescent
+        || (["quiescent", "completed"].contains(ownerState ?? "")
+          && ["clean", "preserved"].contains(dirtyState ?? ""))
     else { throw ResourceCoordinatorError("invalid_recovery_evidence") }
     _ = try string(observer["observer_run_id"], "observer_run_id")
     _ = try string(observer["observer_actor"], "observer_actor")
     let observerTime = try parse(observer["observed_at"])
-    guard observerTime <= now, now.timeIntervalSince(observerTime) <= 300 else {
+    let expires = try parse(receipt["expires_at"])
+    guard observerTime <= now, now.timeIntervalSince(observerTime) <= 300,
+      !quiescent || observerTime >= expires
+    else {
       throw ResourceCoordinatorError("stale_recovery_evidence")
     }
     let checks: [(String, String, Any)] = [
-      ("owner_liveness", "state", "dead"), ("owner_tool_children", "state", "dead"),
-      ("dirty_state", "state", "clean"), ("live_resource_revalidation", "passed", true),
+      ("owner_liveness", "state", quiescent ? ownerState! : "dead"),
+      ("owner_tool_children", "state", quiescent ? "quiescent" : "dead"),
+      ("dirty_state", "state", quiescent ? dirtyState! : "clean"),
+      ("live_resource_revalidation", "passed", true),
     ]
     for (name, field, expectedValue) in checks {
       guard let item = evidence[name] as? [String: Any], jsonEqual(item[field], expectedValue),
         sha256String(item["digest"]), let raw = item["observed_at"] as? String
       else { throw ResourceCoordinatorError("invalid_recovery_evidence") }
       let observed = try parse(raw)
-      guard observed <= now, now.timeIntervalSince(observed) <= 300 else {
+      guard observed <= now, now.timeIntervalSince(observed) <= 300,
+        !quiescent || observed >= expires
+      else {
         throw ResourceCoordinatorError("stale_recovery_evidence")
       }
       let expectedKeys: Set<String> =
@@ -1490,6 +1512,9 @@ public enum ResourceCoordinator {
       confirmation["evidence_sha256"] as? String == (try? recoveryEvidenceSHA256(evidence))
     else { return false }
     let replacement = confirmation["replacement_receipt"]
+    if evidence["mode"] as? String == "quiescent_release", !(replacement is NSNull) {
+      return false
+    }
     let validReplacement =
       replacement is NSNull || replacement == nil
       || ((replacement as? [String: Any])?["coordinator_instance_id"] as? String == supplied[
@@ -1527,12 +1552,20 @@ public enum ResourceCoordinator {
     statePath: URL, receipt supplied: [String: Any], evidence: [String: Any],
     runAuthority: [String: Any]?, observerAuthority: [String: Any]?,
     replacement: [String: Any]? = nil, replacementAuthority: [String: Any]? = nil,
-    now: Date = Date()
+    preview: Bool = false, now: Date = Date()
   ) throws -> [String: Any] {
     try locked(statePath) { path, state in
       try requireBootstrap(state)
       var lease = try leaseForReceipt(state: state, supplied: supplied)
-      _ = try requireReceiptAuthority(state: state, lease: lease, authority: runAuthority)
+      let quiescent = evidence["mode"] as? String == "quiescent_release"
+      // Cleanup can use the archived owner's immutable authority already in state.
+      // It grants no new work; the caller still needs a bound owner/observer below.
+      let ownerAuthority =
+        runAuthority
+        ?? (quiescent
+          ? (state["run_authorities"] as? [String: Any])?[lease["owner_run_id"] as! String]
+            as? [String: Any] : nil)
+      _ = try requireReceiptAuthority(state: state, lease: lease, authority: ownerAuthority)
       guard try parse(lease["expires_at"]) <= now else {
         throw ResourceCoordinatorError("recovery_not_yet_allowed")
       }
@@ -1540,20 +1573,25 @@ public enum ResourceCoordinator {
         throw ResourceCoordinatorError("dependent_lease_active")
       }
       try validateRecoveryEvidence(evidence, receipt: supplied, now: now)
+      guard !quiescent || (replacement == nil && replacementAuthority == nil) else {
+        throw ResourceCoordinatorError("quiescent_release_cannot_replace")
+      }
       let observer = evidence["observer"] as! [String: Any]
       let observerRunID = observer["observer_run_id"] as! String
       let observerActor = observer["observer_actor"] as! String
       do {
-        _ = try authorityWindow(observerAuthority, ownerActor: observerActor, activeAt: now)
+        let selfCleanup = quiescent && observerRunID == lease["owner_run_id"] as? String
+        _ = try authorityWindow(
+          observerAuthority, ownerActor: observerActor, activeAt: selfCleanup ? nil : now)
       } catch { throw ResourceCoordinatorError("untrusted_authority") }
-      guard observerRunID != lease["owner_run_id"] as? String,
-        let storedObserver = (state["run_authorities"] as? [String: Any])?[observerRunID],
+      guard let storedObserver = (state["run_authorities"] as? [String: Any])?[observerRunID],
         jsonEqual(storedObserver, observerAuthority)
       else {
         throw ResourceCoordinatorError(
           storedObserverMissing(state, observerRunID)
             ? "unregistered_run_authority" : "untrusted_authority")
       }
+      let capacityBefore = capacityUsage(state)
       lease["status"] = "recovered"
       lease["recovered_at"] = stamp(now)
       lease["recovery_evidence"] = try safeJSON(evidence)
@@ -1599,6 +1637,14 @@ public enum ResourceCoordinator {
       leases = state["leases"] as! [String: Any]
       leases[lease["lease_id"] as! String] = lease
       state["leases"] = leases
+      if preview {
+        return [
+          "preview": true, "mode": quiescent ? "quiescent_release" : "dead_owner_recovery",
+          "receipt": supplied, "evidence_sha256": lease["recovery_evidence_sha256"]!,
+          "capacity_before": capacityBefore, "capacity_after": capacityUsage(state),
+          "replacement_requested": replacement != nil,
+        ]
+      }
       try HarnessRuntime.atomicWriteJSON(state, to: path)
       return [
         "coordinator_instance_id": state["coordinator_instance_id"]!,

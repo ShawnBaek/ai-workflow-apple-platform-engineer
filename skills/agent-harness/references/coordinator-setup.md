@@ -247,7 +247,7 @@ fresh parallel coordinator to keep working.
 
 ## Recovery boundary
 
-Expiry is not release. Recovery requires a different run's bounded read-only
+Expiry is not release. The default `recover` mode requires a different run's bounded read-only
 observer to show that the owner and every outstanding child/tool process are
 dead, the protected state is clean, and the live resource is revalidated. The
 observer supplies its own trusted harness and active authorization through
@@ -257,3 +257,80 @@ evidence shape, freshness, authority, digest binding, and fencing. Preserve the
 underlying diagnostics and never infer death from lease expiry alone. Simulator
 recovery follows bounded non-reboot diagnosis; reboot is neither an automatic
 step nor a lease-recovery substitute.
+
+### Expired work that has finished
+
+Use `recover` with evidence `mode: "quiescent_release"` to finalize an exact
+expired lease after its protected work has finished. This only records terminal
+cleanup and frees that lease's capacity. It cannot replace ownership, renew the
+receipt, authorize more work, kill processes, or alter the protected files.
+
+- A live, quiescent owner uses its existing harness and exact registered
+  authority, even when that authority's time window has ended. This exception
+  applies only to terminal cleanup; verification and heartbeat remain blocked.
+- For a completed/archived owner, an independently authorized observer uses
+  **its own** harness as `--harness`. Its authorization must be active. The old
+  receipt binds the immutable owner record already in the coordinator; the
+  archived owner's harness is not needed. Cross-client observers are supported.
+- Inspect owned tool/child results and current protected state. A task being
+  archived, an expired TTL, or an empty ledger alone does not prove quiescence.
+  Do not stop unrelated work or fabricate death evidence. If any protected
+  operation is still running or uncertain, keep the lease and diagnose it.
+- Finalize nested package-resolution leases in reverse order: build tuple,
+  project mutation, source writer. Each call targets one receipt and preserves
+  unrelated leases. GUI/destination leases need their own observations.
+
+Reuse the existing recovery evidence fields with these mode-specific values:
+
+| Field | Required observation |
+|---|---|
+| `mode` | `quiescent_release` |
+| `previous_receipt_id`, `previous_fencing_token` | Exact current stored receipt/fence |
+| `observer` | Exact caller run/actor, `bounded_read_only_host_probe`, observation time |
+| `owner_liveness.state` | `quiescent`, or `completed` with a different observer run |
+| `owner_tool_children.state` | `quiescent`: no outstanding protected tool/child operation |
+| `dirty_state.state` | `clean` or `preserved`: no incomplete protected mutation; legitimate Git changes remain intact |
+| `live_resource_revalidation.passed` | `true` from the relevant current resource check |
+
+Each observation retains its existing SHA-256 digest and timestamp fields.
+Digests bind the private observations to this audit; they do not independently
+prove process state. Observe **after lease expiry**, within five minutes of the
+call, and include the current protected content in the preserved-state digest.
+Record task attribution and tool-result evidence privately; never publish raw
+session files, harnesses, receipts or app paths.
+
+```sh
+"$APE" resources "$COORDINATOR_STATE" recover \
+  --harness "$CALLER_HARNESS" \
+  --receipt "$(cat "$RUN_DIR/expired-receipt.json")" \
+  --evidence "$(cat "$RUN_DIR/quiescent-evidence.json")" --preview
+```
+
+Review the exact receipt, evidence hash, and capacity before/projected after.
+Preview does not change state or return a terminal confirmation. Within the
+already authorized cleanup scope, rerun without `--preview`; the real call
+rechecks under the coordinator lock. Do not ask again merely because capacity
+is busy. A missing or insufficient authorization still needs its normal gate.
+
+Read back `status` and validate the returned recovery confirmation. Record the
+original receipt, actual `recovered_at`, evidence, and confirmation in the
+owner's lease-release ledger record; do not manufacture a successful workflow
+node or use a normal release confirmation after expiry. An observer unable to
+append the owner's ledger retains the exact confirmation privately for that
+run's supported reconciliation. Missing ledger reconciliation is not completion.
+The ledger entry may be appended later than the transition, including after
+expiry for a proven pre-expiry normal release. It must retain the exact persisted
+transition time, and `recorded_at` must not precede that time. Delayed audit
+reconciliation does not authorize work under an expired receipt.
+
+The new runtime reads existing schema-2 states and legacy recovery evidence.
+It keeps the same state layout and terminal confirmation contract; old runtimes
+cannot read a state after this new evidence mode is stored. Follow the runtime
+binding upgrade above, never run mixed coordinator versions, and do not
+downgrade after using the mode. This does not auto-update installed clients or
+add automatic heartbeat/task-lifecycle tracking.
+Self-cleanup is for runs bound to this runtime already. Updating a pre-upgrade
+owner's harness would change its immutable registered authority; this command
+does not rebind that owner. Once the old task is completed, a fresh active
+observer can finalize its expired lease. A still-live pre-upgrade owner remains
+an upgrade/reconciliation boundary, not an automatically repaired installation.
