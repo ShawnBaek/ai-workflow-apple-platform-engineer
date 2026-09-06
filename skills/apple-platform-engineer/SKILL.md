@@ -76,7 +76,8 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 | Apple Ads campaigns, paid keywords, supporting ASO checks, bids, budgets, and reporting | `apple-ads` |
 | StoreKit local/sandbox/TestFlight purchase testing | `storekit-sandbox-testing` |
 | Xcode/Simulator disk pressure | `xcode-storage` |
-| visual/App Store evidence | `screenshot` |
+| visual acceptance and PR media evidence | `screenshot` |
+| App Store screenshots/previews from the target build | `app-store-screenshots` |
 | completion summary or private message delivery | `delivery-report` |
 | TestFlight/App Store/Xcode Cloud | `app-store-connect` |
 | CI/CD | `cicd` |

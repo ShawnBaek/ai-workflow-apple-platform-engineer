@@ -184,7 +184,8 @@ only from provider/client records; unavailable totals remain explicit unknowns.
 | Report, investigate and fix collection problems | `skill-maintenance` |
 | first-run tool/configuration setup or upgrade | `apple-platform-setup` |
 | current MCP/CLI/account readiness | `apple-development-health` |
-| QA screenshots/recordings and App Store assets | `screenshot` |
+| QA screenshots/recordings and raw capture | `screenshot` |
+| App Store screenshot/preview sets and build freshness | `app-store-screenshots` |
 | Apple Ads campaigns, paid keywords, spend, and attribution | `apple-ads` |
 | TestFlight/App Store actions | `app-store-connect` |
 

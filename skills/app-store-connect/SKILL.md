@@ -36,6 +36,7 @@ Do not collapse these into a single “release” permission:
 - distribute to a named TestFlight group;
 - change tester notes or store metadata;
 - upload/replace screenshots;
+- upload/replace app preview videos or change their poster frames;
 - create/change bundle IDs, capabilities, certificates, or profiles;
 - trigger an Xcode Cloud workflow;
 - run submission preflight;
@@ -67,7 +68,9 @@ artifact, group, compliance, signing, or permission drift blocks the run.
 6. Read back the exact changed object and record its stable ID/state. A successful
    request without post-observation is not completion.
 
-For screenshots, route capture/privacy/spec verification through `screenshot`.
+For App Store screenshots and preview videos, route listing preparation and
+current-build verification through `app-store-screenshots`; `screenshot` owns raw
+capture/privacy mechanics. Return here for the exact authorized upload/readback.
 For CI credentials and protected environments, use `cicd`.
 For Apple Ads campaigns, paid keywords, bids, budgets, attribution, or reporting,
 route through `apple-ads`. App Store metadata keywords and paid Apple Ads keywords

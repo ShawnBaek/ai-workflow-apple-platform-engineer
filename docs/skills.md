@@ -7,6 +7,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [agent-harness](../skills/agent-harness/SKILL.md) | Ownership, authorization, resources, knowledge, and evidence contracts |
 | [app-intents](../skills/app-intents/SKILL.md) | Expose meaningful app actions to system and agentic experiences |
 | [app-store-connect](../skills/app-store-connect/SKILL.md) | Guarded signing, TestFlight, App Store Connect, and distribution |
+| [app-store-screenshots](../skills/app-store-screenshots/SKILL.md) | App Store screenshots and previews tied to the intended app version/build |
 | [app-versioning](../skills/app-versioning/SKILL.md) | Preserve the actual app version source of truth |
 | [app-website](../skills/app-website/SKILL.md) | Native app introduction websites |
 | [apple-ads](../skills/apple-ads/SKILL.md) | Apple Ads account, campaign, and reporting operations |

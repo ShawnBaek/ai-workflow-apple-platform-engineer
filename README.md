@@ -55,7 +55,9 @@ Include your minimum OS, existing UI approach, reference apps and preferred styl
 | Build, run or debug on Simulator | `xcodebuild` |
 | Choose and run focused tests | `apple-platform-testing` |
 
-See [all 35 skills](docs/skills.md). Each skill supplies guidance; it does not require a separate agent.
+For listing images and recorded previews, use **`$app-store-screenshots Prepare screenshots and a preview from this release build`** (Claude Code: `/app-store-screenshots`). Captures stay tied to the intended app version/build.
+
+See [all 36 skills](docs/skills.md). Each skill supplies guidance; it does not require a separate agent.
 
 ## How the workflow works
 
