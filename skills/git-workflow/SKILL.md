@@ -7,6 +7,12 @@ description: Safely prepare Apple-project branches, worktrees, Git metadata reco
 
 Use this skill for repository setup, branch work, linked worktrees, Git-index recovery, or a pull request. Project policy and user authorization take precedence.
 
+Use `git` for local repository operations and **GitHub CLI (`gh`) for GitHub**:
+repository/PR discovery, publication, attachments, checks, reviews and readback.
+Use `gh api` when a required field or operation is absent from a dedicated command.
+Check installed help instead of inventing flags or writing a Python/curl client.
+See [PR delivery](references/pr-delivery.md) for the shared attachment commands.
+
 ## Start from the authoritative checkout
 
 - Use the exact repository and Xcode project directory the user identified. Inspect its top level, redacted remote, current branch, working state, and remote default branch before implementation.
@@ -14,6 +20,13 @@ Use this skill for repository setup, branch work, linked worktrees, Git-index re
 - Apply the detailed [branch policy](references/branch-policy.md) before creating or switching a branch.
 - Update safely from the remote default branch only when the checkout is clean and the repository policy permits it. Do not use `--force`, reset, automatic pruning, or a replacement clone to work around a problem.
 - Before the first commit or push, show the repository name, absolute path, branch, and a credential-redacted remote, then obtain the repository-confirmation gate required by project policy.
+
+Resolve publication from this authoritative checkout's remote and intended base,
+including fork/upstream policy when applicable. Inspect those facts yourself;
+ask the user to choose only when they are ambiguous or policy requires a missing
+confirmation. The repository that distributes these skills is not the default
+destination for an app PR. Keep confirmed account/destination answers with the
+task brief so publication does not restart discovery.
 
 ## Worktrees and Git metadata
 
@@ -35,17 +48,20 @@ Use the repository's size policy when it has one. Otherwise, 400 non-generated
 changed lines or 12 changed files is a review checkpoint, not a target: split at
 a real phase boundary or record why splitting would create an invalid
 intermediate. Never pad a stack with tiny mechanical PRs just to stay under a
-number.
+number. Revisit this checkpoint when scope grows, before the whole feature is
+implemented. A shared file alone does not require one large PR: consider a
+compatible prerequisite followed by its consumers. Keep genuinely incompatible
+changes together and name that dependency rather than citing line count alone.
 
 When phases depend on each other, use stacked PRs. Obtain approval for every
 branch name, base each branch and PR on its approved predecessor, and put the
-ordered stack map in every PR body. Each phase gets its own diff, checks,
+shared stack-plan link and immediate dependency in each body. Each phase gets its own diff, checks,
 evidence, and review status. A stacked PR does not grant merge, force-push, or
 branch-retarget authority.
 
 ## Deliver a reviewable pull request
 
-Keep the PR sequence explicit: inspect scope and status, implement, select minimum-sufficient verification, review the staged diff, commit only after the gate, push only after the gate, open the PR, then verify remote SHA, CI/check status, and PR body/evidence links. Attach requested screenshots or video through a supported, verified evidence path; do not claim an attachment exists until its PR-visible location is checked.
+Keep the PR sequence explicit: inspect scope and status, implement, select minimum-sufficient verification, review the staged diff, commit only after the gate, push only after the gate, open the PR, publish authorized reviewer feedback, then verify remote SHA, CI/check status, and PR body/evidence/review links. Attach requested screenshots or video through a supported, verified evidence path; do not claim an attachment exists until its PR-visible location is checked. Continue this sequence when already authorized; do not end at “ready for your review” while the requested PR remains uncreated.
 
 Use exact repository-relative paths after `--` for file-specific operations. Record what was verified, what was intentionally not run, and any remaining risk. Read [PR delivery](references/pr-delivery.md) when opening or updating a PR.
 

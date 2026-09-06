@@ -74,7 +74,13 @@ task scheduler.
    the current session's exposed limit. The host's `internal_workers` budget is
    for admitted local tool workers, not an additional cap on read-only LLM
    subagents. Use only available delegation tools.
-3. Launch independent ready assignments up to that limit only when their required
+3. Assign the initial repository writer to the first ready implementation slice;
+   this can be the lead or an implementation worker. Supporting workers can
+   trace callers, draft bounded patch proposals from frozen inputs, derive
+   regression cases or review while that writer implements. Return concrete
+   outputs for integration, not another general plan. Proposals belong in the
+   assigned output area and do not authorize writes to the app checkout.
+   Launch independent ready assignments up to the client limit only when their required
    permissions/isolation are available. Record the returned
    agent IDs and keep remaining work pending. A role name or planned assignment
    is not evidence that a worker started. Keep model/context size proportional

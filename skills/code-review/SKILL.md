@@ -54,7 +54,15 @@ or mandatory test layer.
 
 ## Publish concise findings
 
-When the current task authorizes review-comment publication, submit a small batch of line-level findings with a short summary through supported GitHub review/comment tools. Otherwise return the same findings as a local draft. The publication actor may post the independent reviewer's findings with clear attribution while preserving the reviewer's lack of source-write privileges.
+When the current task authorizes review-comment publication, submit a small batch of line-level findings with a short summary through `gh pr review` or `gh api`, following the [GitHub CLI delivery path](../git-workflow/references/pr-delivery.md#standard-github-cli-path). Otherwise return the same findings as a local draft. The publication actor may post the independent reviewer's findings with clear attribution while preserving the reviewer's lack of source-write privileges.
+
+For task-to-PR delivery with authorized review comments, finish this step after
+the PR exists; do not leave the review only in the agent conversation. With no
+actionable findings, post one short summary naming the reviewed head, relevant
+checks and material limits. Do not invent a line-level issue to obtain a comment.
+Reuse the verified pre-publication review of the identical patch, and return the
+posted review ID/URL to the lead for its completion report. If publication is
+not authorized or fails, retain the draft and report that gap explicitly.
 
 Use the current commit and exact diff location, read back the posted review/comment IDs and URLs, and avoid duplicate comments after an uncertain response. GitHub documents review-comment commit, path, and line fields in its [review comments API](https://docs.github.com/en/rest/pulls/comments).
 

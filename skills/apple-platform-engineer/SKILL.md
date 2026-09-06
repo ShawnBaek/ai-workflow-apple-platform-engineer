@@ -92,14 +92,18 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 3. Read applicable ADRs and record significant new decisions. Use a simple plan
    by default; add graph structure only when actual dependencies justify it.
    Split broad work into coherent reviewable PRs. Assign justified model classes
-   and parallelize independent frozen-snapshot research when useful and authorized.
-4. Implement with one repository writer and scoped Apple resource leases.
+   and give workers the accepted brief without repeating intake.
+4. Start the first ready implementation slice with one repository writer and
+   scoped Apple resource leases. Run useful independent assignments alongside it;
+   resource contention queues the affected operation, not the entire task.
 5. Run the minimum checks justified by impact and risk.
 6. Use `code-review` for an independent view of the frozen patch, assess findings
    against sources and behavior, and verify accepted fixes within bounded attempts.
-7. Prepare evidence, confirm repository, commit, push, create the PR, wait for
-   required checks, and route the completion summary to `delivery-report` when
-   the task authorized those actions.
+7. Carry an authorized PR task through publication: prepare the template and
+   proof, satisfy only missing gates, commit/push/create, publish the independent
+   review comment when authorized, and verify the PR's evidence and checks.
+   The lead owns this handoff; local implementation is not PR completion.
+   Route the completion summary to `delivery-report`.
 8. Stop at the selected authorized target: `local_verified` for local work, `pr_ready` for a PR request, or the
    pre-authorized TestFlight uploaded/internal-distributed continuation. Merge,
    App Review/production release, signing-resource mutation, destructive
