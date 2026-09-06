@@ -64,7 +64,7 @@ it.
 Set `APE` using the [Swift setup](../agent-harness/references/swift-verification.md), then evaluate a populated private report:
 
 ```sh
-"$APE" health '<health-observations.json>' \
+"$APE" --app-root '<absolute-authoritative-app-repository>' health '<health-observations.json>' \
   --harness '<authoritative-harness.json>'
 ```
 
@@ -73,6 +73,12 @@ status/evidence never establishes high-risk success: the evaluator overwrites
 it from live observations and repeats those observations at action dispatch.
 Missing commands, offline providers, timeouts, target/account drift, or a
 required non-healthy result block. Unselected optional MCPs are not probed.
+
+Keep a failed operation separate from the whole assignment. A busy lease follows
+[contention handling](../agent-harness/references/host-resources.md); a root/schema
+failure needs the installed runtime and caller checked before blaming task
+locks. Reuse the selected profile within its freshness rules; delegated workers
+do not repeat unrelated discovery or ask again for settled project facts.
 
 `active_lease_count` is a time-scoped observation, not coordinator identity.
 Unrelated tasks may change it between collection and evaluation; binding uses

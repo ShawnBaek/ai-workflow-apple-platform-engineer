@@ -10,6 +10,20 @@ The version 2 coordinator admits host-wide `heavy_jobs`, `active_devices`, and `
 
 The lead/client queues work when the coordinator returns `resource_conflict` or `capacity_exceeded`; the coordinator is an admission gate, not a waiter queue or agent launcher. Retry when the conflicting work releases ownership or capacity, within the task's retry policy. Do not duplicate a coordinator, steal an expired lease, kill unrelated processes, or turn on maximum parallel testing to make progress. Prefer a lower-cost model for bounded extraction/formatting, a balanced model for ordinary implementation, and stronger reasoning for uncertain architecture or authorization review. The [shared routing policy](cost-and-usage.md) separates model cost from host resource limits.
 
+Describe the blocked operation and canonical reason, not “the skill is locked”:
+
+| Observation | Caller action |
+|---|---|
+| `resource_conflict` / `capacity_exceeded` | Queue the affected operation and continue independent work. Preserve the conflicting lease ID or exhausted dimension when available; report the owner only when verified. Recheck after a relevant release using supported bounded waits. Busy capacity is not a request for user permission. |
+| `coordination_required`, migration or runtime/root mismatch | Diagnose the configured runtime, app root and receipt. An installed-copy defect is a setup failure, not evidence another task owns the resource. Route repair to its owner; keep unaffected work moving. Do not create another coordinator or silently bypass the guard. |
+| Missing action/account/branch/signing authority | Ask only for the actual missing authorization, with the concrete action and applicable rule. Reuse confirmed facts within their scope. |
+
+An unchanged busy response is not a failed implementation attempt. Do not poll
+repeatedly or ask the user to “unlock four tasks” from a lease count alone. If
+the client cannot wait/resume, preserve the pending operation and its precise
+resumption condition; do not claim background progress. Release this task's
+unneeded leases before waiting for another resource or human input.
+
 Check relevant memory pressure, free disk, active builds/destinations and output sizes before admitting heavy work. Reduce concurrency before deleting caches. Capture only bounded logs and short recordings; stream large hashes, process images sequentially, and keep raw evidence only as long as the accepted retention policy needs it. Preserve original hashes and the final reviewable proof before cleaning task-owned temporary output.
 
 Reuse DerivedData and package artifacts only for a matching build tuple. Give concurrent incompatible builds separate task-owned paths; avoid copying whole package caches into every worktree. Prefer `build-for-testing` followed by selected `test-without-building` runs when inputs match. Do not blindly reset package caches, erase all Simulators, delete archives, or remove global DerivedData. Route an actual storage-pressure cleanup to [xcode-storage](../../xcode-storage/SKILL.md), inventory candidates and obey its destructive-action scope.

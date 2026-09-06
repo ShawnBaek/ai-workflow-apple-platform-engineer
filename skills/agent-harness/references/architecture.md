@@ -207,6 +207,11 @@ mode, symlink, deletion, or path change invalidates affected evidence.
 
 ## Bounded attempts
 
+Admission contention (`resource_conflict` or `capacity_exceeded`) queues an
+operation; it is not an implementation failure or a human authorization gate.
+Follow the bounded client waiting and resumption rules in [host resources](host-resources.md)
+without consuming implementation attempts on unchanged busy responses.
+
 - transient tool/network failure: one retry, two attempts total;
 - compiler or test assertion: no blind retry; diagnose, change input/code, then
   create a new attempt;
