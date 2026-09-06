@@ -1,14 +1,16 @@
 ---
 name: screenshot
 description: >-
-  Captures and verifies deterministic iOS, iPadOS, watchOS, and macOS screenshots or videos for pull-request evidence and App Store listings. Use for visual acceptance evidence, localized screenshots, interaction recordings, framing, or App Store screenshot upload. Uses current Apple specifications and Xcode official capture tools first; publication and upload remain explicit gated actions.
+  Captures and verifies deterministic Apple-platform screenshots and recordings. Use for PR evidence, visual acceptance, localized raw capture, interaction recordings and aligned comparisons. For a complete App Store listing media set, use app-store-screenshots; this skill supplies its capture and integrity mechanics. Uses Xcode official capture tools first.
 ---
 
 # Screenshot and Video Evidence
 
-Own the scenario, deterministic state, capture matrix, privacy review, artifact
-integrity, framing, and publication. Route build/run/UI mechanics to `xcodebuild`
-and store upload/account operations to `app-store-connect`.
+Own the scenario, deterministic state, raw capture matrix, privacy, artifact
+integrity and PR evidence publication. Route build/run/UI mechanics to `xcodebuild`.
+For App Store listing story, current-version/build provenance and preview exports,
+use [app-store-screenshots](../app-store-screenshots/SKILL.md); retain this skill's
+general capture/evidence workflow for ordinary PR screenshots and recordings.
 
 ## Plan from the acceptance criterion
 
@@ -25,9 +27,8 @@ Choose only the affected evidence:
 Use a screenshot for a static visual criterion and a recording for sequence,
 gesture, or motion. Capture both only when they prove distinct criteria.
 
-For App Store assets, retrieve the current display types, resolutions, count,
-file types, and upload rules from Apple's live screenshot specification. Do not
-trust a hardcoded annual device table.
+For App Store raw capture, use the current slot/dimension requirements resolved
+by `app-store-screenshots`; do not choose a second, conflicting listing matrix.
 
 ## Deterministic capture
 
@@ -99,13 +100,6 @@ committed image with a full-commit permalink, GitHub's browser attachment flow,
 or an Actions artifact with digest and retention/expiry stated. Verify the final
 PR preview/link for the intended viewer. Do not use an undocumented upload
 endpoint or present an expiring artifact as permanent proof.
-
-## App Store upload
-
-Capture-only is the default. Before upload, verify the current private Apple
-account/team guard, app/version, locale, display type, order, and live specs.
-Upload only with explicit authority, then list/read back the stored assets. An
-upload command succeeding without read-back is not completion.
 
 ## Never
 
