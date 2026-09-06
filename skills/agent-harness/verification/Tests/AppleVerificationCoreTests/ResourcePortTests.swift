@@ -29,6 +29,31 @@ final class ResourcePortTests: XCTestCase {
     ]
   }
 
+  func testBlockedResponseExposesOnlyBoundedContentionDetails() throws {
+    let leaseID = "7a1209ba-f0d8-4f0e-a7ac-a99733fd6326"
+    let conflict = ResourceCoordinator.blockedResponse(
+      for: ResourceCoordinatorError("resource_conflict", leaseID))
+    XCTAssertEqual(conflict["status"] as? String, "blocked")
+    XCTAssertEqual(conflict["reason_code"] as? String, "resource_conflict")
+    XCTAssertEqual(
+      (conflict["reason_detail"] as? [String: Any])?["conflicting_lease_id"] as? String,
+      leaseID)
+
+    let capacity = ResourceCoordinator.blockedResponse(
+      for: ResourceCoordinatorError("capacity_exceeded", "heavy_jobs"))
+    XCTAssertEqual(capacity["reason_code"] as? String, "capacity_exceeded")
+    XCTAssertEqual(
+      (capacity["reason_detail"] as? [String: Any])?["capacity_dimension"] as? String,
+      "heavy_jobs")
+
+    let unsafeConflict = ResourceCoordinator.blockedResponse(
+      for: ResourceCoordinatorError("resource_conflict", "/private/coordinator/state.json"))
+    XCTAssertNil(unsafeConflict["reason_detail"])
+    let unrelated = ResourceCoordinator.blockedResponse(
+      for: ResourceCoordinatorError("untrusted_authority", "/private/run/authorization.json"))
+    XCTAssertNil(unrelated["reason_detail"])
+  }
+
   func testRemoteNormalization() throws {
     XCTAssertEqual(
       try ProjectResolver.normalizeGitHubRemote("git@github.com:ExampleOrg/Sample.git"),

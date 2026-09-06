@@ -70,4 +70,18 @@ final class CLIInvocationTests: XCTestCase {
       XCTAssertTrue(result.stderr.contains(diagnostic), "\(arguments): \(result.stderr)")
     }
   }
+
+  func testResourcesCLIKeepsNonContentionFailureShapeAndExitCode() throws {
+    let result = try HarnessRuntime.run(
+      executable: executable.path,
+      arguments: ["--repository-root", root.path, "resources", "relative", "status"],
+      timeout: 10)
+    XCTAssertEqual(result.exitCode, 2, result.stdout + result.stderr)
+    XCTAssertEqual(result.stderr, "")
+    let response = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: Data(result.stdout.utf8)) as? [String: Any])
+    XCTAssertEqual(Set(response.keys), ["status", "reason_code"])
+    XCTAssertEqual(response["status"] as? String, "blocked")
+    XCTAssertEqual(response["reason_code"] as? String, "migration_required")
+  }
 }

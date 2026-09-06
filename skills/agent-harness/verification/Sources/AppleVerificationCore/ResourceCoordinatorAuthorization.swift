@@ -1,6 +1,26 @@
 import Foundation
 
 extension ResourceCoordinator {
+  static func blockedResponse(for error: ResourceCoordinatorError) -> [String: Any] {
+    var response: [String: Any] = ["status": "blocked", "reason_code": error.code]
+    switch error.code {
+    case "resource_conflict":
+      if error.detail.range(
+        of: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        options: [.regularExpression, .caseInsensitive]) != nil
+      {
+        response["reason_detail"] = ["conflicting_lease_id": error.detail]
+      }
+    case "capacity_exceeded":
+      if ["heavy_jobs", "active_devices", "internal_workers"].contains(error.detail) {
+        response["reason_detail"] = ["capacity_dimension": error.detail]
+      }
+    default:
+      break
+    }
+    return response
+  }
+
   public static func loadExistingRunAuthority(
     authorizationPath: URL, harnessPath: URL, harness: [String: Any], runID: String,
     context: RuntimeContext
@@ -287,7 +307,7 @@ extension ResourceCoordinator {
         try HarnessRuntime.canonicalJSON(wrapper, ensureASCII: true) + Data([0x0a]))
       return 0
     } catch let error as ResourceCoordinatorError {
-      let wrapper: [String: Any] = ["status": "blocked", "reason_code": error.code]
+      let wrapper = blockedResponse(for: error)
       FileHandle.standardOutput.write(
         try HarnessRuntime.canonicalJSON(wrapper, ensureASCII: true) + Data([0x0a]))
       return 2
