@@ -1,7 +1,7 @@
 ---
 name: xcodebuild
 description: >-
-  Builds, tests, runs, debugs, and captures Apple-platform apps with Xcode's official tools first. Use for iOS, iPadOS, watchOS, macOS, tvOS, or visionOS compile failures, Simulator/device runs, logs, debugger work, UI interaction, screenshots, or xcresult evidence. Routes external Codex/Claude through Apple's supported Xcode bridge and uses third-party adapters only by explicit fallback.
+  Builds, tests, archives, exports, runs, debugs, and captures Apple-platform apps with Xcode's official tools first. Use for iOS, iPadOS, watchOS, macOS, tvOS, or visionOS compile failures, archive/export, Simulator/device runs, logs, debugger work, UI interaction, screenshots, or xcresult evidence. Routes external Codex/Claude through Apple's supported Xcode bridge and uses third-party adapters only by explicit fallback.
 ---
 
 # Xcode Build and Runtime
@@ -54,6 +54,13 @@ for the same trigger. Record the selected tool/skill provider and version.
 When runtime discovery is stalled, inventory all Simulator-capable providers
 across open tasks and keep exactly one active for diagnosis, official-first.
 Do not compare providers concurrently against an already blocked global service.
+
+When the user selects `asc` for a build, inspect the installed `asc xcode --help`
+and follow [build and release lanes](../app-store-connect/references/build-and-release-lanes.md).
+Its local archive/export helpers wrap Xcode; they retain this skill's exact
+container, toolchain and resource rules. Xcode Cloud is a remote build route
+owned by `app-store-connect`. Neither route creates a GitHub PR: use
+`git-workflow` with the app's confirmed remote/base for that handoff.
 
 ## Smallest useful operations
 

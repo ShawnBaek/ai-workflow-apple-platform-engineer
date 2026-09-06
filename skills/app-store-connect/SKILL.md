@@ -10,6 +10,12 @@ Use the project's approved App Store Connect client (for example `asc`) only
 after resolving the private Apple account/team guard. CLI availability or cached
 authentication never authorizes reading another account.
 
+For source builds, existing artifacts or Xcode Cloud, first choose the
+[build and release lane](references/build-and-release-lanes.md). Local CLI help
+and source inspection need no ASC login; account-bound reads and mutations do.
+Do not require a local archive when an eligible cloud-produced build already
+matches the requested source and release target.
+
 ## Account gate comes first
 
 1. Load the expected team/account/provider/profile from the private project
@@ -56,8 +62,11 @@ artifact, group, compliance, signing, or permission drift blocks the run.
 
 1. Use `app-versioning` to verify marketing/build values at their source of
    truth and in the built bundle.
-2. Use `xcodebuild` in the authoritative host project to archive/export and
-   verify signing identity, entitlements, platform, and artifact hash.
+2. Follow the selected lane: reuse a verified processed build, observe/trigger
+   the authorized Xcode Cloud workflow, or use `xcodebuild` (including approved
+   `asc xcode` wrappers) in the authoritative host project to archive/export.
+   Verify the relevant source, signing, entitlements, platform and artifact/build
+   identity. A green CI check alone does not establish an eligible release build.
 3. Run the smallest supported App Store Connect operation with explicit app and
    account/profile flags where available.
 4. Prefer structured output for identifiers/state; do not parse a decorative
