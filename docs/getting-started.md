@@ -10,7 +10,7 @@ Use the [Skills CLI](https://skills.sh/docs/cli) to select the skills and client
 npx skills add ShawnBaek/ai-workflow-apple-platform-engineer
 ```
 
-After installing for your client, open your app repository and type `$apple-platform-engineer <your task>` in [Codex](https://learn.chatgpt.com/docs/build-skills), or `/apple-platform-engineer <your task>` in [Claude Code](https://code.claude.com/docs/en/skills). See the [README usage examples and workflow](../README.md#after-installation) and the [skill catalog](skills.md) for focused tasks.
+After installing for your client, use the [first-run setup](#first-run-setup-with-your-agent) for a new environment. Then open your app repository and type `$apple-platform-engineer <your task>` in [Codex](https://learn.chatgpt.com/docs/build-skills), or `/apple-platform-engineer <your task>` in [Claude Code](https://code.claude.com/docs/en/skills). See the [README usage examples and workflow](../README.md#after-installation) and the [skill catalog](skills.md) for focused tasks.
 
 Keep one active copy of each skill in the client's configured search roots. Avoid loading duplicate Codex and Claude installations into the same client. Check the [catalog](skills.md) for individual entry points; install the harness and its selected dependencies only for coordinated work.
 
@@ -19,6 +19,29 @@ Native builds, Previews, Simulator, and the Swift verifier need macOS and Xcode.
 ## Update
 
 For an existing installation, use the [update guide](updating.md). Updating a repository checkout does not necessarily update the copy loaded by your agent.
+
+## First-run setup with your agent
+
+Include `apple-platform-setup` and the specialists for your selected work in the
+installation. Then open the intended app repository and ask:
+
+```text
+$apple-platform-setup Set up this project for local app work and GitHub PR delivery.
+```
+
+Use `/apple-platform-setup` in Claude Code. Add ASC/Xcode Cloud, Figma or another
+integration only when needed. The setup skill inventories the active client and
+skill copy, checks dependencies, carries authorized configuration through its
+owning specialist, and verifies actual capability before handing off to the lead.
+It reuses your answers and requires only missing decisions/approvals. See the
+[dependency matrix](../skills/apple-platform-setup/references/dependencies.md).
+Lightweight setup uses direct capability checks; coordinated profiles also use
+the harness and its health report.
+
+Installed → configured → authenticated when needed → exposed → verified.
+Each step is a separate observation. A setup report names remaining work; files
+copied or a successful login alone do not mean an app task was verified. Existing
+environments resume from their working state rather than repeating installation.
 
 ## Rename an existing lead installation
 

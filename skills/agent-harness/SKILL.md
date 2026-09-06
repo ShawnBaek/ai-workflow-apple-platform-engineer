@@ -182,7 +182,8 @@ only from provider/client records; unavailable totals remain explicit unknowns.
 | Code-first Xcode Preview and motion review | `xcode-preview-design` |
 | Issues and GitHub Projects | `github-projects` |
 | Report, investigate and fix collection problems | `skill-maintenance` |
-| setup/MCP/CLI/account readiness | `apple-development-health` |
+| first-run tool/configuration setup or upgrade | `apple-platform-setup` |
+| current MCP/CLI/account readiness | `apple-development-health` |
 | QA screenshots/recordings and App Store assets | `screenshot` |
 | Apple Ads campaigns, paid keywords, spend, and attribution | `apple-ads` |
 | TestFlight/App Store actions | `app-store-connect` |
