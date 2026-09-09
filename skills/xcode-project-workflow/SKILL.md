@@ -80,6 +80,26 @@ profiles, or CI secrets never imply an override.
 
 This policy overrides any execution adapter that suggests automatic generation.
 
+## Compile before claiming implementation completion
+
+After the final source or project change, build the affected target(s) from the
+authoritative container and inspect the terminal build result. Only a successful
+build of the current changes supports reporting "implemented", "complete", or
+"changes applied" as a completed handoff. An earlier build, a clean diff check,
+syntax inspection, or files written to disk does not satisfy this gate.
+
+If compilation fails, fix the reported errors and rebuild before claiming
+completion. If a build is unavailable or explicitly forbidden, report "source
+edited; compilation unverified" or "compilation failed; implementation
+incomplete", with the concrete reason. Do not lead with a completion claim and
+bury the missing build in a disclaimer.
+
+"I will test it myself" assigns runtime testing to the user; it does not waive
+compilation verification. Build without launching the app or running tests when
+the user retains runtime testing. A successful build proves compilation only,
+not keyboard motion, UI behavior, network writes, or release readiness. Record
+the target, configuration, destination/platform, and build result used.
+
 ## Apple official-first routing
 
 For the selected Xcode version, use one Apple-authored skill exposure (built-in
