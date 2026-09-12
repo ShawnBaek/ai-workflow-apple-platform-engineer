@@ -1,5 +1,10 @@
 # IconGen companion upstream
 
+This is optional collection-maintainer provenance, not a consumer account or
+installation dependency. The watcher runs only in this collection's canonical
+repository. A fork does not need it and must review its own destination and
+contract before enabling a different maintenance integration.
+
 [`ShawnBaek/IconGen`](https://github.com/ShawnBaek/IconGen) is maintained as a
 separate public companion repository. Its reviewed revision and selected source
 blobs are recorded in

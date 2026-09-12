@@ -1,6 +1,7 @@
 #!/usr/bin/env swift
 
 import Foundation
+import CoreFoundation
 
 struct Arguments {
   let metrics: URL
@@ -11,10 +12,11 @@ struct Arguments {
 enum ReportError: LocalizedError {
   case usage(String)
   case invalidJSON(URL)
+  case invalidEvidence(String)
 
   var errorDescription: String? {
     switch self {
-    case let .usage(message): return message
+    case let .usage(message), let .invalidEvidence(message): return message
     case let .invalidJSON(url): return "Could not read JSON: \(url.path)"
     }
   }
@@ -78,14 +80,39 @@ func metricValue(_ metrics: [String: Any], _ key: String) -> String {
   return "-"
 }
 
-func metricsSVG(_ metrics: [String: Any]) -> String {
-  let status = (Double(metricValue(metrics, "matchPercentage")) ?? 0) >= 99 ? "PASS" : "FAIL"
+func number(_ metrics: [String: Any], _ key: String, range: ClosedRange<Double>) throws -> Double {
+  guard let value = metrics[key] as? NSNumber,
+        CFGetTypeID(value) != CFBooleanGetTypeID(),
+        value.doubleValue.isFinite, range.contains(value.doubleValue) else {
+    throw ReportError.invalidEvidence("metrics.\(key) is missing or outside its valid range")
+  }
+  return value.doubleValue
+}
+
+func metricsSVG(_ metrics: [String: Any]) throws -> String {
+  let percentage = try number(metrics, "matchPercentage", range: 0...100)
+  _ = try number(metrics, "threshold", range: 0...255)
+  let total = try number(metrics, "pixelCount", range: 1...Double(Int.max))
+  let matching = try number(metrics, "matchingPixels", range: 0...total)
+  guard abs(percentage - matching * 100 / total) < 0.000001 else {
+    throw ReportError.invalidEvidence("metrics percentage conflicts with matching pixel counts")
+  }
+  var required: Double?
+  if let value = metrics["requiredMatchPercentage"], !(value is NSNull) {
+    required = try number(metrics, "requiredMatchPercentage", range: 0...100)
+  }
+  let status = required.map { percentage >= $0 ? "PASS" : "FAIL" } ?? "NOT EVALUATED"
+  let expectedStatus = required.map { percentage >= $0 ? "passed" : "failed" } ?? "not_evaluated"
+  if let supplied = metrics["status"], supplied as? String != expectedStatus {
+    throw ReportError.invalidEvidence("metrics.status conflicts with the explicit acceptance criterion")
+  }
   var body: [String] = [
     text("STATUS", x: 42, y: 116, size: 13, weight: "700", color: "#59667d"),
     text(status, x: 42, y: 158, size: 34, weight: "700", color: status == "PASS" ? "#087f5b" : "#c92a2a"),
     text("CoreGraphics device-RGB decode; no scale/crop/mask", x: 42, y: 194, size: 14, color: "#59667d"),
   ]
   let rows = [
+    ("Required match percentage", required.map { String($0) + "%" } ?? "Not agreed"),
     ("Dimensions", metricValue(metrics, "dimensions")),
     ("Threshold (max RGB delta)", metricValue(metrics, "threshold")),
     ("Matching pixels", "\(metricValue(metrics, "matchingPixels")) / \(metricValue(metrics, "pixelCount"))"),
@@ -99,10 +126,22 @@ func metricsSVG(_ metrics: [String: Any]) -> String {
     body.append(text(row.1, x: 390, y: y, size: 15, color: "#33415c"))
     body.append("<line x1=\"42\" y1=\"\(y + 14)\" x2=\"958\" y2=\"\(y + 14)\" stroke=\"#e2e7ef\"/>")
   }
-  return document(title: "Figma golden pixel metrics", width: 1000, height: 560, body: body)
+  return document(title: "Figma golden pixel metrics", width: 1000, height: 600, body: body)
 }
 
-func textResultsSVG(_ results: [String: Any]) -> String {
+func textResultsSVG(_ results: [String: Any]) throws -> String {
+  for key in ["missing", "extra", "changed", "matches"] {
+    guard let rows = results[key] as? [[String: Any]] else {
+      throw ReportError.invalidEvidence("text results.\(key) must be an array")
+    }
+    for row in rows {
+      let required = ["field", "figmaNodeId"] + (key == "missing" ? ["expected"] :
+        key == "extra" ? ["actual"] : ["expected", "actual"])
+      guard required.allSatisfy({ row[$0] is String }) else {
+        throw ReportError.invalidEvidence("text results.\(key) entry has missing strings")
+      }
+    }
+  }
   var body: [String] = []
   let sections: [(String, String, String)] = [
     ("Missing", "missing", "#c92a2a"),
@@ -128,22 +167,24 @@ func textResultsSVG(_ results: [String: Any]) -> String {
       let line = "\(field): \(detail) [\(node)]"
       body.append(text(line, x: 56, y: y, size: 13, color: "#33415c"))
       y += 23
-      if y > 840 { break }
+
     }
     y += 18
-    if y > 840 { break }
+
   }
-  if body.isEmpty { body.append(text("No semantic text differences", x: 42, y: 124, size: 18, color: "#087f5b")) }
-  return document(title: "Figma visible-text results", width: 1400, height: 900, body: body)
+  if body.isEmpty { body.append(text("No semantic observations supplied", x: 42, y: 124, size: 18, color: "#087f5b")) }
+  return document(title: "Figma visible-text results", width: 1400, height: max(220, y + 50), body: body)
 }
 
 do {
   let arguments = try parseArguments()
   let metrics = try loadJSON(arguments.metrics)
   let textResults = try loadJSON(arguments.textResults)
+  let metricsImage = try metricsSVG(metrics)
+  let textImage = try textResultsSVG(textResults)
   try FileManager.default.createDirectory(at: arguments.output, withIntermediateDirectories: true)
-  try metricsSVG(metrics).write(to: arguments.output.appendingPathComponent("metrics.svg"), atomically: true, encoding: .utf8)
-  try textResultsSVG(textResults).write(to: arguments.output.appendingPathComponent("text-results.svg"), atomically: true, encoding: .utf8)
+  try metricsImage.write(to: arguments.output.appendingPathComponent("metrics.svg"), atomically: true, encoding: .utf8)
+  try textImage.write(to: arguments.output.appendingPathComponent("text-results.svg"), atomically: true, encoding: .utf8)
   print(arguments.output.path)
 } catch {
   FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))

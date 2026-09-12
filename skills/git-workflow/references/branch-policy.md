@@ -2,8 +2,10 @@
 
 Repository policy and an explicit user instruction take precedence over this
 default. Before editing, verify the exact repository path, credential-redacted
-remote, and current branch; identify the current remote default branch and
-create the approved feature branch from it.
+remote, and current branch. Identify the remote default branch when the
+requested branch workflow depends on it. Create or switch branches only as the
+user's or repository's policy directs; do not impose a feature-branch approval
+step of this skill's own.
 
 When the repository has no naming rule, use:
 

@@ -128,7 +128,7 @@ or unusable status response is blocked when selected. If not selected, report
 
 ## GitHub, Spec Kit, and delivery
 
-- Verify active personal/approved GitHub account, exact remote repository,
+- Verify approved GitHub account, exact remote repository,
   permission level, Issues availability, and PR capability.
 - Inspect Project v2 only when selected. Missing `read:project`/`project` scope is
   a scoped Project limitation; do not refresh OAuth during health collection.

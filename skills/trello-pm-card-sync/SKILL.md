@@ -1,92 +1,93 @@
 ---
 name: trello-pm-card-sync
 description: >-
-  Turn rough Trello intake cards into agent-ready work units and keep their
-  Figma, GitHub issue, PR, proof, QA, and TestFlight state synchronized. Use
-  for PM card cleanup or Trello-to-GitHub issue tracking; do not use it to
-  invent missing design decisions or claim QA without evidence.
+  Turn rough Trello intake cards into reusable agent-ready work units, and,
+  when explicitly requested, synchronize confirmed delivery state with the
+  configured tracker. Use for card cleanup, handoff, or opt-in tracker sync.
 ---
 
 # Trello PM card sync
 
-Use the Trello card as the PM intake record and the GitHub issue as the
-engineering work unit. Preserve each system's URL and ID, but keep the same
-scope, acceptance criteria, and delivery state in both places.
+Use this skill in four distinct modes. **Audit** is read-only discovery.
+**Normalize** improves a card as a self-contained PM handoff without
+implementing, running tests, or changing another tracker. **Sync** is an
+explicit, idempotent cross-tracker update. **Handoff** supplies the next owner
+with a bounded work unit and evidence requirements. A card can stop after any
+mode.
 
-## Discovery before editing
+Before acting, confirm the configured board/list, title convention, design
+source requirement, status vocabulary, and source-of-truth mapping. These may
+come from the user, board policy, or repository workflow. Do not assume a
+particular organization, personal owner, repository, list name, or companion
+tracker.
 
-1. Read the card, its board/list, checklists, comments, labels, and visible
-   links. Treat attached screenshots and free-form notes as evidence, not as a
-   complete specification.
-2. Find an existing GitHub issue in the confirmed personal repository. Match by
-   card URL, feature wording, Figma node, or an explicit issue number. If there
-   are multiple plausible issues, stop and ask which one is authoritative.
-3. Record what is present and missing: node-specific Figma URL, route/source
-   mapping, repro steps, expected behavior, issue URL, PR URL, commit SHA,
-   test command/result, snapshot proof, and QA/TestFlight destination.
-4. Do not call a card Done, QA-ready, or TestFlight-ready because a file is
-   attached. Verify the observable result and its link.
+## Audit
 
-If a visual card has no Figma link or the link is not node-specific, report the
-card as blocked and ask the user/PM to provide the correct Figma URL. Do not
-search for or choose a replacement frame silently; the user may supply the
-authoritative link directly to the implementing agent.
+Read the card, board/list, checklists, comments, labels, attachments, and
+visible links. Preserve their text, attachment URLs, authorship, and timestamps
+as PM evidence. Record confirmed and missing objective, route/source mapping,
+design source, acceptance criteria, linked work item, delivery links,
+verification evidence, and status.
 
-## Title and body format
+If more than one linked work item is plausible, report the ambiguity and ask
+which is authoritative. Audit does not rename, move, create, or update records,
+and it does not execute implementation or verification commands.
 
-Rename vague image-based titles to:
+## Normalize
 
-`[Platform][Area] Verb + object + acceptance anchor`
+Only after a requested normalization, improve the title and add a clearly
+separated agent-ready brief using [card-template.md](references/card-template.md).
+Keep the original PM description, comments, checklists, attachments, and links
+intact; do not replace them with inferred requirements. Follow a configured
+title convention. If none exists, use a concise outcome-oriented title such as
+`[Platform][Area] Verb + object`.
 
-Examples: `[iOS][UI] Set Timeline background to #ECECF2` and
-`[iOS][UI] Match Timeline item Edit screen to Figma node 419-31291`.
-When a design or behavior is missing, say so in the title or status instead of
-guessing: `[iOS][UI] Define Photo Edit UI update (Figma required)`.
+Mark unknown fields `Not provided` and unresolved requirements `Blocked`.
+Normalization prepares work only: it must not implement code, run tests, capture
+screenshots, claim QA/TestFlight results, create a branch/PR/issue, or move a
+status based on an assumption.
 
-Write the body with the sections in [card-template.md](references/card-template.md):
+Require a node-specific Figma URL only when the configured task or acceptance
+criteria requires a Figma-backed visual result. If a required source is missing
+or not node-specific, mark `BLOCKED — required design source missing` and ask
+the user/PM for the authoritative URL. Never select or guess a replacement
+frame. For non-visual work, or work whose configured design source is code, a
+prototype, or `Not applicable`, state that source explicitly.
 
-- **Objective**: one testable sentence.
-- **Context / route**: entry point, affected screen, and source symbol if known.
-- **Design source**: node-specific Figma URL, frame size, and visible text for
-  visual work. Mark `BLOCKED — Figma node required` when absent.
-- **Scope**: concrete fields, colors, spacing, states, and exclusions.
-- **Acceptance criteria**: observable Given/When/Then or numbered checks.
-- **Verification fixture**: device/OS, locale, timezone, data, appearance, and
-  deterministic interaction.
-- **Proof required**: PR URL and commit, test command/result, raw screenshot,
-  side-by-side, overlay, diff heatmap, metrics, and field-level text results
-  when the change is visual. Link checked-in or PR-visible files.
-- **Status and handoff**: Backlog, In Progress, In Review, Blocked, QA, or
-  TestFlight, with the reason and owner. QA/TestFlight means the stated gates
-  passed; it is not a synonym for “someone attached an image.”
-- **Sync links**: Trello card URL, GitHub issue URL, PR URL, Figma URL, and
-  proof URLs. Use `Not provided` or `Not applicable` explicitly.
+## Sync
 
-## Figma and snapshot gates
+Sync is opt-in: obtain the requested direction, systems, fields, and
+source-of-truth mapping before the first external write. A mapping may make
+Trello own scope/acceptance criteria and a configured issue tracker own
+branch/PR or delivery status. Do not overwrite fields owned elsewhere, original
+PM content, or attachments.
 
-For visual UI work, require a node-specific Figma URL and map it to the real
-SwiftUI view or view controller. Capture the deterministic screen, inspect
-visible text, and preserve the raw inputs. Use the repository's Figma golden
-testing guidance for the Swift Testing/Point-Free SnapshotTesting command and
-the comparator. Report pixel mismatch as `FAIL` with the percentage and the
-fields that differ; a passing capture alone is not parity evidence.
+1. Re-read both records and compare configured fields, URLs, and IDs.
+2. If owned fields conflict, stop and report both values and sources; ask for
+   resolution rather than choosing one.
+3. Apply only minimal requested changes, with stable cross-links and an
+   operation key or equivalent idempotency marker when supported.
+4. Read both records back. If the requested state already exists, record a
+   no-op rather than creating a duplicate item, comment, or link.
+5. On partial success, preserve the completed record, report the exact failed
+   operation and current readback, and retry only an unambiguous idempotent
+   operation when authorized.
 
-## GitHub and Trello synchronization
+Use the configured status mapping. If none exists, keep the current status and
+report that a mapping is needed; do not create lists, fields, or options as a
+workaround.
 
-- Create one GitHub issue per independently reviewable card when no match
-  exists. Put the Trello URL in the issue body and the issue URL in the card.
-- Update both records together when title, scope, acceptance, or status changes.
-  Keep one writer for a card/issue pair and preserve unrelated comments.
-- A PR link is required before `In Review`; a verified proof bundle is required
-  before `QA` or `TestFlight`; a merged PR and accepted QA result are required
-  before `Done`.
-- If the board lacks a QA or TestFlight list, report that fact and create or use
-  a destination only when the user requests the workflow. Move only cards that
-  meet the destination's gates, and list cards that remain blocked.
+## Handoff and evidence gates
 
-## Failure handling
+The handoff identifies the next owner, scope, exclusions, acceptance criteria,
+required design source, verification fixture, links, and known blockers. A card
+becomes ready only when its configured readiness conditions are evidenced; a
+link or attachment alone is not proof.
 
-Keep the last failed test result and proof links in the card and issue. Retry a
-failed snapshot after fixing the narrowest cause. Stop when the Figma node,
-deterministic fixture, or required simulator/toolchain is unavailable, and name
-the missing input rather than fabricating parity.
+For QA, require evidence appropriate to changed behavior, such as a test
+result, observed device/simulator behavior, and visual comparison where visual
+acceptance is required. For TestFlight, require a real uploaded/processed build
+containing the intended revision plus evidence that the requested tester or
+group has access. A PR, merge, archive, or screenshot alone establishes neither
+condition. Preserve failed evidence and state the blocker instead of promoting
+the card.

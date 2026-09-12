@@ -1,8 +1,8 @@
 # Discovery and permissions
 
 Perform discovery before proposing a tracker mutation. Keep the output limited
-to the intended personal account and repository or Project owner; do not scan
-other accounts or organizations merely to find a usable Project.
+to the intended authorized account or organization, repository, and Project
+owner; do not scan other accounts or organizations merely to find a usable Project.
 
 ## Read-only discovery
 

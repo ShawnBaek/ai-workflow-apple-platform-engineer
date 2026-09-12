@@ -32,7 +32,7 @@ the deployment target to make an example compile.
 2. **Migration path must be explicit.** For every shipped model version, define the next step and test it.
 3. **One writer truth, many readers.** Use a clear context topology and actor/main-actor boundaries.
 4. **Measure startup regressions.** Migration and store loading must be observable with logs/timing.
-5. **Never mutate source entities by accident.** If product semantics require "derived/edited views" (e.g. magazine from crumbs), persist derivative entities separately.
+5. **Never mutate source entities by accident.** If product semantics require "derived/edited views" (e.g. report from entries), persist derivative entities separately.
 
 ---
 

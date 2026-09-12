@@ -16,7 +16,7 @@ app's remote; this skill owns the supported GitHub publication operations.
 
 ## Guard before mutation
 
-1. Confirm the intended GitHub account and repository, reusing current-session
+1. Confirm the intended authorized GitHub account or organization and repository, reusing current-session
    answers. For branch/PR-linked work, also verify the checkout path, current
    branch and redacted `origin` URL. An issue-only report needs no checkout or
    branch. Follow explicit commit/push confirmation rules when those actions
@@ -52,7 +52,7 @@ bounded comments/status updates, push, PR creation, and evidence publication.
 Validate the single-use grant immediately before each write. It never grants
 Project OAuth scope expansion, ruleset changes, merge, or auto-merge.
 
-Use these Project statuses unless an existing Project defines its own mapping:
+Use these Project statuses only when an existing Project has no configured mapping:
 
 | Status | Meaning |
 | --- | --- |

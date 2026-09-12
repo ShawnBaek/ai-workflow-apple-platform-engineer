@@ -1,0 +1,18 @@
+{
+  "comparison" : "raw pixel agreement; not perceptual correctness",
+  "dimensions" : {
+    "height" : 840,
+    "width" : 560
+  },
+  "exactPercentage" : 93.897746598639458,
+  "exactPixels" : 441695,
+  "matchingPixels" : 454426,
+  "matchPercentage" : 96.604166666666671,
+  "maxRGBDelta" : 233,
+  "meanMaxRGBDelta" : 6.3023937074829934,
+  "pixelCount" : 470400,
+  "requiredMatchPercentage" : 99,
+  "status" : "failed",
+  "threshold" : 16,
+  "transformations" : "CoreGraphics device-RGB decode; no scaling, cropping, or masking"
+}

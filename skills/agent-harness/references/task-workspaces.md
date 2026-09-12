@@ -26,10 +26,9 @@ list never overrides the repository-writer lease.
 | Client sandbox/tool permissions | The access restrictions actually configured and enforced by the client | Isolation merely because a prompt names an allowed folder |
 | Harness lease | Cooperative ownership and host-resource admission for supported operations | Protection against a same-user process bypassing the harness |
 
-Follow [git-workflow](../../git-workflow/SKILL.md) for an explicitly requested
-worktree, approved branch/base and Git metadata preflight. Use its sibling
-`../worktree/<sanitized-branch>` convention; never nest a worktree inside the
-app checkout. An Xcode worktree needs its own authoritative session/container
+Follow [git-workflow](../../git-workflow/SKILL.md) for a worktree authorized by
+the task or current project policy, approved branch/base and Git metadata
+preflight. Use the project's selected location outside the app checkout. An Xcode worktree needs its own authoritative session/container
 under [xcode-project-workflow](../../xcode-project-workflow/SKILL.md). Do not
 create one worktree per assignment merely because several tasks exist.
 

@@ -1,0 +1,11 @@
+{
+  "exampleOnly": true,
+  "figmaUrl": "<user-provided-node-specific-url>",
+  "fileKey": "<user-provided-file-key>",
+  "nodeId": "<user-provided-node-id>",
+  "sourcePath": "Sources/ExampleItemView.swift",
+  "symbol": "ExampleItemView",
+  "fixture": "ExampleItemFixture",
+  "capturedAt": null,
+  "textInventory": "<private-path-to-node-text-and-bounds>"
+}

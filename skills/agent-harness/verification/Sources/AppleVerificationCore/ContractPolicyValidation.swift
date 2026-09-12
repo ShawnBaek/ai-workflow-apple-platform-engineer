@@ -320,7 +320,9 @@ extension ContractValidation {
       errors.append("IconGen watcher must contain exactly one compare job")
     }
     for required in [
-      "runs-on: macos-15", "timeout-minutes: 15", "apple-verify companion",
+      "runs-on: macos-15", "timeout-minutes: 15", "\"$APE_BIN_DIR/apple-verify\" companion",
+      "if: github.repository == 'ShawnBaek/ai-workflow-apple-platform-engineer'",
+      "--show-bin-path",
       "--target-repository \"$GITHUB_REPOSITORY\"",
     ] where !text.contains(required) { errors.append("IconGen watcher execution contract drifted") }
     for forbidden in [

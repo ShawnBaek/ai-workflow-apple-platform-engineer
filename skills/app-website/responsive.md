@@ -1,5 +1,9 @@
 # Responsive design — mobile / tablet / desktop
 
+Scope: optional SwiftUI-For-Web recipe, used only when selected by the project.
+Adapt example layout, tokens, sections and hosting to the accepted brief.
+
+
 The site must look right at **375px (iPhone), 768px (iPad), 1024px+ (laptop/desktop), and 1440px+ (wide)**. Enforced with **breakpoint-stepped rhythm tokens**, not fluid `clamp()`.
 
 ## Breakpoints

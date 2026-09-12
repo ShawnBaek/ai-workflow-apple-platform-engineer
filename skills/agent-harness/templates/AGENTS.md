@@ -1,6 +1,6 @@
 # Project agent harness
 
-Load the installed `agent-harness` skill for broad or task-to-PR work. Put this
+Select standalone skills or the guarded `agent-harness` runtime for this project. Put this
 project's authoritative checkout, Apple/GitHub account guards, branch policy,
 and approval boundaries below. Private identifiers belong in a local overlay,
 not in a reusable public skill.
@@ -11,14 +11,21 @@ not in a reusable public skill.
 - Authoritative Xcode container: `<absolute-project-or-workspace-path>`
 - Allowed GitHub owner: `<owner>`
 - Allowed Apple team: `<private-overlay>`
-- Branch policy: `<prefix/type/slug>`
+- Branch policy and approval gates: `<project convention>`
+- Workflow: `<standalone | guarded>`; tracking: `<none | Issues | configured board>`
+- Design source: `<Figma node | supplied image | code-first Preview | not applicable>`
+- Evidence: `<private output location and separately approved public artifacts>`
+
+These are guidance preferences, not additional fields in the strict runtime JSON
+schema. Resolve them from existing project instructions; do not commit populated
+private paths, account guards, board IDs, or design mappings to public templates.
 
 Use one repository writer at a time. Run Xcode and Simulator operations only in
 the logged-in host environment. Do not auto-regenerate XcodeGen, create a
 worktree, clean caches, publish, submit, merge, or broaden credentials without
 the explicit approval required by this project.
 
-Select a delivery target (`pr_ready`, `testflight_uploaded`, or
+For guarded execution, select a delivery target (`local_verified`, `pr_ready`, `testflight_uploaded`, or
 `testflight_distributed`) and run the matching `apple-development-health`
 profile. If the project enables Spec Kit, pin `v1.0.1`, bind its artifact
 snapshot to the branch and run authorization, and keep its workflow log

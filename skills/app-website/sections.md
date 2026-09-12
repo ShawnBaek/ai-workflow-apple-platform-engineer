@@ -1,5 +1,9 @@
 # 5-section canonical spec + vertical rhythm
 
+Scope: optional SwiftUI-For-Web recipe, used only when selected by the project.
+Adapt example layout, tokens, sections and hosting to the accepted brief.
+
+
 ## Vertical rhythm — use these numbers
 
 Generated from Gridlover at **base 20px / line-height 1.5 / scale 1.414 (√2)** — readable, snaps cleanly, gives a 30px baseline grid. These are the **desktop** values. The `responsive()` helper in `theme.js` regenerates the full scale per breakpoint (24px / 27px / 30px baseline at mobile/tablet/desktop).
@@ -197,7 +201,7 @@ function DownloadSection() {
 - **Share buttons:** X, Threads, Mastodon — use share-intent URLs, no SDK, no AddThis
 - **Copy-link button** — `navigator.clipboard.writeText(window.location.href)`
 - **Footer line:** `© 2026 [Developer Name] · [Email] · [Privacy]`
-- **Mandatory credit line:** `Made with SwiftUI-For-Web ↗` linking to `https://github.com/ShawnBaek/SwiftUI-For-Web`. Small, tertiary-label color, low-key — same convention as "Hosted on GitHub" on GitHub Pages sites or Cloudflare-Pages credit. Pays back the framework you used and helps other indie devs discover it.
+- **Optional credit line:** include framework promotion only if the user selects it. Required license notices follow the dependency's actual license, independently of visible branding.
 
 ```javascript
 export function ShareSection() {
@@ -225,7 +229,7 @@ export function ShareSection() {
 
     caption('© 2026 — Developer Name · hi@developer.com · Privacy'),
 
-    // Mandatory framework credit
+    // Optional example credit: remove unless requested by the user.
     caption('Made with SwiftUI-For-Web ↗')
       .onTapGesture(() => window.open('https://github.com/ShawnBaek/SwiftUI-For-Web', '_blank'))
       .modifier(cls('made-with'))

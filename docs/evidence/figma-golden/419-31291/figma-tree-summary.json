@@ -1,9 +1,0 @@
-{
-  "figmaUrl": "https://www.figma.com/design/6vbnqI4BVkNA52jqJNSNjh/travelcrumb_Design-System---USE-THIS-?node-id=419-31291&m=dev",
-  "fileKey": "6vbnqI4BVkNA52jqJNSNjh",
-  "nodeId": "419:31291",
-  "frame": "TC_AddItem_Expense_Detail",
-  "bounds": {"x": 5324, "y": 12790, "width": 375, "height": 812},
-  "visibleTextExport": "figma-visible-text.json",
-  "notes": "Sanitized frame metadata and visible text inventory. The raw REST node response is kept out of git because it contains a signed thumbnail URL."
-}
