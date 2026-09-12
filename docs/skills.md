@@ -37,6 +37,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [skill-maintenance](../skills/skill-maintenance/SKILL.md) | Report, investigate and fix collection skill or workflow problems |
 | [storekit-sandbox-testing](../skills/storekit-sandbox-testing/SKILL.md) | Verify StoreKit purchases, restoration, renewal and failure behavior in local and sandbox environments |
 | [swift-package-manager](../skills/swift-package-manager/SKILL.md) | Dependency resolution and compatible package/build reuse |
+| [trello-pm-card-sync](../skills/trello-pm-card-sync/SKILL.md) | Normalize PM cards and synchronize Figma, issues, proof, QA, and TestFlight state |
 | [xcode-preview-design](../skills/xcode-preview-design/SKILL.md) | Design in code before logic; Preview and motion review |
 | [xcode-project-workflow](../skills/xcode-project-workflow/SKILL.md) | Authoritative project, toolchain, target, and host preflight |
 | [xcode-storage](../skills/xcode-storage/SKILL.md) | Audit and safely reclaim owned Xcode storage |
