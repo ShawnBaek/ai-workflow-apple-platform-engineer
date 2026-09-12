@@ -42,10 +42,17 @@ The Figma comparison is **FAIL**. The comparator used identical 375×812 inputs,
 no scaling, cropping, or masking, and a max RGB delta threshold of `16`:
 
 ```text
+❌ Figma pixel comparison failed
+Figma node: 419:31291 (TC_AddItem_Expense_Detail)
+Source: TimelineItemAddView
+Expected: 375×812 Figma export
+Actual: 375×812 simulator capture
+Threshold: max RGB delta ≤ 16
 matchingPixels: 5,222 / 304,500
 matchPercentage: 1.7149%
 meanMaxRGBDelta: 44.5564
 maxRGBDelta: 221
+Mismatched fields: time, expense, currency, category labels, note, Items/share
 ```
 
 The largest semantic gaps are the time (`9:30 AM` → `8:00 PM`), currency

@@ -137,6 +137,33 @@ snapshot name plus reference and failure-diff file URLs in Xcode's Report
 Navigator/result bundle. A missing baseline reports that it was recorded and
 fails intentionally; inspect it, then rerun with recording disabled.
 
+When the Figma comparison fails, add a human-readable failure record alongside
+the library's assertion output. Use this shape so a reviewer can see the cause
+without opening an image first:
+
+```text
+❌ Figma pixel comparison failed
+Figma node: 419:31291 (TC_AddItem_Expense_Detail)
+Source: TimelineItemAddView
+Expected: 375×812 Figma export
+Actual: 375×812 simulator capture
+Threshold: max RGB delta ≤ 16
+Matching pixels: 5,222 / 304,500 (1.7149%)
+Mismatched fields:
+  - time: expected "9:30 AM", actual "8:00 PM"
+  - expense: expected "$0", actual "₩0"
+  - currency: expected "USD", actual ""
+  - note: expected "The best coffee place", actual "Add note"
+Artifacts: report/side-by-side.png, report/overlay.png, report/diff.png,
+           report/metrics.json, report/text-results.json
+```
+
+Do not turn a low percentage into a generic “snapshot failed” message. Include
+the node, source symbol, dimensions, threshold, numerator/denominator,
+percentage, and the first actionable text or geometry mismatches. If the Swift
+Testing assertion itself fails, preserve its reference and failure-diff paths
+in the same report.
+
 Extract or copy the actual PNG from the test attachment and compare it with the
 Figma export:
 
