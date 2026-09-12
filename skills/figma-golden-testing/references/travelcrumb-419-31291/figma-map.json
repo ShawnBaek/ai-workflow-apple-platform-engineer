@@ -1,0 +1,12 @@
+{
+  "figmaUrl": "https://www.figma.com/design/6vbnqI4BVkNA52jqJNSNjh/travelcrumb_Design-System---USE-THIS-?node-id=419-31291&m=dev",
+  "fileKey": "6vbnqI4BVkNA52jqJNSNjh",
+  "nodeId": "419:31291",
+  "frame": "TC_AddItem_Expense_Detail",
+  "size": {"width": 375, "height": 812},
+  "sourcePath": "TravelCrumbs/Timeline/View/TimelineItemAddView.swift",
+  "symbol": "TimelineItemAddView",
+  "fixture": "Expense detail with Figma-matched time, date, place, address, and note values",
+  "textInventory": "visible-text.json (generated per capture; keep node IDs and bounds)",
+  "status": "reference mapping; runtime parity must be verified by a captured comparison"
+}
