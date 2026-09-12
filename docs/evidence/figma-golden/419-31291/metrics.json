@@ -1,16 +1,16 @@
 {
-  "comparison": "raw pixel agreement; not perceptual correctness",
-  "dimensions": {
-    "width": 375,
-    "height": 812
+  "comparison" : "raw pixel agreement; not perceptual correctness",
+  "dimensions" : {
+    "height" : 812,
+    "width" : 375
   },
-  "threshold": 16,
-  "exactPixels": 0,
-  "matchingPixels": 5222,
-  "pixelCount": 304500,
-  "exactPercentage": 0.0,
-  "matchPercentage": 1.7149425287356321,
-  "meanMaxRGBDelta": 44.556371100164206,
-  "maxRGBDelta": 221,
-  "transformations": "none; no scaling, cropping, or masking"
+  "exactPercentage" : 63.183908045977013,
+  "exactPixels" : 192395,
+  "matchingPixels" : 224269,
+  "matchPercentage" : 73.651559934318556,
+  "maxRGBDelta" : 237,
+  "meanMaxRGBDelta" : 34.928798029556653,
+  "pixelCount" : 304500,
+  "threshold" : 16,
+  "transformations" : "CoreGraphics device-RGB decode; no scaling, cropping, or masking"
 }

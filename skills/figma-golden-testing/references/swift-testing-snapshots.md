@@ -148,7 +148,7 @@ Source: TimelineItemAddView
 Expected: 375×812 Figma export
 Actual: 375×812 simulator capture
 Threshold: max RGB delta ≤ 16
-Matching pixels: 5,222 / 304,500 (1.7149%)
+Matching pixels: 224,269 / 304,500 (73.6516%)
 Mismatched fields:
   - time: expected "9:30 AM", actual "8:00 PM"
   - expense: expected "$0", actual "₩0"
@@ -168,7 +168,7 @@ Extract or copy the actual PNG from the test attachment and compare it with the
 Figma export:
 
 ```sh
-python3 skills/figma-golden-testing/scripts/overlay_diff.py \
+swift skills/figma-golden-testing/scripts/overlay_diff.swift \
   --figma evidence/figma.png \
   --actual evidence/actual.png \
   --out evidence/report
@@ -179,6 +179,20 @@ The command must finish with identical input dimensions and creates
 `matchingPixels` and `matchPercentage` use the configured raw RGB threshold;
 they are not perceptual similarity. Report the threshold, dimensions, exact
 and threshold-matching percentages, and the maximum/mean RGB delta.
+
+To show the JSON results as images in a pull request, run the Swift report
+renderer after the comparator:
+
+```sh
+swift skills/figma-golden-testing/scripts/render_report.swift \
+  --metrics evidence/report/metrics.json \
+  --text evidence/report/text-results.json \
+  --out evidence/report
+```
+
+It creates `metrics.svg` and `text-results.svg`. Embed those SVGs in the PR
+alongside `overlay.png` and `diff.png`; keep the JSON files linked as the
+machine-readable source.
 
 ## Validate visible text separately
 
@@ -216,8 +230,9 @@ Record these independent outcomes in the PR or evidence directory:
 For the TravelCrumb frame `419:31291`, the known capture ran on iPhone 17 Pro
 (iOS 27) at 375×812 and passed the one-test Swift Testing execution. Its Figma
 comparison was intentionally reported as **FAIL**: raw threshold match was
-`625 / 304500 = 0.2053%` because the development screen was the Expense/Income
-entry state while the Figma frame was the populated Plan detail state. This is
+`224269 / 304500 = 73.6516%` at the threshold because the development screen
+still differs from the Figma Expense detail state in status-bar treatment, time,
+currency, amount, categories, note, and lower content. This is
 the expected evidence shape for a capture that works but still needs UI/state
 repair.
 

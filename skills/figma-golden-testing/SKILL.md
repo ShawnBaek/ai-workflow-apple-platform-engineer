@@ -33,11 +33,15 @@ future run compares the same state.
    write/update and run the test; a prose instruction to run snapshot testing is
    not a validation result. Use XCTest/XCUITest attachments and the supplied
    comparator when the project does not use Point-Free SnapshotTesting.
-4. Before changing production code, run the comparator:
-   `python3 scripts/overlay_diff.py --figma figma.png --actual actual.png --out report`.
+4. Before changing production code, run the Swift comparator:
+   `swift skills/figma-golden-testing/scripts/overlay_diff.swift --figma figma.png --actual actual.png --out report`.
    It writes `overlay.png` (50% aligned blend), `diff.png` (red difference heatmap),
    `side-by-side.png`, and `metrics.json`. Images must have identical dimensions;
    never silently resize, crop, or mask them.
+   To make the JSON results directly visible in a PR, render them as SVG images:
+   `swift skills/figma-golden-testing/scripts/render_report.swift --metrics report/metrics.json --text report/text-results.json --out report`.
+   This adds `metrics.svg` and `text-results.svg` without changing the source
+   JSON.
 5. Check visible strings independently from pixels. Report missing, extra, or
    changed labels/buttons/text views with Figma node IDs and source accessibility
    identifiers when available. Pixel agreement is a review signal, not a semantic

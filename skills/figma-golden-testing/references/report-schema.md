@@ -10,7 +10,13 @@
   "capture": {"device": "...", "os": "...", "width": 375, "height": 812},
   "comparison": {"status": "failed", "threshold": 16, "matchingPixels": 0, "pixelCount": 0, "matchPercentage": 0},
   "text": {"missing": [], "extra": [], "changed": []},
-  "artifacts": {"overlay": "overlay.png", "diff": "diff.png", "sideBySide": "side-by-side.png"}
+  "artifacts": {
+    "overlay": "overlay.png",
+    "diff": "diff.png",
+    "sideBySide": "side-by-side.png",
+    "metricsImage": "metrics.svg",
+    "textResultsImage": "text-results.svg"
+  }
 }
 ```
 

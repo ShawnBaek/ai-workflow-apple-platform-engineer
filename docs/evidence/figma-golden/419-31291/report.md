@@ -16,8 +16,10 @@ This proof uses the requested Figma node:
 - [50% overlay](overlay.png)
 - [Difference heatmap](diff.png)
 - [Raw pixel metrics](metrics.json)
+- [Metrics image](metrics.svg)
 - [Figma visible-text inventory](figma-visible-text.json)
 - [Semantic text results](text-results.json)
+- [Text results image](text-results.svg)
 - [Sanitized Figma tree summary](figma-tree-summary.json)
 
 ## Execution result
@@ -38,8 +40,13 @@ xcodebuild test -project Travelcrumb.xcodeproj -scheme TravelCrumb \
   -resultBundlePath /tmp/figma-golden-active-snapshot.xcresult
 ```
 
-The Figma comparison is **FAIL**. The comparator used identical 375×812 inputs,
-no scaling, cropping, or masking, and a max RGB delta threshold of `16`:
+The Swift proof renderer then created `metrics.svg` and `text-results.svg` from
+the JSON files so the numerical and field-level failures can be reviewed as
+images in the PR body.
+
+The Figma comparison is **FAIL**. The Swift comparator used identical 375×812
+inputs, CoreGraphics device-RGB decoding, no scaling, cropping, or masking, and
+a max RGB delta threshold of `16`:
 
 ```text
 ❌ Figma pixel comparison failed
@@ -48,10 +55,11 @@ Source: TimelineItemAddView
 Expected: 375×812 Figma export
 Actual: 375×812 simulator capture
 Threshold: max RGB delta ≤ 16
-matchingPixels: 5,222 / 304,500
-matchPercentage: 1.7149%
-meanMaxRGBDelta: 44.5564
-maxRGBDelta: 221
+matchingPixels: 224,269 / 304,500
+matchPercentage: 73.6516%
+exactPixels: 192,395 / 304,500 (63.1839%)
+meanMaxRGBDelta: 34.9288
+maxRGBDelta: 237
 Mismatched fields: time, expense, currency, category labels, note, Items/share
 ```
 
