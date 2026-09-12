@@ -1,0 +1,26 @@
+name: Validate skills and harness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Run Swift regression tests
+        run: swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+      - name: Validate repository contracts and documentation
+        run: |
+          APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1 --show-bin-path)"
+          "$APE_BIN_DIR/apple-verify" repository --root .

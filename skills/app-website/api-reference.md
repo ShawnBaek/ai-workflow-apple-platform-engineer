@@ -67,7 +67,7 @@ For production, pin to a specific commit SHA instead of `@main` so you don't get
 "swiftui-for-web": "https://cdn.jsdelivr.net/gh/ShawnBaek/SwiftUI-For-Web@<sha>/src/index.js"
 ```
 
-`file://` blocks ES modules entirely. The page **will be blank** if the developer opens `index.html` directly. Always use `python3 -m http.server 8000` or `npx serve`.
+`file://` blocks ES modules entirely. The page **will be blank** if the developer opens `index.html` directly. Use the project's existing development server or `npx serve` over HTTP.
 
 ## The mandatory module set you ship in every project
 

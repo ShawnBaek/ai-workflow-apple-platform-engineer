@@ -1,0 +1,53 @@
+{
+  "$schema": "../contracts/schemas/harness.schema.json",
+  "schema_version": "1.0.0",
+  "mode": "codex",
+  "selected_writer": "codex",
+  "reviewer": null,
+  "platforms": ["ios"],
+  "delivery_target": "pr_ready",
+  "health_profile": "pr_ready",
+  "health_components": [],
+  "agent_skills": {
+    "task_skills": ["apple-platform-engineer"],
+    "expected_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "installations": {
+      "codex": {"collection_root": "/absolute/path/to/installed/skills"},
+      "claude": null
+    }
+  },
+  "authoritative_root": "<absolute-path>",
+  "xcode_container": "<absolute-project-or-workspace-path>",
+  "private_policy_overlay": "<local-untracked-path>",
+  "run_authorization": "<local-untracked-path>",
+  "run_ledger": "/absolute/private/run/ledger.jsonl",
+  "resource_coordinator": {
+    "state_path": "/absolute/private/runtime/resource-coordinator.json",
+    "coordinator_instance_id": "00000000-0000-4000-8000-000000000000",
+    "executable_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract": "apple-verification-core.resources.v1",
+    "runtime_kind": "swift",
+    "source_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "apple_observation_probe": null,
+  "spec_kit": {
+    "enabled": false,
+    "release": "v1.0.1"
+  },
+  "github_tracking": {
+    "issues": true,
+    "project": null
+  },
+  "max_active_repository_writers": 1,
+  "max_implementation_attempts": 3,
+  "max_review_cycles": 2,
+  "authorization_runtime": {
+    "executable_path": "/absolute/path/to/apple-verify",
+    "executable_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract": "apple-verification-core.authorization.v1",
+    "runtime_kind": "swift",
+    "source_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "local_requirements": null,
+  "runtime_probe_scope": null
+}

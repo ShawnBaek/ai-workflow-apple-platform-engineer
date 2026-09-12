@@ -1,0 +1,16 @@
+{
+  "comparison": "raw pixel agreement; not perceptual correctness",
+  "dimensions": {
+    "width": 375,
+    "height": 812
+  },
+  "threshold": 16,
+  "exactPixels": 0,
+  "matchingPixels": 5222,
+  "pixelCount": 304500,
+  "exactPercentage": 0.0,
+  "matchPercentage": 1.7149425287356321,
+  "meanMaxRGBDelta": 44.556371100164206,
+  "maxRGBDelta": 221,
+  "transformations": "none; no scaling, cropping, or masking"
+}

@@ -106,11 +106,16 @@ var body: some View {
 @State private var sorted: [Note] = []
 var body: some View {
     List(sorted) { NoteRow(note: $0) }
-        .onChange(of: notes) { _, new in sorted = new.sorted { $0.date > $1.date } }
+        .onChange(of: notes, initial: true) { _, new in
+            sorted = new.sorted { $0.date > $1.date }
+        }
 }
 ```
 
-Or — store the sort in the model.
+This overload requires iOS 17 / macOS 14 / watchOS 10 or later. On older targets,
+initialize and update the sorted value at the existing model seam. Never leave
+the first render empty until an unrelated data change. Cache only after the
+profile shows sorting matters; a second stored array is not automatically faster.
 
 ## Item 6 — Profile `body` with the SwiftUI Instruments template before optimizing
 

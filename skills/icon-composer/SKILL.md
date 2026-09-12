@@ -7,7 +7,7 @@ description: >-
   App Store exports. Use for iOS, iPadOS, macOS, or watchOS icon concepts;
   typography or monogram icons; Default, Dark, Clear, or Tinted appearances;
   Xcode app-icon replacement; platform-size generation; or archive icon
-  verification.
+  verification; or reference-only review of IconGen companion-upstream drift.
 ---
 
 # Icon Composer
@@ -29,8 +29,14 @@ semantic cue, and a restrained product palette.
   layers, previews, contact sheets, fallback sizes, and opaque marketing PNGs.
 - Before editing an Xcode project, invoke `xcode-project-workflow`. Use
   `xcodebuild` for build, simulator, bundle, and archive verification.
+- For generalized workflow changes derived from the separate IconGen repository,
+  read [`references/companion-upstream.md`](references/companion-upstream.md).
+  Its public upstream is commit-pinned and reference-only; visibility does not
+  replace a license, and sync never copies or executes upstream material.
 
 ## Prepare the artwork
+
+For a new icon concept, use [design discovery](../agent-harness/references/design-discovery.md) to clarify reference apps/icons, likes/dislikes and preferred style, then research what should inform the mark. Reuse the product brief and approved brand direction. An export, size correction or packaging task does not need a fresh style interview.
 
 - Start from the latest template in
   [Apple Design Resources](https://developer.apple.com/design/resources/).
@@ -38,8 +44,9 @@ semantic cue, and a restrained product palette.
   on SVG features Icon Composer doesn't support.
 - Convert typography to outlines before SVG export because SVG doesn't preserve
   fonts reliably.
-- Use SF Pro for typography-first icons. Resolve the installed Apple font on the
-  current Mac instead of hardcoding another developer's font path.
+- For typography-first icons, preserve an approved brand typeface or use SF Pro
+  as a starting point. Verify the font is available and permitted for the asset;
+  resolve its local path instead of hardcoding another developer's font path.
 - Use SF Symbols or an Apple platform rendering API for system symbols. Do not
   redraw an SF Symbol by hand.
 - Keep colors, text, and graphics on separate, meaningfully named layers.
@@ -81,6 +88,9 @@ semantic cue, and a restrained product palette.
    icon reads clearly at every tested size.
 8. Read [`platform-handoff.md`](./platform-handoff.md), install the correct
    artifact in every applicable target, and verify the built product.
+9. If companion-upstream drift is reported, review its exact commit through the
+   normal Issue/branch/PR harness. Never auto-apply or auto-merge upstream
+   changes into this skill.
 
 ## Source layout
 

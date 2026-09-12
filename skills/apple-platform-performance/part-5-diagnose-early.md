@@ -2,37 +2,48 @@
 
 Reference: [Diagnosing performance issues early](https://developer.apple.com/documentation/xcode/diagnosing-performance-issues-early)
 
-## Item 20 — Write `XCTMetric` perf tests for hot paths and gate them in CI
+## Item 20 — Measure a hot path when a stable regression check is useful
+
+Use the existing test target. Do not create a performance or XCUI harness for a
+small UI edit without a measured performance concern. Select the application
+being measured: `XCTCPUMetric()` alone measures the test process, while
+[`XCTCPUMetric(application:)`](https://developer.apple.com/documentation/xctest/xctcpumetric/init(application:))
+measures the requested app.
 
 ```swift
-final class NotesListPerfTests: XCTestCase {
-    func testScrollPerformance() throws {
-        let app = XCUIApplication()
-        app.launchArguments += ["-UITestMode", "YES"]
-
-        measure(metrics: [
-            XCTClockMetric(),
-            XCTCPUMetric(),
-            XCTMemoryMetric(application: app),
-            XCTOSSignpostMetric.applicationLaunch
-        ]) {
-            app.launch()
-            app.swipeUp(velocity: .fast)
-            app.swipeUp(velocity: .fast)
-        }
+func testScrollPerformance() {
+    let app = XCUIApplication()
+    let options = XCTMeasureOptions()
+    options.invocationOptions = [.manuallyStart]
+    measure(metrics: [
+        XCTClockMetric(),
+        XCTCPUMetric(application: app),
+        XCTMemoryMetric(application: app)
+    ], options: options) {
+        // The app's existing fixture mode opens the same populated list at top.
+        app.terminate()
+        app.launchArguments = ["-UITestScenario", "populated-notes"]
+        app.launch()
+        let list = app.collectionViews["notes.list"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        startMeasuring()
+        list.swipeUp(velocity: .fast)
+        list.swipeUp(velocity: .fast)
+        stopMeasuring()
     }
 }
 ```
 
-Available metrics — use what fits:
-- `XCTClockMetric` — wall-clock time
-- `XCTCPUMetric` — CPU time + cycles
-- `XCTMemoryMetric` — peak physical memory
-- `XCTStorageMetric` — disk writes
-- `XCTApplicationLaunchMetric` — full launch profile
-- `XCTOSSignpostMetric` — duration between matching `os_signpost` events you placed in code
+The fixture argument and selector are examples, not APIs supplied by this skill.
+Use the actual app's supported setup and wait for data/animations to settle.
+Reset every measured iteration to the same state outside the timed interval.
+Measure launch separately with `XCTApplicationLaunchMetric`; mixing launch and
+scrolling hides which behavior regressed. Choose a scroll/hitch metric when
+frame delivery is the concern instead of inferring it from elapsed time.
 
-**Set baselines.** Run, capture, accept baseline. From then on, regressions fail the test. Gate in Xcode Cloud or your CI.
+Accept a baseline from repeated measurements under a recorded configuration.
+Gate a meaningful regression budget after accounting for noise; a single fast
+run or a Simulator screen recording is not a performance baseline.
 
 ## Item 21 — Mark expensive code regions with `os_signpost`
 

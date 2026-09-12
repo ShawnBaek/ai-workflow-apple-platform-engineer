@@ -1,0 +1,20 @@
+{
+  "$schema": "../contracts/schemas/project-registry.schema.json",
+  "schema_version": "1.0.0",
+  "developer_id": "developer-local",
+  "host_id": "host-local",
+  "projects": [
+    {
+      "project_id": "project-one",
+      "remote_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "checkouts": [
+        {
+          "checkout_id": "primary",
+          "path": "/absolute/path/to/repository",
+          "kind": "primary",
+          "xcode_containers": ["Application.xcworkspace"]
+        }
+      ]
+    }
+  ]
+}

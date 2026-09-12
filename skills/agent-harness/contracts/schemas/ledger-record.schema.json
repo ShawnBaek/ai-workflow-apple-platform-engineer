@@ -1,0 +1,1182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:ledger-record:1.0.0",
+  "type": "object",
+  "required": ["schema_version", "run_id", "sequence", "recorded_at", "record_type", "payload"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "sequence": {"type": "integer", "minimum": 1},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "record_type": {
+      "enum": [
+        "node",
+        "attempt",
+        "time_interval",
+        "lease",
+        "approval",
+        "grant_reservation",
+        "grant_dispatch",
+        "knowledge",
+        "evidence",
+        "external_write",
+        "feedback",
+        "improvement",
+        "stop"
+      ]
+    },
+    "payload": {"type": "object"}
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "record_type": {"const": "node"},
+        "payload": {
+          "type": "object",
+          "required": ["node_id", "status"],
+          "properties": {
+            "node_id": {"type": "string", "minLength": 1},
+            "status": {
+              "enum": [
+                "pending",
+                "ready",
+                "leased",
+                "acting",
+                "verifying",
+                "passed",
+                "failed_retryable",
+                "failed_terminal",
+                "awaiting_approval",
+                "blocked",
+                "skipped",
+                "superseded"
+              ]
+            },
+            "patch_identity": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "patch_manifest": {"type": "object", "minProperties": 1},
+            "reason": {"type": "string"},
+            "lease_id": {"type": "string", "minLength": 1},
+            "lease_resource": {
+              "enum": [
+                "source_checkout_writer",
+                "xcode_project_mutation",
+                "build_tuple",
+                "simulator_or_device",
+                "coresimulator_runtime_registry",
+                "macos_gui_session",
+                "signing_or_app_store_connect",
+                "github_external_mutation"
+              ]
+            },
+            "lease_resource_key": {"type": "string", "minLength": 1}
+          },
+          "allOf": [
+            {
+              "if": {
+                "required": ["node_id", "status"],
+                "properties": {
+                  "status": {"const": "passed"},
+                  "node_id": {
+                    "enum": [
+                      "claim_implementation_writer",
+                      "release_implementation_writer",
+                      "claim_github_tracking",
+                      "release_github_tracking",
+                      "claim_github_in_progress",
+                      "release_github_in_progress",
+                      "claim_delivery_writer",
+                      "release_delivery_writer",
+                      "claim_github_mutation",
+                      "release_github_mutation",
+                      "claim_archive_build",
+                      "release_archive_build",
+                      "claim_testflight_upload",
+                      "release_testflight_upload",
+                      "claim_upload_evidence_publication",
+                      "release_upload_evidence_publication",
+                      "claim_testflight_distribution",
+                      "release_testflight_distribution",
+                      "claim_distribution_evidence_publication",
+                      "release_distribution_evidence_publication"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "required": ["lease_id", "lease_resource", "lease_resource_key"]
+              }
+            },
+            {
+              "if": {
+                "required": ["node_id", "status"],
+                "properties": {
+                  "status": {"const": "passed"},
+                  "node_id": {
+                    "enum": [
+                      "verify",
+                      "freeze_review",
+                      "review",
+                      "converge",
+                      "reverify",
+                      "prepare_evidence",
+                      "prepare_pr",
+                      "repository_confirmation",
+                      "commit",
+                      "push",
+                      "verify_remote_sha",
+                      "create_pr",
+                      "publish_evidence",
+                      "verify_published_evidence",
+                      "checks",
+                      "pr_ready"
+                    ]
+                  }
+                }
+              },
+              "then": {"required": ["patch_identity", "patch_manifest"]}
+            }
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "attempt"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "attempt_id",
+            "authorization_hash",
+            "phase",
+            "ordinal",
+            "input_hash",
+            "outcome"
+          ],
+          "properties": {
+            "attempt_id": {"type": "string", "minLength": 1},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "phase": {"enum": ["implementation", "review", "tool"]},
+            "ordinal": {"type": "integer", "minimum": 1},
+            "attempt_of": {"type": ["string", "null"]},
+            "supersedes": {"type": ["string", "null"]},
+            "input_hash": {"type": "string", "minLength": 1},
+            "failure_hash": {"type": "string", "minLength": 1},
+            "outcome": {
+              "enum": ["passed", "failed_retryable", "failed_terminal", "blocked", "superseded"]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "time_interval"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "authorization_hash",
+            "kind",
+            "started_at",
+            "ended_at",
+            "reason"
+          ],
+          "properties": {
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "kind": {"enum": ["active", "async_wait"]},
+            "started_at": {"type": "string", "format": "date-time"},
+            "ended_at": {"type": "string", "format": "date-time"},
+            "reason": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "lease"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "lease_id",
+            "action",
+            "owner",
+            "resource",
+            "resource_key",
+            "resource_descriptor",
+            "coordinator_receipt"
+          ],
+          "properties": {
+            "lease_id": {"type": "string", "minLength": 1},
+            "action": {"enum": ["acquire", "heartbeat", "release"]},
+            "owner": {"type": "string", "minLength": 1},
+            "resource": {
+              "enum": [
+                "source_checkout_writer",
+                "xcode_project_mutation",
+                "build_tuple",
+                "simulator_or_device",
+                "coresimulator_runtime_registry",
+                "macos_gui_session",
+                "signing_or_app_store_connect",
+                "github_external_mutation"
+              ]
+            },
+            "resource_key": {"type": "string", "minLength": 1},
+            "resource_descriptor": {"type": "object", "minProperties": 1},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            },
+            "branch": {"type": "string", "minLength": 1},
+            "base_sha": {"type": "string", "minLength": 1},
+            "pre_state_hash": {"type": "string", "minLength": 1},
+            "post_state_hash": {"type": "string", "minLength": 1},
+            "allowed_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "allowed_actions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "protects": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "approval_id": {"type": "string", "minLength": 1},
+            "mutation_target": {"type": "string", "minLength": 1},
+            "acquired_at": {"type": "string", "format": "date-time"},
+            "heartbeat_at": {"type": "string", "format": "date-time"},
+            "released_at": {"type": "string", "format": "date-time"},
+            "expires_at": {"type": "string", "format": "date-time"},
+            "coordinator_release_confirmation": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "release_id",
+                "receipt_id",
+                "lease_id",
+                "fencing_token",
+                "released_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "release_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "released_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            },
+            "recovery_evidence": {
+              "type": "object",
+              "required": [
+                "previous_receipt_id",
+                "previous_fencing_token",
+                "observer",
+                "owner_liveness",
+                "owner_tool_children",
+                "dirty_state",
+                "live_resource_revalidation"
+              ],
+              "properties": {
+                "mode": {"const": "quiescent_release"},
+                "previous_receipt_id": {"type": "string", "minLength": 1},
+                "previous_fencing_token": {"type": "integer", "minimum": 1},
+                "observer": {
+                  "type": "object",
+                  "required": ["observer_run_id", "observer_actor", "method", "observed_at"],
+                  "properties": {
+                    "observer_run_id": {"type": "string", "minLength": 1},
+                    "observer_actor": {"type": "string", "minLength": 1},
+                    "method": {"const": "bounded_read_only_host_probe"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "owner_liveness": {
+                  "type": "object",
+                  "required": ["state", "digest", "observed_at"],
+                  "properties": {
+                    "state": {"enum": ["dead", "quiescent", "completed"]},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "owner_tool_children": {
+                  "type": "object",
+                  "required": ["state", "digest", "observed_at"],
+                  "properties": {
+                    "state": {"enum": ["dead", "quiescent"]},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "dirty_state": {
+                  "type": "object",
+                  "required": ["state", "digest", "observed_at"],
+                  "properties": {
+                    "state": {"enum": ["clean", "preserved"]},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                },
+                "live_resource_revalidation": {
+                  "type": "object",
+                  "required": ["passed", "digest", "observed_at"],
+                  "properties": {
+                    "passed": {"const": true},
+                    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                    "observed_at": {"type": "string", "format": "date-time"}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "oneOf": [
+                {
+                  "required": ["mode"],
+                  "properties": {
+                    "owner_liveness": {"properties": {"state": {"enum": ["quiescent", "completed"]}}},
+                    "owner_tool_children": {"properties": {"state": {"const": "quiescent"}}}
+                  }
+                },
+                {
+                  "not": {"required": ["mode"]},
+                  "properties": {
+                    "owner_liveness": {"properties": {"state": {"const": "dead"}}},
+                    "owner_tool_children": {"properties": {"state": {"const": "dead"}}},
+                    "dirty_state": {"properties": {"state": {"const": "clean"}}}
+                  }
+                }
+              ],
+              "additionalProperties": false
+            },
+            "recovery_confirmation": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "recovery_id",
+                "previous_receipt_id",
+                "previous_fencing_token",
+                "recovery_fencing_token",
+                "recovered_at",
+                "evidence_sha256",
+                "replacement_receipt"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "recovery_id": {"type": "string", "minLength": 1},
+                "previous_receipt_id": {"type": "string", "minLength": 1},
+                "previous_fencing_token": {"type": "integer", "minimum": 1},
+                "recovery_fencing_token": {"type": "integer", "minimum": 2},
+                "recovered_at": {"type": "string", "format": "date-time"},
+                "evidence_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "replacement_receipt": {"type": ["object", "null"]}
+              },
+              "additionalProperties": false
+            }
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"action": {"const": "acquire"}}},
+              "then": {
+                "required": [
+                  "branch",
+                  "base_sha",
+                  "pre_state_hash",
+                  "allowed_paths",
+                  "allowed_actions",
+                  "approval_id",
+                  "acquired_at",
+                  "expires_at"
+                ]
+              }
+            },
+            {
+              "if": {"properties": {"action": {"const": "heartbeat"}}},
+              "then": {"required": ["heartbeat_at", "expires_at"]}
+            },
+            {
+              "if": {
+                "properties": {
+                  "resource": {
+                    "enum": [
+                      "xcode_project_mutation",
+                      "build_tuple",
+                      "simulator_or_device",
+                      "coresimulator_runtime_registry",
+                      "macos_gui_session"
+                    ]
+                  }
+                }
+              },
+              "then": {"required": ["protects"]}
+            },
+            {
+              "if": {"properties": {"action": {"const": "release"}}},
+              "then": {
+                "required": ["released_at", "post_state_hash"],
+                "oneOf": [
+                  {
+                    "required": ["coordinator_release_confirmation"],
+                    "not": {
+                      "anyOf": [
+                        {"required": ["recovery_evidence"]},
+                        {"required": ["recovery_confirmation"]}
+                      ]
+                    }
+                  },
+                  {
+                    "required": ["recovery_evidence", "recovery_confirmation"],
+                    "not": {"required": ["coordinator_release_confirmation"]}
+                  }
+                ]
+              }
+            }
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "approval"},
+        "payload": {
+          "type": "object",
+          "required": ["approval_id", "kind", "actor", "decision", "scope"],
+          "properties": {
+            "approval_id": {"type": "string", "minLength": 1},
+            "kind": {
+              "enum": [
+                "acceptance",
+                "plan",
+                "branch",
+                "repository",
+                "xcodegen",
+                "external_write",
+                "destructive_action",
+                "improvement",
+                "run_authorization"
+              ]
+            },
+            "actor": {"type": "string", "minLength": 1},
+            "decision": {"enum": ["approved", "rejected"]},
+            "scope": {"type": "string", "minLength": 1},
+            "resource": {"type": "string", "minLength": 1},
+            "resource_key": {"type": "string", "minLength": 1},
+            "action": {"type": "string", "minLength": 1},
+            "target": {"type": "string", "minLength": 1},
+            "single_use": {"type": "boolean"},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "delivery_target": {
+              "enum": ["local_verified", "pr_ready", "testflight_uploaded", "testflight_distributed"]
+            },
+            "health_profile": {
+              "enum": [
+                "local_verified",
+                "pr_ready",
+                "runtime_ui",
+                "testflight_uploaded",
+                "testflight_distributed",
+                "icon_upstream"
+              ]
+            },
+            "selected_writer": {"enum": ["codex", "claude"]},
+            "contract_schema_id": {
+              "const": "urn:ios-experts:schema:run-authorization:1.0.0"
+            },
+            "contract_schema_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "health_attestation": {
+              "type": "object",
+              "required": [
+                "report_sha256",
+                "observed_at",
+                "profile",
+                "overall_status",
+                "authoritative_targets_sha256",
+                "agent_skill_bundle_sha256",
+                "coordinator_instance_id",
+                "coordinator_contract_bundle_sha256"
+              ],
+              "properties": {
+                "report_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "observed_at": {"type": "string", "format": "date-time"},
+                "profile": {"enum": ["local_verified", "pr_ready", "runtime_ui", "testflight_uploaded", "testflight_distributed", "icon_upstream"]},
+                "overall_status": {"enum": ["healthy", "degraded"]},
+                "authoritative_targets_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "agent_skill_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "coordinator_contract_bundle_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+              },
+              "additionalProperties": false
+            },
+            "resource_plan": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "required": [
+                  "plan_id",
+                  "resource",
+                  "resource_key",
+                  "descriptor_sha256",
+                  "resource_descriptor",
+                  "owner_actor",
+                  "protects"
+                ],
+                "properties": {
+                  "plan_id": {"type": "string", "minLength": 1},
+                  "resource": {
+                    "enum": [
+                      "source_checkout_writer",
+                      "xcode_project_mutation",
+                      "build_tuple",
+                      "simulator_or_device",
+                      "coresimulator_runtime_registry",
+                      "macos_gui_session",
+                      "signing_or_app_store_connect",
+                      "github_external_mutation"
+                    ]
+                  },
+                  "resource_key": {"type": "string", "minLength": 1},
+                  "descriptor_sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "resource_descriptor": {
+                    "type": "object",
+                    "minProperties": 1
+                  },
+                  "owner_actor": {"type": "string", "minLength": 1},
+                  "protects": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {"type": "string", "minLength": 1}
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "repository_fingerprint": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "repository_base_sha": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40,64}$"
+            },
+            "allowed_paths": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "acceptance_ids": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "issued_at": {"type": "string", "format": "date-time"},
+            "expires_at": {"type": "string", "format": "date-time"},
+            "action_grants": {
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "object",
+                "required": [
+                  "grant_id",
+                  "system",
+                  "action",
+                  "operation",
+                  "operation_input",
+                  "constraint_sha256",
+                  "resource_key",
+                  "phase",
+                  "single_use",
+                  "idempotency_key"
+                ],
+                "properties": {
+                  "grant_id": {"type": "string", "minLength": 1},
+                  "system": {"enum": ["git", "github", "apple"]},
+                  "action": {"type": "string", "minLength": 1},
+                  "operation": {"type": "string", "minLength": 1},
+                  "operation_input": {"type": "object", "minProperties": 1},
+                  "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                  "resource_key": {"type": "string", "minLength": 1},
+                  "phase": {"enum": ["local_delivery", "pr_delivery", "testflight_upload", "testflight_distribution"]},
+                  "target": {"type": "string", "minLength": 1},
+                  "target_from_grant_id": {"type": "string", "minLength": 1},
+                  "produces_target_kind": {"enum": ["github_issue", "github_pr"]},
+                  "single_use": {"const": true},
+                  "idempotency_key": {"type": "string", "minLength": 1}
+                },
+                "oneOf": [
+                  {
+                    "required": ["target"],
+                    "not": {"required": ["target_from_grant_id"]}
+                  },
+                  {
+                    "required": ["target_from_grant_id"],
+                    "not": {"required": ["target"]}
+                  }
+                ],
+                "additionalProperties": false
+              }
+            },
+            "local_requirements": {
+              "additionalProperties": false,
+              "properties": {
+                "review_required": {
+                  "type": "boolean"
+                },
+                "spec_kit_required": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "review_required",
+                "spec_kit_required"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "spec_kit": {
+              "additionalProperties": false,
+              "properties": {
+                "approved_git_branch": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "artifact_hashes": {
+                  "additionalProperties": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "minProperties": 1,
+                  "type": "object"
+                },
+                "feature_directory": {
+                  "pattern": "^specs/[^/]+$",
+                  "type": "string"
+                },
+                "feature_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "release": {
+                  "const": "v1.0.1"
+                },
+                "snapshot_sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "workflow_run_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "release",
+                "feature_id",
+                "feature_directory",
+                "approved_git_branch",
+                "snapshot_sha256",
+                "workflow_run_id",
+                "artifact_hashes"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"kind": {"const": "run_authorization"}}},
+              "then": {
+                "required": [
+                  "authorization_hash",
+                  "delivery_target",
+                  "selected_writer",
+                  "contract_schema_id",
+                  "contract_schema_sha256",
+                  "health_profile",
+                  "health_attestation",
+                  "resource_plan",
+                  "repository_fingerprint",
+                  "repository_base_sha",
+                  "allowed_paths",
+                  "acceptance_ids",
+                  "issued_at",
+                  "expires_at",
+                  "action_grants",
+                  "local_requirements",
+                  "spec_kit"
+                ]
+              }
+            }
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "grant_reservation"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "reservation_id",
+            "authorization_hash",
+            "grant_id",
+            "idempotency_key",
+            "system",
+            "action",
+            "operation",
+            "operation_input",
+            "action_request_sha256",
+            "constraint_sha256",
+            "phase",
+            "target",
+            "lease_id",
+            "lease_owner",
+            "writer_actor",
+            "resource",
+            "resource_key",
+            "resource_descriptor",
+            "coordinator_receipt",
+            "spec_checkpoint_sha256",
+            "apple_observation_sha256",
+            "apple_observation_state_sha256",
+            "health_report_sha256",
+            "paths",
+            "repository_observation_sha256"
+          ],
+          "properties": {
+            "reservation_id": {"type": "string", "minLength": 1},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "grant_id": {"type": "string", "minLength": 1},
+            "idempotency_key": {"type": "string", "minLength": 1},
+            "system": {"enum": ["git", "github", "apple"]},
+            "action": {"type": "string", "minLength": 1},
+            "operation": {"type": "string", "minLength": 1},
+            "operation_input": {"type": "object", "minProperties": 1},
+            "action_request_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "phase": {"enum": ["local_delivery", "pr_delivery", "testflight_upload", "testflight_distribution"]},
+            "target": {"type": "string", "minLength": 1},
+            "lease_id": {"type": "string", "minLength": 1},
+            "lease_owner": {"type": "string", "minLength": 1},
+            "writer_actor": {"enum": ["codex", "claude"]},
+            "resource": {
+              "enum": [
+                "source_checkout_writer",
+                "github_external_mutation",
+                "signing_or_app_store_connect"
+              ]
+            },
+            "resource_key": {"type": "string", "minLength": 1},
+            "resource_descriptor": {"type": "object", "minProperties": 1},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            },
+            "spec_checkpoint_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "apple_observation_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "apple_observation_state_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "health_report_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "paths": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "repository_observation_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "grant_dispatch"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "dispatch_id",
+            "reservation_id",
+            "coordinator_receipt",
+            "health_report_sha256",
+            "dispatch_deadline"
+          ],
+          "properties": {
+            "dispatch_id": {"type": "string", "minLength": 1},
+            "reservation_id": {"type": "string", "minLength": 1},
+            "health_report_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "dispatch_deadline": {"type": "string", "format": "date-time"},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "knowledge"},
+        "payload": {
+          "type": "object",
+          "required": ["source_id", "authority", "content_hash", "provenance"],
+          "properties": {
+            "source_id": {"type": "string", "minLength": 1},
+            "authority": {"type": "string", "minLength": 1},
+            "content_hash": {"type": "string", "minLength": 1},
+            "provenance": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "evidence"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "evidence_id",
+            "evidence_kind",
+            "acceptance_ids",
+            "patch_identity",
+            "patch_manifest",
+            "repository_fingerprint",
+            "tool_tuple",
+            "observed_result",
+            "outcome"
+          ],
+          "properties": {
+            "evidence_id": {"type": "string", "minLength": 1},
+            "acceptance_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "patch_identity": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "patch_manifest": {"type": "object", "minProperties": 1},
+            "tool_tuple": {"type": "object"},
+            "observed_result": {"type": "string", "minLength": 1},
+            "outcome": {"enum": ["passed", "failed", "blocked"]},
+            "artifact_path": {"type": "string", "minLength": 1},
+            "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            ,"evidence_kind": {"enum": ["acceptance", "review", "commit_equivalence", "spec_kit_checkpoint", "testflight_artifact", "publication", "checks_readback"]}
+            ,"repository_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+            ,"local_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
+            ,"remote_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
+            ,"artifact_source_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
+            ,"version": {"type": "string", "minLength": 1}
+            ,"build": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "external_write"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "system",
+            "action",
+            "operation",
+            "operation_input",
+            "constraint_sha256",
+            "phase",
+            "resource_key",
+            "lease_id",
+            "lease_owner",
+            "writer_actor",
+            "resource",
+            "resource_descriptor",
+            "coordinator_receipt",
+            "target",
+            "outcome",
+            "authorization_hash",
+            "grant_id",
+            "idempotency_key"
+            ,"reservation_id",
+            "dispatch_id",
+            "spec_checkpoint_sha256",
+            "apple_observation_sha256",
+            "health_report_sha256"
+          ],
+          "properties": {
+            "system": {"enum": ["git", "github", "apple", "other"]},
+            "action": {"type": "string", "minLength": 1},
+            "operation": {"type": "string", "minLength": 1},
+            "operation_input": {"type": "object", "minProperties": 1},
+            "constraint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "phase": {"enum": ["local_delivery", "pr_delivery", "testflight_upload", "testflight_distribution"]},
+            "resource_key": {"type": "string", "minLength": 1},
+            "lease_id": {"type": "string", "minLength": 1},
+            "lease_owner": {"type": "string", "minLength": 1},
+            "writer_actor": {"enum": ["codex", "claude"]},
+            "resource": {
+              "enum": [
+                "source_checkout_writer",
+                "github_external_mutation",
+                "signing_or_app_store_connect"
+              ]
+            },
+            "resource_descriptor": {"type": "object", "minProperties": 1},
+            "coordinator_receipt": {
+              "type": "object",
+              "required": [
+                "coordinator_instance_id",
+                "receipt_id",
+                "lease_id",
+                "owner_run_id",
+                "owner_actor",
+                "resource",
+                "resource_key",
+                "descriptor_sha256",
+                "fencing_token",
+                "acquired_at",
+                "expires_at"
+              ],
+              "properties": {
+                "coordinator_instance_id": {"type": "string", "minLength": 1},
+                "receipt_id": {"type": "string", "minLength": 1},
+                "lease_id": {"type": "string", "minLength": 1},
+                "owner_run_id": {"type": "string", "minLength": 1},
+                "owner_actor": {"type": "string", "minLength": 1},
+                "resource": {"type": "string", "minLength": 1},
+                "resource_key": {"type": "string", "minLength": 1},
+                "descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "fencing_token": {"type": "integer", "minimum": 1},
+                "acquired_at": {"type": "string", "format": "date-time"},
+                "expires_at": {"type": "string", "format": "date-time"}
+              },
+              "additionalProperties": false
+            },
+            "target": {"type": "string", "minLength": 1},
+            "outcome": {"enum": ["succeeded", "failed", "blocked"]},
+            "local_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+            "remote_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+            "authorization_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "grant_id": {"type": "string", "minLength": 1},
+            "idempotency_key": {"type": "string", "minLength": 1},
+            "reservation_id": {"type": "string", "minLength": 1},
+            "dispatch_id": {"type": "string", "minLength": 1},
+            "spec_checkpoint_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "apple_observation_sha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "health_report_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "output_target": {"type": "string", "minLength": 1},
+            "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "artifact_source_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+            "version": {"type": "string", "minLength": 1},
+            "build": {"type": "string", "minLength": 1},
+            "external_state": {
+              "enum": ["accepted", "pending", "processing", "completed"]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "feedback"},
+        "payload": {
+          "type": "object",
+          "required": ["feedback_id", "actor", "scope", "target", "summary", "disposition"],
+          "properties": {
+            "feedback_id": {"type": "string", "minLength": 1},
+            "actor": {"type": "string", "minLength": 1},
+            "scope": {"enum": ["current_run", "project_candidate", "repository_candidate"]},
+            "target": {"type": "string", "minLength": 1},
+            "summary": {"type": "string", "minLength": 1},
+            "disposition": {"enum": ["accepted", "rejected", "needs_clarification"]},
+            "invalidates": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "improvement"},
+        "payload": {
+          "type": "object",
+          "required": [
+            "candidate_id",
+            "derived_from_feedback_ids",
+            "scope",
+            "proposal_hash",
+            "status",
+            "validation_evidence_ids"
+          ],
+          "properties": {
+            "candidate_id": {"type": "string", "minLength": 1},
+            "derived_from_feedback_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "scope": {"enum": ["private_project_overlay", "ios_experts_repository"]},
+            "proposal_hash": {"type": "string", "minLength": 1},
+            "status": {"enum": ["proposed", "approved", "rejected", "applied", "rolled_back"]},
+            "validation_evidence_ids": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "rollback_ref": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "record_type": {"const": "stop"},
+        "payload": {
+          "type": "object",
+          "required": ["reason", "outcome"],
+          "properties": {
+            "reason": {"type": "string", "minLength": 1},
+            "outcome": {"enum": ["blocked", "failed_terminal", "cancelled"]}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

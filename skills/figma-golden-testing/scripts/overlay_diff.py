@@ -4,6 +4,12 @@ import argparse, json
 from pathlib import Path
 from PIL import Image, ImageChops, ImageEnhance
 
+def pixels(image):
+    """Return flattened pixels without Pillow's deprecated getdata warning."""
+    if hasattr(image, 'get_flattened_data'):
+        return list(image.get_flattened_data())
+    return list(image.getdata())
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--figma', required=True)
@@ -19,7 +25,7 @@ def main():
     heat = ImageEnhance.Contrast(diff.convert('RGB')).enhance(3.0)
     side = Image.new('RGB', (figma.width * 2, figma.height), 'white')
     side.paste(figma.convert('RGB'), (0, 0)); side.paste(actual.convert('RGB'), (figma.width, 0))
-    fpx, apx = list(figma.getdata()), list(actual.getdata()); matches = 0; exact = 0; total = len(fpx); sum_delta = 0; max_delta = 0
+    fpx, apx = pixels(figma), pixels(actual); matches = 0; exact = 0; total = len(fpx); sum_delta = 0; max_delta = 0
     for f, q in zip(fpx, apx):
         delta = max(abs(f[i] - q[i]) for i in range(3)); max_delta = max(max_delta, delta); sum_delta += delta
         exact += delta == 0; matches += delta <= a.threshold

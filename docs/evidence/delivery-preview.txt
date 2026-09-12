@@ -1,0 +1,18 @@
+# Completion Report
+Status: partial
+Task: not recorded
+# Changes
+- none recorded
+# PRs
+- none recorded
+# Checks
+- none recorded
+# Evidence
+- none recorded
+# Omissions / residual risk
+- none recorded
+# Resource Usage (not_exposed)
+- none recorded
+Missing usage sources: provider/client usage source IDs were not exposed
+Cross-provider total (informational): not exposed
+Cost: not_exposed; not exposed

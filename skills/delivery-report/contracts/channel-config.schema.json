@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:delivery-channel-config:1.0.0",
+  "type": "object",
+  "required": ["schema_version", "enabled", "channels"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "enabled": {"type": "boolean"},
+    "channels": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "enabled", "destination_ref", "credential_ref", "transport_ref", "send_policy", "media_policy", "whatsapp_template_ref"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9._-]{1,63}$"},
+          "kind": {"enum": ["telegram", "whatsapp", "imessage"]},
+          "enabled": {"type": "boolean"},
+          "destination_ref": {"type": "string", "pattern": "^(private|shortcuts)\\.[a-z][a-z0-9._-]{1,127}$"},
+          "credential_ref": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^(keychain|private)\\.[a-z][a-z0-9._-]{1,127}$"}]},
+          "transport_ref": {"type": "string", "pattern": "^[a-z][a-z0-9.-]{1,63}$"},
+          "send_policy": {"const": "exact_task_authorization"},
+          "media_policy": {"const": "reviewed_allowlist_only"},
+          "whatsapp_template_ref": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^private\\.[a-z][a-z0-9._-]{1,127}$"}]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

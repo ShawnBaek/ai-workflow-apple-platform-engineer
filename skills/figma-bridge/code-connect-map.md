@@ -83,7 +83,8 @@ The third command is the developer-friendliness check the engineer can run befor
 
 ## When you generate a file from a Figma frame
 
-The agent must add the `// figma:` comment to every file it writes from `generate_figma_design`. The URL is the exact node you generated from. No exceptions.
+Preserve the exact source node in the existing design record or the touched
+view's `// figma:` comment. A helper file does not need a duplicate mapping.
 
 If the agent is editing an existing file and notices the comment is missing, **suggest adding it** (don't add silently — the engineer may have deliberately omitted it for an internal-only utility).
 

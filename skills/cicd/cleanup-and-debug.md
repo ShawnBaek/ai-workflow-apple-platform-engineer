@@ -1,136 +1,67 @@
-# Disk cleanup + failure debugging on the self-hosted runner
+# Runner storage audit and failure triage
 
-The two things that bite self-hosted runners:
-1. **Disk fills up** from DerivedData, Xcode caches, simulators, Homebrew cache. Builds suddenly start failing with "no space left on device."
-2. **A failed build with no log** wastes the next 30 minutes. Always upload diagnostic artifacts.
+## Audit before cleanup
 
-## Cleanup commands (memorize these)
+For a long-lived Mac runner, record filesystem capacity and itemized sizes before
+proposing any deletion. Use the `xcode-storage` skill to classify each target as:
 
-### Per-job (every workflow, in the `always()` cleanup step)
+- rebuildable: job-owned output that can be recreated;
+- conditional: caches, DerivedData, DeviceSupport, or Simulator devices whose
+  next-use cost must be stated;
+- protected: archives, signing material, installed runtimes in use, user data,
+  and any path with uncertain ownership.
 
-```bash
-# DerivedData — biggest offender, grows unbounded
-rm -rf ~/Library/Developer/Xcode/DerivedData/*
+Show the exact path/item, observed size, expected reclaim, owner/job, last-use
+signal when available, and rebuild/redownload/reset impact. Ask for itemized
+approval. Prefer Xcode Settings > Components for runtime management and
+recoverable Trash operations for approved local folders.
 
-# Simulators booted by tests
-xcrun simctl shutdown all || true
-xcrun simctl delete unavailable || true
+Never place blanket user-library, Simulator, package-cache, archive, Homebrew, or
+runner-workspace deletion in an `if: always()` step. A job may remove only a
+workspace-relative path it created, named exactly, and no longer needs.
 
-# Build artifacts produced by this job
-rm -rf ./build
-rm -f *.log *.xcresult
-```
+## Safe recurring policy
 
-### Weekly (the `weekly-cleanup.yml` workflow)
+Use retention rather than sweeps:
 
-```bash
-# Xcode caches
-rm -rf ~/Library/Caches/com.apple.dt.Xcode/*
-rm -rf ~/Library/Developer/CoreSimulator/Caches/*
+- set artifact/log retention explicitly;
+- expire old job-owned artifacts through GitHub settings;
+- cap concurrency so duplicate builds do not accumulate;
+- monitor free-space thresholds and pause new jobs before exhaustion;
+- schedule a read-only size report, then review itemized cleanup separately.
 
-# Reset all simulators to factory
-xcrun simctl erase all
+An unavailable Simulator device is not the same as an installed runtime. Do not
+erase devices or remove runtimes as a generic response to disk pressure.
 
-# Homebrew
-brew cleanup -s --prune=all
-brew autoremove
+## Evidence on failure
 
-# Swift Package Manager
-rm -rf ~/Library/Caches/org.swift.swiftpm
-rm -rf ~/Library/org.swift.swiftpm
+Upload only the relevant evidence, with a short retention period appropriate to
+the project:
 
-# CocoaPods
-pod cache clean --all 2>/dev/null || true
+- build log with the first actionable diagnostic;
+- `.xcresult` bundle for affected tests;
+- package fingerprint and resolution log for dependency failures;
+- screenshot/video for a UI acceptance failure;
+- runner diagnostic excerpt when the runner itself failed.
 
-# Carthage (rare in 2026, but worth checking)
-rm -rf ~/Library/Caches/org.carthage.CarthageKit
+Do not upload signing assets, profiles, private keys, environment dumps, or
+unredacted home/session logs.
 
-# Runner workspaces (keeps the actions-runner intact, drops _work contents)
-rm -rf ~/actions-runner/_work/*/
+## Triage by layer
 
-# Logs — runner diagnostics
-find ~/actions-runner/_diag -name "*.log" -mtime +14 -delete
-```
-
-### Disk check (always print before + after major cleanup)
-
-```bash
-df -h /
-du -sh ~/Library/Developer/Xcode/DerivedData ~/Library/Caches/Homebrew 2>/dev/null
-```
-
-### Disk usage triage — when something blew up
-
-```bash
-# Top 20 largest folders in your home
-sudo du -d 2 ~/ 2>/dev/null | sort -rn | head -20
-
-# Or with ncdu (better UX)
-brew install ncdu
-ncdu ~
-```
-
-## Debug logging — always upload artifacts on failure
-
-The workflow template (see [`workflow-templates.md`](workflow-templates.md)) wires this up. Pattern:
-
-```yaml
-- name: Build
-  run: |
-    set -o pipefail
-    xcodebuild build ... | tee build.log
-
-- name: Upload logs on failure
-  if: failure()
-  uses: actions/upload-artifact@v4
-  with:
-    name: build-logs-${{ github.run_id }}
-    path: |
-      build.log
-      ~/Library/Logs/DiagnosticReports/*.crash
-      ~/Library/Logs/CoreSimulator/CoreSimulator.log
-    retention-days: 7
-```
-
-What to capture:
-
-| Artifact | Path | Why |
-|---|---|---|
-| Build log | `build.log` (via `tee`) | The xcodebuild output, full, unfiltered |
-| Test result bundle | `*.xcresult` | Open in Xcode → see exact test failures, screenshots, attachments |
-| Simulator log | `~/Library/Logs/CoreSimulator/CoreSimulator.log` | Why a simulator didn't boot or crashed |
-| Crash reports | `~/Library/Logs/DiagnosticReports/*.crash` | App crashes during testing |
-| Runner diag | `~/actions-runner/_diag/Worker_*.log` | When the runner itself misbehaves |
-
-Use **`actions/upload-artifact@v4`** (v3 is deprecated). `retention-days: 7` for build/test, `14` for releases. Don't let artifacts accumulate.
-
-## When a build fails — the triage flow
-
-The cicd skill routes failures to the matching specialist skill (install it with `npx skills add ShawnBaek/iOS-experts`):
-
-| Failure pattern in log | Route to |
+| Signal | Route |
 |---|---|
-| `xcodebuild` exit ≠ 0; compile errors, link errors, scheme not found, signing failures | the `xcodebuild` skill |
-| `asc` exit ≠ 0; submission rejected, build processing stuck, certificate expired | the `app-store-connect` skill |
-| Simulator boot failure, screen capture fail, UI automation tap missed | the `xcodebuild` skill (has simulator + ui-automation tools) |
-| Unit / UI test failure | Read `.xcresult` → identify the test → flag the underlying code change |
-| Test perf regression (XCTMetric baseline exceeded) | the `apple-platform-performance` skill |
-| Hang report from CI (`MetricKit` payload) | the `apple-platform-performance` skill → Part II (Hangs) |
+| runner offline, disk pressure, permission, Xcode selection | runner/environment |
+| package resolve/checkout/revision | `swift-package-manager` |
+| project, scheme, compiler, linker, Simulator | `xcodebuild` |
+| assertion, UI synchronization, xcresult | `apple-platform-testing` |
+| signing, upload, TestFlight/App Store | `app-store-connect` |
+| deterministic performance regression | `apple-platform-performance` |
 
-When you read a failed-build log:
-1. **Search for `error:` first**, then `warning:`. Skip success lines.
-2. **Find the FIRST error** — later errors are usually cascades.
-3. **Quote the error to the developer** with file:line — don't paste 200 lines of unrelated output.
-4. **Then hand off** to the right specialist skill with the diagnostic.
+Do not rerun unchanged deterministic failures. Retain the original failure,
+change the relevant input or implementation, and create a new attempt.
 
-## Common runner failures + fixes
+References:
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| "No space left on device" mid-build | DerivedData grew | Run cleanup workflow, increase frequency to daily |
-| "Signing for X requires development team" | New machine, no signing setup | Manual: open Xcode → Preferences → Accounts; add the Apple ID; then xcodebuild can re-sign |
-| Runner shows "Offline" in Settings → Actions | `actions.runner.*` service stopped (after macOS update or reboot loop) | `sudo ~/actions-runner/svc.sh restart` |
-| Build hangs forever | Xcode prompted for a password / cert and there's no UI to see it | SSH in, run `xcodebuild` manually to see the dialog, dismiss; keep runner logged-in user |
-| `xcrun: error: invalid active developer path` | Command Line Tools selected instead of full Xcode | `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` |
-| Test fails only on runner, passes locally | Locale, timezone, language differ on runner | Set in workflow: `defaults write NSGlobalDomain AppleLocale en_US`, `sudo systemsetup -settimezone America/Los_Angeles` |
-| `brew install` prompts for password | Homebrew not in PATH for the runner user, or sudo not configured | Add to runner user's `~/.zprofile`: `eval "$(/opt/homebrew/bin/brew shellenv)"`; restart runner |
+- [Self-hosted runner security](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#hardening-for-self-hosted-runners)
+- [Workflow artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)

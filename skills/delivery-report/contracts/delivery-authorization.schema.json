@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:delivery-authorization:1.0.0",
+  "type": "object",
+  "required": ["schema_version", "decision", "authorization_id", "run_id", "issued_at", "expires_at", "channel_id", "channel_kind", "destination_ref", "report_sha256", "media_allowlist", "transport_ref", "idempotency_key", "single_use", "whatsapp_mode", "whatsapp_template_ref", "whatsapp_template_language", "whatsapp_request_sha256", "cost_approval"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "decision": {"const": "approved"},
+    "authorization_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "channel_id": {"type": "string", "pattern": "^[a-z][a-z0-9._-]{1,63}$"},
+    "channel_kind": {"enum": ["telegram", "whatsapp", "imessage"]},
+    "destination_ref": {"type": "string", "pattern": "^(private|shortcuts)\\.[a-z][a-z0-9._-]{1,127}$"},
+    "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "media_allowlist": {"type": "array", "uniqueItems": true, "items": {"type": "object", "required": ["kind", "reference", "sha256"], "properties": {"kind": {"enum": ["screenshot", "trimmed_video"]}, "reference": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false}},
+    "transport_ref": {"type": "string", "pattern": "^[a-z][a-z0-9.-]{1,63}$"},
+    "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$"},
+    "single_use": {"const": true},
+    "whatsapp_mode": {"enum": [null, "service_window", "approved_template"]},
+    "whatsapp_template_ref": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^private\\.[a-z][a-z0-9._-]{1,127}$"}]},
+    "whatsapp_template_language": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[a-z]{2,3}(?:_[A-Z]{2})?$"}]},
+    "whatsapp_request_sha256": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-f]{64}$"}]},
+    "cost_approval": {"enum": ["not_applicable", "approved_for_this_send"]}
+  },
+  "allOf": [
+    {"if": {"properties": {"channel_kind": {"const": "whatsapp"}}}, "then": {"properties": {"whatsapp_mode": {"enum": ["service_window", "approved_template"]}}}, "else": {"properties": {"whatsapp_mode": {"const": null}, "cost_approval": {"const": "not_applicable"}}}},
+    {"if": {"properties": {"whatsapp_mode": {"const": "approved_template"}}}, "then": {"properties": {"whatsapp_template_ref": {"type": "string"}, "whatsapp_template_language": {"type": "string"}, "whatsapp_request_sha256": {"type": "string"}, "cost_approval": {"const": "approved_for_this_send"}}}, "else": {"properties": {"whatsapp_template_ref": {"const": null}, "whatsapp_template_language": {"const": null}, "whatsapp_request_sha256": {"const": null}}}}
+  ],
+  "additionalProperties": false
+}

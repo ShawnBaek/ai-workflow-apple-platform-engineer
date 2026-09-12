@@ -1,0 +1,9 @@
+{
+  "$schema": "../contracts/schemas/private-policy-overlay.schema.json",
+  "schema_version": "1.0.0",
+  "decision": "approved",
+  "github": {
+    "owner": "<approved-personal-owner>"
+  },
+  "apple": null
+}

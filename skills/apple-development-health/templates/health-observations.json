@@ -1,0 +1,121 @@
+{
+  "$schema": "../contracts/health-report.schema.json",
+  "schema_version": "1.0.0",
+  "profile": "pr_ready",
+  "observed_at": "2098-01-01T00:00:00Z",
+  "authoritative_targets": {
+    "repository": "<absolute-path>",
+    "remote": "https://github.com/<owner>/<repository>.git",
+    "branch": "<approved-branch>"
+  },
+  "agent_skill_manifest": {
+    "required_skills": [
+      "agent-harness",
+      "apple-development-health",
+      "git-workflow",
+      "github-projects",
+      "apple-platform-engineer"
+    ],
+    "expected_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "clients": [
+      {
+        "client": "codex",
+        "root_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "skills": [
+          {"name": "agent-harness", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "apple-development-health", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "git-workflow", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "github-projects", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+          {"name": "apple-platform-engineer", "entry_kind": "directory", "resolved_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+        ]
+      }
+    ]
+  },
+  "project_registry_resolution": null,
+  "resource_coordinator_observation": {
+    "state_path_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "coordinator_instance_id": "<configured-coordinator-instance-id>",
+    "state_schema_version": 2,
+    "migration_bootstrap_confirmed": true,
+    "active_lease_count": 0,
+    "executable_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "runtime_contract": "apple-verification-core.resources.v1",
+    "runtime_kind": "swift",
+    "source_bundle_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "selected_components": [],
+  "required_check_ids": [
+    "repository.identity",
+    "agent.skills",
+    "agent.resource_coordinator",
+    "cli.git",
+    "github.issue_pr"
+  ],
+  "checks": [
+    {
+      "id": "repository.identity",
+      "category": "repository",
+      "required": true,
+      "status": "healthy",
+      "summary": "Authoritative repository, remote, base, and branch match the run.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "agent.skills",
+      "category": "agent",
+      "required": true,
+      "status": "healthy",
+      "summary": "Required agent skills resolve from the authoritative installation.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "agent.resource_coordinator",
+      "category": "agent",
+      "required": true,
+      "status": "healthy",
+      "summary": "The private harness, installed coordinator script, and live bootstrapped state bind to one instance.",
+      "evidence": ["<sanitized-state-path-hash-instance-and-script-hash>"]
+    },
+    {
+      "id": "cli.git",
+      "category": "cli",
+      "required": true,
+      "status": "healthy",
+      "summary": "Git is available and bound to the authoritative checkout.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "github.issue_pr",
+      "category": "github",
+      "required": true,
+      "status": "healthy",
+      "summary": "Approved GitHub account can read the repository and required Issue/PR surfaces.",
+      "evidence": ["<sanitized-read-only-observation>"]
+    },
+    {
+      "id": "repository.project_registry",
+      "category": "repository",
+      "required": false,
+      "status": "not_applicable",
+      "summary": "This run used an explicit authoritative repository rather than the optional registry.",
+      "evidence": []
+    },
+    {
+      "id": "mcp.apple_sample_code",
+      "category": "mcp",
+      "required": false,
+      "status": "not_applicable",
+      "summary": "This run did not select AppleSampleCode MCP retrieval.",
+      "evidence": []
+    },
+    {
+      "id": "simulator.runtime",
+      "category": "simulator",
+      "required": false,
+      "status": "not_applicable",
+      "summary": "This delivery profile does not require a Simulator.",
+      "evidence": []
+    }
+  ]
+}

@@ -26,8 +26,13 @@ future run compares the same state.
 3. Render the screen at the Figma frame's pixel dimensions on a deterministic
    simulator/device fixture. Capture the full screen and hierarchy from the same
    settled state. Set locale, appearance, time zone, data, and status-bar state
-   explicitly. Use Point-Free SnapshotTesting when the project already depends on
-   it; otherwise use XCTest/XCUITest attachments and the supplied comparator.
+   explicitly. Read [references/swift-testing-snapshots.md](references/swift-testing-snapshots.md)
+   before writing the test. That guide shows the Swift Testing test code, the
+   Point-Free SnapshotTesting strategy, the exact `xcodebuild` invocation, and how
+   to interpret a pass, a missing baseline, or a pixel mismatch. The agent must
+   write/update and run the test; a prose instruction to run snapshot testing is
+   not a validation result. Use XCTest/XCUITest attachments and the supplied
+   comparator when the project does not use Point-Free SnapshotTesting.
 4. Before changing production code, run the comparator:
    `python3 scripts/overlay_diff.py --figma figma.png --actual actual.png --out report`.
    It writes `overlay.png` (50% aligned blend), `diff.png` (red difference heatmap),
@@ -58,4 +63,3 @@ concrete blocker and the last artifacts.
 
 Do not commit Figma access tokens, transient asset URLs, or generated Xcode
 projects. Use the project's existing Xcode project/workspace and test conventions.
-

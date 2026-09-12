@@ -1,0 +1,58 @@
+{
+  "actual" : {
+    "path" : "actual.png",
+    "pixelHeight" : 840,
+    "pixelWidth" : 560,
+    "scalePixelsPerPoint" : 2,
+    "sha256" : "099c9ebd3d2e5df5244f9e2d070642a2ea1bd6291378fdc88e0342103f027d24"
+  },
+  "landmarks" : [
+    {
+      "actualX" : 27,
+      "actualY" : 78,
+      "deltaXPoints" : 3,
+      "deltaYPoints" : 6,
+      "name" : "Title baseline",
+      "referenceX" : 24,
+      "referenceY" : 72
+    },
+    {
+      "actualX" : 27,
+      "actualY" : 116,
+      "deltaXPoints" : 3,
+      "deltaYPoints" : 6,
+      "name" : "First card corner",
+      "referenceX" : 24,
+      "referenceY" : 110
+    }
+  ],
+  "note" : "Coordinate evidence only. No tolerance, pass/fail result, or UI-parity verdict is inferred.",
+  "outputScale" : 2,
+  "outputs" : {
+    "annotatedPNG" : "comparison-annotated.png",
+    "cleanPNG" : "comparison-clean.png",
+    "reportJSON" : "comparison-report.json"
+  },
+  "reference" : {
+    "path" : "reference.png",
+    "pixelHeight" : 840,
+    "pixelWidth" : 560,
+    "scalePixelsPerPoint" : 2,
+    "sha256" : "d7ec6f8a3c6fd95de15f2fb0d1372ab338fd7dc4b5363d956f395f23756d4f29"
+  },
+  "schemaVersion" : 1,
+  "transforms" : {
+    "actual" : {
+      "panelOriginXPoints" : 292,
+      "panelOriginYPoints" : 26,
+      "pointToPixelScale" : 2
+    },
+    "reference" : {
+      "panelOriginXPoints" : 0,
+      "panelOriginYPoints" : 26,
+      "pointToPixelScale" : 2
+    }
+  },
+  "viewportHeightPoints" : 420,
+  "viewportWidthPoints" : 280
+}

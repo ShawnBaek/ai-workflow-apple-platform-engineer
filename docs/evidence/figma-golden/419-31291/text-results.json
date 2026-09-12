@@ -1,0 +1,33 @@
+{
+  "status": "FAIL",
+  "figmaNodeId": "419:31291",
+  "sourcePath": "TravelCrumbs/Timeline/View/TimelineItemAddView.swift",
+  "symbol": "TimelineItemAddView",
+  "missing": [
+    {"figmaNodeId": "I419:31295;605:56325", "expected": "Text 18", "field": "time item label"},
+    {"figmaNodeId": "I419:31300;317:23239", "expected": "USD", "field": "currency value"},
+    {"figmaNodeId": "I1385:108937;317:23294", "expected": "Add item", "field": "items section"},
+    {"figmaNodeId": "I419:31302;404:26110", "expected": "Anika +8", "field": "share audience"}
+  ],
+  "extra": [
+    {"actual": "Food", "field": "category label"},
+    {"actual": "Sightseeing", "field": "category label"}
+  ],
+  "changed": [
+    {"figmaNodeId": "I419:31295;605:56331", "expected": "9:30 AM", "actual": "8:00 PM", "field": "time"},
+    {"figmaNodeId": "I419:31299;403:24263", "expected": "$0", "actual": "₩0", "field": "expense value"},
+    {"figmaNodeId": "I419:31301;317:23239", "expected": "The best coffee place", "actual": "Add note", "field": "note value"},
+    {"figmaNodeId": "I419:31297;315:20418", "expected": "Category name / Cafe / Drinks / Shopping / Groceries / Transport", "actual": "Food / Drinks / Shopping / Transport / Sightseeing / Groceries", "field": "category labels"},
+    {"figmaNodeId": "I419:31303;96:8848", "expected": "Save", "actual": "SAVE", "field": "save button casing"},
+    {"figmaNodeId": "I419:31304;138:2312", "expected": "expense", "actual": "EXPENSE", "field": "selected tab casing"}
+  ],
+  "matches": [
+    {"figmaNodeId": "I419:31296;406:25688", "expected": "Enter place name", "actual": "Enter place name", "field": "place placeholder"},
+    {"figmaNodeId": "I419:31296;406:25689", "expected": "291 Geary St, San Francisco, CA 94102, USA", "actual": "291 Geary St, San Francisco, CA 94102, USA", "field": "address (whitespace normalized)"},
+    {"figmaNodeId": "I419:31295;605:56335", "expected": "SEP 11, 2025", "actual": "SEP 11, 2025", "field": "date"}
+  ],
+  "notes": [
+    "Figma includes a 12:30 status-bar label; the development capture has no matching status-bar text in the 375x812 image.",
+    "The capture test proves the active TimelineItemAddView rendered. It does not prove that the fixture or route is visually equal to Figma."
+  ]
+}

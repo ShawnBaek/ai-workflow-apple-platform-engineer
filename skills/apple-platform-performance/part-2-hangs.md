@@ -17,16 +17,38 @@ Disk reads, file enumeration, JSON parsing of non-trivial blobs, image decoding 
 }
 ```
 
-**Do** (move off main; `.task` already gives you a background context, but be explicit when calling sync APIs):
+`.task` is asynchronous but can inherit main-actor isolation. It does not
+automatically move synchronous work off the main actor. Prefer an asynchronous
+API. For bounded legacy synchronous work, use an explicitly off-actor worker;
+propagate cancellation and check it before publishing the result:
 ```swift
 .task {
-    let notes: [Note] = try await Task.detached(priority: .userInitiated) {
+    let worker = Task.detached(priority: .userInitiated) {
+        try Task.checkCancellation()
         let data = try Data(contentsOf: url)
+        try Task.checkCancellation()
         return try JSONDecoder().decode([Note].self, from: data)
-    }.value
-    self.notes = notes        // back on MainActor by default
+    }
+    do {
+        let result = try await withTaskCancellationHandler {
+            try await worker.value
+        } onCancel: {
+            worker.cancel()
+        }
+        try Task.checkCancellation()
+        self.notes = result // This view's .task is main-actor isolated.
+    } catch is CancellationError {
+        // The screen no longer needs this result.
+    } catch {
+        self.loadError = error.localizedDescription
+    }
 }
 ```
+
+`Note` must be `Sendable`; transfer immutable values across isolation boundaries.
+Cancellation cannot interrupt `Data(contentsOf:)` midway. Bound file size and
+keep blocking operations out of cooperative-executor hot paths. Use the
+project's existing worker instead of adding a new layer for this example.
 
 ## Item 8 — Avoid locks on the main thread
 
@@ -54,6 +76,7 @@ await MainActor.run { self.items.append(contentsOf: items) }
 
 ## Item 10 — Read the Hang Report in Xcode Organizer weekly after launch
 
-Window → Organizer → **Hangs** tab. Apple aggregates these from real device telemetry. Treat anything in the top 10 list as a release blocker.
+Window → Organizer → **Hangs** tab. Prioritize by affected users, duration,
+frequency, and the interrupted task. A ranking alone does not define release risk.
 
 For local development, enable **Edit Scheme → Run → Diagnostics → Thread Performance Checker**. It surfaces hangs in real time during dev.

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:completion-report:1.0.0",
+  "type": "object",
+  "required": ["schema_version", "status", "task", "changes", "pull_requests", "checks", "evidence", "omissions", "usage"],
+  "properties": {
+    "$schema": {"type": "string"}, "schema_version": {"const": "1.0.0"},
+    "status": {"enum": ["complete", "partial", "blocked"]}, "task": {"type": ["string", "null"]},
+    "changes": {"type": "array", "items": {"type": "string"}},
+    "pull_requests": {"type": "array", "items": {"type": "object", "required": ["url", "state"], "properties": {"url": {"type": ["string", "null"], "format": "uri"}, "state": {"enum": ["created", "not_created", "unknown"]}}, "additionalProperties": false}},
+    "checks": {"type": "array", "items": {"type": "object", "required": ["name", "result", "summary"], "properties": {"name": {"type": "string"}, "result": {"enum": ["passed", "failed", "not_run", "unknown"]}, "summary": {"type": ["string", "null"]}}, "additionalProperties": false}},
+    "evidence": {"type": "array", "items": {"type": "object", "required": ["kind", "reference", "observed_result", "sha256"], "properties": {"kind": {"enum": ["screenshot", "trimmed_video", "xcresult", "log", "other"]}, "reference": {"type": ["string", "null"]}, "observed_result": {"type": ["string", "null"]}, "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false}},
+    "omissions": {"type": "array", "items": {"type": "object", "required": ["check", "reason", "residual_risk"], "properties": {"check": {"type": "string"}, "reason": {"type": "string"}, "residual_risk": {"type": "string"}}, "additionalProperties": false}},
+    "usage": {
+      "type": "object", "required": ["status", "missing_sources", "source_records", "attribution", "cross_provider_total", "cost"],
+      "properties": {
+        "status": {"enum": ["full", "partial", "not_exposed"]}, "missing_sources": {"type": "array", "items": {"type": "string"}},
+        "source_records": {"description": "Map keyed by stable provider/client source ID; each key appears once.", "type": "object", "additionalProperties": {"type": "object", "required": ["provider", "input_tokens", "output_tokens", "cached_input_tokens", "reasoning_tokens"], "properties": {"provider": {"type": "string"}, "input_tokens": {"type": ["integer", "null"], "minimum": 0}, "output_tokens": {"type": ["integer", "null"], "minimum": 0}, "cached_input_tokens": {"type": ["integer", "null"], "minimum": 0}, "reasoning_tokens": {"type": ["integer", "null"], "minimum": 0}}, "additionalProperties": false}},
+        "attribution": {"type": "array", "items": {"type": "object", "required": ["agent_id", "session_id", "model", "source_ids"], "properties": {"agent_id": {"type": "string"}, "session_id": {"type": "string"}, "model": {"type": "string"}, "source_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}}, "additionalProperties": false}},
+        "cross_provider_total": {"type": ["object", "null"], "required": ["input_tokens", "output_tokens", "label"], "properties": {"input_tokens": {"type": "integer", "minimum": 0}, "output_tokens": {"type": "integer", "minimum": 0}, "label": {"const": "informational; cached input and reasoning are subsets, not added"}}, "additionalProperties": false},
+        "cost": {"type": "object", "required": ["status", "amount", "currency"], "properties": {"status": {"enum": ["provider_reported", "client_estimate", "not_exposed"]}, "amount": {"type": ["number", "null"], "minimum": 0}, "currency": {"type": ["string", "null"]}}, "additionalProperties": false}
+      }, "additionalProperties": false
+    }
+  }, "additionalProperties": false
+}

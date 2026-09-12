@@ -1,0 +1,136 @@
+{
+  "$schema" : "./schemas/local-workflow.schema.json",
+  "attempt_policy" : {
+    "default_active_wall_minutes" : 45,
+    "identical_failure_stop_count" : 2,
+    "max_implementation_attempts" : 3,
+    "max_review_cycles" : 2,
+    "max_transient_retries" : 1,
+    "pause_while_awaiting_human_or_ci" : true
+  },
+  "cleanup" : {
+    "mode" : "finally",
+    "release_active_resources" : [
+      "source_checkout_writer",
+      "xcode_project_mutation",
+      "build_tuple",
+      "simulator_or_device",
+      "coresimulator_runtime_registry",
+      "macos_gui_session",
+      "signing_or_app_store_connect",
+      "github_external_mutation"
+    ],
+    "triggers" : [
+      "blocked",
+      "failed_terminal",
+      "cancelled",
+      "success_terminal"
+    ]
+  },
+  "completion_requires" : [
+    "required_nodes_passed",
+    "required_health_profile_satisfied",
+    "run_authorization_current",
+    "spec_kit_snapshot_current_or_not_applicable",
+    "latest_evidence_matches_patch_identity",
+    "no_active_resource_lease",
+    "review_current_or_not_required_by_accepted_plan",
+    "acceptance_evidence_complete"
+  ],
+  "identity_policy" : {
+    "algorithm" : "patch_identity_v1",
+    "base" : "base_sha",
+    "commit_equivalence" : "commit_tree_and_changed_paths_match_reviewed_identity",
+    "digest" : "sha256",
+    "path_order" : "utf8_bytewise",
+    "path_record_fields" : [
+      "path",
+      "mode",
+      "state",
+      "content_sha256_or_deletion"
+    ]
+  },
+  "nodes" : [
+    {
+      "id" : "intake",
+      "requires" : [
+
+      ]
+    },
+    {
+      "id" : "guard",
+      "requires" : [
+        "intake"
+      ]
+    },
+    {
+      "id" : "health",
+      "requires" : [
+        "guard"
+      ]
+    },
+    {
+      "id" : "claim_implementation_writer",
+      "lease_action" : "acquire",
+      "protects" : [
+        "implement"
+      ],
+      "requires" : [
+        "health"
+      ],
+      "resource" : "source_checkout_writer"
+    },
+    {
+      "id" : "implement",
+      "requires" : [
+        "claim_implementation_writer"
+      ]
+    },
+    {
+      "id" : "release_implementation_writer",
+      "lease_action" : "release",
+      "protects" : [
+        "implement"
+      ],
+      "requires" : [
+        "implement"
+      ],
+      "resource" : "source_checkout_writer"
+    },
+    {
+      "id" : "verify",
+      "requires" : [
+        "release_implementation_writer"
+      ]
+    },
+    {
+      "id" : "local_verified",
+      "requires" : [
+        "verify"
+      ],
+      "terminal" : true
+    }
+  ],
+  "runtime_edge_types" : [
+    "attempt_of",
+    "supersedes",
+    "produced_by",
+    "validates",
+    "invalidates",
+    "feedback_on",
+    "promoted_to",
+    "authorized_by",
+    "tracks",
+    "continues_from",
+    "derived_from"
+  ],
+  "schema_version" : "1.0.0",
+  "terminal_outcomes" : {
+    "non_success" : [
+      "blocked",
+      "failed_terminal",
+      "cancelled"
+    ],
+    "success" : "local_verified"
+  }
+}

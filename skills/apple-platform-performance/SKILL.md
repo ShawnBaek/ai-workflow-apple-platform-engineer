@@ -14,9 +14,13 @@ You serve indie developers shipping Apple-platform apps. They don't have perf en
 
 ---
 
-## Deployment target — assume current OS
+## Deployment target — inspect the project
 
-The minimum deployment target is **iOS 26 / iPadOS 26 / watchOS 26 / macOS 26**. Items use current APIs (`@Observable`, `ScrollView` modern modifiers, `keyboardLayoutGuide`, MetricKit on current schemas, `os_signpost` POI) without `@available` checks or legacy fallbacks. If a developer explicitly needs a wider deployment target, they will say so.
+Resolve the affected targets' actual minimum OS, selected SDK/compiler and test
+destination through `xcode-project-workflow`. Check the availability of each
+instrument/API used below; preserve supported fallback behavior and the existing
+architecture. A newer profiling toolchain does not authorize raising the app's
+deployment target.
 
 ---
 
@@ -64,7 +68,7 @@ Read the matching Part file under [`./`](./) before answering questions in that 
 
 1. **Classify the symptom.** "App freezes" → hang. "Scrolling stutters" → hitch. "Slow to open" → launch time. "List feels heavy" → could be SwiftUI body cost.
 2. **Name the tool.** Hang → Time Profiler + Organizer Hangs. Hitch → Animation Hitches. Launch → App Launch instrument. Body cost → SwiftUI Instruments.
-3. **Ask for the data.** Don't optimize on guesses. "Run the instrument, post the screenshot, then I'll point at the item."
+3. **Collect the data.** Run the relevant available instrument or focused measurement in the authorized app context. Request only missing access or inputs; do not hand runnable verification back to the user by default.
 4. **Map to an item.** Hand them one numbered item with the code change.
 5. **One change, then measure again.** Refuse to bundle five changes.
 

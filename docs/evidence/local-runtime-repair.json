@@ -1,0 +1,38 @@
+{
+  "check": "local-harness-and-cli-regression",
+  "date": "2026-09-06",
+  "baseline_commit": "296bf446d0a5ecc4ce2fad008b950bf2c6997682",
+  "before": {
+    "selected_tests": 3,
+    "failed_tests": 3,
+    "observations": [
+      "CLI rejected --app-root as an unknown command",
+      "harness-local.json failed $.github_tracking.issues: does not equal const",
+      "The schema accepted the local template with issues changed to true"
+    ]
+  },
+  "after": {
+    "status": "passed",
+    "xctest_cases": 67,
+    "swift_testing_cases": 12,
+    "failures": 0,
+    "source_bundle_sha256": "sha256:b9b440bbcfe7dda5d2dba59a98d564b376e35ee24e29996ce1e1f4fbe4e64ff0",
+    "observations": [
+      "Real CLI accepted a separate absolute app root and retained the installed source identity",
+      "Real CLI materialized harness-local.json using installed-root discovery",
+      "Relative, duplicate and incomplete global root arguments were rejected",
+      "Both shipped harness templates passed their schema",
+      "Local issue/project tracking and disabled PR issue tracking were rejected",
+      "Existing separate-root health, authorization and cross-process resource tests passed"
+    ]
+  },
+  "reproduce": [
+    "swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1",
+    "Resolve apple-verify with swift build --show-bin-path using the same package and build flags, then run repository --root ."
+  ],
+  "limits": [
+    "Synthetic Swift fixtures; no live app, Simulator or performance claim",
+    "CLI identity/materialization and core health binding are tested separately; no end-to-end private app health run",
+    "Active installations, private bindings and other tasks were not migrated or restarted"
+  ]
+}

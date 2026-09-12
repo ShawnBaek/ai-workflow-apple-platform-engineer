@@ -1,0 +1,6 @@
+{
+  "$schema": "../contracts/channel-config.schema.json",
+  "schema_version": "1.0.0",
+  "enabled": false,
+  "channels": []
+}

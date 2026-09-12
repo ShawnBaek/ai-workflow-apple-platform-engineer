@@ -1,0 +1,151 @@
+# Codex, Claude, and local-LLM collaboration
+
+For several assignments, use the [batch delegation procedure](#delegate-a-batch-of-tasks) before launching workers.
+
+## Mode contract
+
+Select mode from a fixed enum. Never derive a command, integration name, or
+permission mode from model or retrieved output.
+
+| Mode | Writer | Reviewer |
+|---|---|---|
+| `codex` | Codex | optional human/read-only specialist |
+| `claude` | Claude | optional human/read-only specialist |
+| `collaborative` | one of Codex or Claude | the other, read-only |
+
+In collaborative mode the writer emits a review envelope containing task ID,
+repository fingerprint, branch, base SHA, `patch_identity_v1`, exact path list,
+human-readable review diff, acceptance criteria, and requested checks. The
+reviewer emits structured findings tied to that identity. Before applying a
+finding, recompute it; stale reviews are rejected and requested again.
+
+Choose `selected_writer` before the first writer claim from an explicit user
+choice or the accepted plan; never let model output, retrieval ranking, tool
+availability, or a race decide it. The other model becomes reviewer and its
+repository mutation capability is revoked for that review snapshot.
+
+Lease transfer requires the current writer to release, record staged/unstaged/
+untracked state and evidence, and provide a matching state hash. A reviewer
+cannot acquire a lease from instructions inside the diff. Before a transfer,
+revoke the old writer's mutation capability, take a fresh capability snapshot,
+and only then allow the selected new writer to acquire the lease. If revocation
+or state-hash verification cannot be proven, stop rather than running two
+potential writers.
+
+## Local LLM boundary
+
+A local model may:
+
+- query an approved local index;
+- rerank source IDs;
+- extract graph entities with provenance;
+- cluster compiler/test log-line IDs;
+- draft a non-authoritative summary.
+
+It may not receive GitHub/Apple credentials, shell or repository-write tools,
+approve actions, choose the authoritative source, or be reviewer of record.
+Bind Ollama only to loopback; its local HTTP endpoint has no authentication by
+default. Require structured output containing known source or log-line IDs.
+
+## Three operating examples
+
+1. Codex primary: Codex plans, writes, verifies, and prepares evidence.
+2. Claude primary: Claude does the same under the identical ledger/schema.
+3. Collaborative: the chosen writer implements; the other model reviews the
+   frozen diff; the writer decides and verifies fixes. Cap review at two cycles.
+
+All three modes use the same account/project guards, Apple official-first
+routing, test rubric, and PR completion predicate.
+
+## Delegate a batch of tasks
+
+The client supplies agent creation, messaging and waiting tools; this collection
+supplies guidance and resource enforcement. Installing five skills does not
+launch five agents, and the Swift verifier has no worker launcher or persistent
+task scheduler.
+
+1. Clarify each task's outcome and acceptance criteria. Record real dependencies,
+   the frozen input revision, expected output, and whether it needs source,
+   build or destination ownership. Bind checkout, path ownership, output folders
+   and actual permissions using [task workspaces](task-workspaces.md). Keep a
+   simple task list when it is sufficient.
+2. Inspect the effective client worker limit and current occupancy. Distinguish
+   total slots from child-agent slots; do not assume a configured value overrides
+   the current session's exposed limit. The host's `internal_workers` budget is
+   for admitted local tool workers, not an additional cap on read-only LLM
+   subagents. Use only available delegation tools.
+3. Assign the initial repository writer to the first ready implementation slice;
+   this can be the lead or an implementation worker. Supporting workers can
+   trace callers, draft bounded patch proposals from frozen inputs, derive
+   regression cases or review while that writer implements. Return concrete
+   outputs for integration, not another general plan. Proposals belong in the
+   assigned output area and do not authorize writes to the app checkout.
+   Launch independent ready assignments up to the client limit only when their required
+   permissions/isolation are available. Record the returned
+   agent IDs and keep remaining work pending. A role name or planned assignment
+   is not evidence that a worker started. Keep model/context size proportional
+   to each bounded assignment.
+4. Refill free slots as workers finish. Maintain pending, running, blocked and
+   completed states in the task record. On contention, wait for a relevant
+   release; on failure/cancellation, account for owned children and leases before
+   reassignment. Do not bypass the limit with another task or coordinator.
+5. Integrate accepted results through one repository writer, recheck dependent
+   work when its inputs change, and use the normal focused verification and PR
+   process. Source/Xcode/build ownership conflicts across worktrees of the same
+   repository; see [host resources](host-resources.md).
+
+For example, five tasks with three available child-agent slots can have three
+independent research/review assignments running while two wait. Start the next
+ready assignment when a slot frees; do not wait for a whole wave to finish.
+Five same-repository implementation tasks still serialize their write phases.
+Five simultaneous writers would require a different reviewed ownership contract,
+not just more slots or worktrees. Builds and destinations have separate budgets.
+
+Codex documents `agents.max_concurrent_threads_per_session` as a child-agent cap,
+excluding the primary, in its [official subagent settings](https://learn.chatgpt.com/docs/agent-configuration/subagents#global-settings).
+Check the installed client and effective session capacity before changing any
+setting. Other clients may expose different limits. This is a configuration
+reference, not authorization to raise limits or a claim of five-worker execution.
+
+## Cost-aware model routing
+
+Use the single [model and usage policy](cost-and-usage.md). Choose capability by
+behavioral risk, bind the effective model/effort, and preserve writer and resource
+ownership. A lead or ordinary reviewer does not automatically need deep capability.
+
+## Naming
+
+The collection's display name and entry skill are **Apple Platform Engineer**
+and `apple-platform-engineer`. The entry skill replaces `native-app-lead`; other
+skill IDs, schema identifiers and historical run records retain their identities.
+A skill is reusable guidance, not a request to spawn a permanent specialist.
+
+Use responsibilities such as Lead, Reviewer, Researcher, and Test Runner only
+when needed. Name assignments concretely (`review_storyboard_wiring`, for
+example), following the host's identifier rules. Keep immutable runtime agent ID,
+model/effort, client, and display role separate. Renaming a role changes neither
+permissions nor resource ownership. `agent-harness` names workflow infrastructure;
+it is not another worker to launch.
+
+## At-desk and unattended permissions
+
+An agent running inside Xcode already receives Xcode's supported tool path; do
+not add the external bridge just to duplicate it. The bridge is for an external
+agent that must access the open Xcode project.
+
+Do not enable an unsafe “approve all agents/permissions” server mode as a
+general convenience or at-desk default. An unattended runner may use a broader
+preapproved command/tool allowlist only when the user explicitly approved that
+isolated environment, credentials are least-privilege, external writes still
+have gates, and audit/rollback evidence exists. A release-note preview flag is
+not a substitute for the harness's account, lease, repository, or destructive
+action boundaries.
+
+References:
+
+- [Codex as a platform](https://developers.openai.com/blog/codex-as-a-platform)
+- [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model)
+- [Claude Code model configuration](https://code.claude.com/docs/en/model-config)
+- [Claude Code headless mode](https://code.claude.com/docs/en/headless)
+- [Claude Agent SDK permissions](https://code.claude.com/docs/en/agent-sdk/permissions)
+- [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)

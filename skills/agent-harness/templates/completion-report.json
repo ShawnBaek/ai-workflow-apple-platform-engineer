@@ -1,0 +1,19 @@
+{
+  "$schema": "../contracts/schemas/completion-report.schema.json",
+  "schema_version": "1.0.0",
+  "status": "partial",
+  "task": null,
+  "changes": [],
+  "pull_requests": [],
+  "checks": [],
+  "evidence": [],
+  "omissions": [],
+  "usage": {
+    "status": "not_exposed",
+    "missing_sources": ["provider/client usage source IDs were not exposed"],
+    "source_records": {},
+    "attribution": [],
+    "cross_provider_total": null,
+    "cost": {"status": "not_exposed", "amount": null, "currency": null}
+  }
+}

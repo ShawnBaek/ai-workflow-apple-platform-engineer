@@ -7,6 +7,6 @@
   "sourcePath": "TravelCrumbs/Timeline/View/TimelineItemAddView.swift",
   "symbol": "TimelineItemAddView",
   "fixture": "Expense detail with Figma-matched time, date, place, address, and note values",
-  "textInventory": "visible-text.json (generated per capture; keep node IDs and bounds)",
+  "textInventory": "docs/evidence/figma-golden/419-31291/figma-visible-text.json (keep node IDs and bounds)",
   "status": "reference mapping; runtime parity must be verified by a captured comparison"
 }
