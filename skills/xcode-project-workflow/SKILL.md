@@ -38,8 +38,8 @@ to the same live Git top level, stop; never switch Xcode windows, checkouts, or
 worktrees to make the registry entry fit.
 
 Use `git-workflow` for remote-default discovery, branch-name approval, Git
-metadata preflight, and PR state. A worktree remains forbidden unless the user
-explicitly opts in for this exact task; if approved, it must become a separate
+metadata preflight, and PR state. A worktree requires authority from the current
+task or project policy; if approved, it must become a separate
 authoritative Xcode session rather than borrowing the original open window.
 
 ## Host execution gate

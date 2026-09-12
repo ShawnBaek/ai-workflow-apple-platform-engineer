@@ -9,6 +9,11 @@ Use this skill when an Apple app, Xcode project, or Swift package needs dependen
 
 ## Decide before changing dependencies
 
+Apply the lease steps below when guarded/coordinated execution is selected.
+Standalone work uses exclusive ownership under current project policy; see
+[project customization](../agent-harness/references/project-customization.md).
+Unknown shared ownership blocks the affected operation.
+
 - Identify the dependency owner: `Package.swift`, an Xcode project/workspace, or a generated project specification. Change the source of truth, not a derived file.
 - Keep **resolve**, **update**, and **build** separate. Resolve only when dependency inputs changed or an explicit resolution is requested; update only when the requested version policy permits it.
 - Before resolve or update, acquire the repository source-writer lease as well

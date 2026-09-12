@@ -23,4 +23,6 @@
 Keep `text` results separate from pixel metrics. A frame with the wrong fixture
 can have a low pixel score while still having correct geometry. Keep the
 execution status separate from both: a test can pass while the Figma comparison
-fails, as it did for the TravelCrumb evidence in this PR.
+fails. The wrapper above is an application report, not the comparator's flat
+`metrics.json` output. Preserve the original metrics and link it from the wrapper.
+The synthetic proof contains no app-runtime or live-design acceptance claim.

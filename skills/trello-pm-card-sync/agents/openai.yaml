@@ -1,4 +1,4 @@
 interface:
   display_name: "Trello PM Card Sync"
   short_description: "Normalize cards and sync issue, proof, QA, and TestFlight state"
-  default_prompt: "Use $trello-pm-card-sync to review and normalize a Trello card, then synchronize its GitHub issue and delivery evidence."
+  default_prompt: "Use $trello-pm-card-sync to review the selected card and perform only the requested audit, normalization, sync, or handoff using the configured workflow."

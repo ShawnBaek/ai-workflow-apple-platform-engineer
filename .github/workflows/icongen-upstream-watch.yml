@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   compare:
+    if: github.repository == 'ShawnBaek/ai-workflow-apple-platform-engineer'
     runs-on: macos-15
     timeout-minutes: 15
     steps:
@@ -25,8 +26,8 @@ jobs:
       - name: Compare the public reference-only upstream
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: >-
-          skills/agent-harness/verification/.build/debug/apple-verify companion
-          --manifest skills/icon-composer/contracts/companion-upstream.json
-          sync-issue
-          --target-repository "$GITHUB_REPOSITORY"
+        run: |
+          APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
+          "$APE_BIN_DIR/apple-verify" companion \
+            --manifest skills/icon-composer/contracts/companion-upstream.json \
+            sync-issue --target-repository "$GITHUB_REPOSITORY"

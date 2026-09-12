@@ -63,6 +63,10 @@ silently renew existing approvals.
 
 ## Start a task
 
+Choose consumer preferences using [customization](customization.md). Ordinary
+local and PR tasks can use standalone skills; select the guarded runtime for
+coordinated work or an explicitly requested runtime profile.
+
 Describe the outcome, relevant constraints, and proof you want. For example:
 
 > Use apple-platform-engineer to add a saved-items screen. Keep our storyboard navigation, design the component in a UIKit preview first, and verify empty and populated states on the minimum supported iOS version.

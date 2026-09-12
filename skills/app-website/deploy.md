@@ -1,5 +1,9 @@
 # Deploy to GitHub Pages (the indie default)
 
+Scope: optional SwiftUI-For-Web recipe, used only when selected by the project.
+Adapt example layout, tokens, sections and hosting to the accepted brief.
+
+
 The site is plain static files — no build step — so GitHub Pages is the cheapest, fastest host. Free, free HTTPS, custom domain supported, deploys on git push.
 
 ## Path A — Project site (recommended)

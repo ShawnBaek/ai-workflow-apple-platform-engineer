@@ -42,7 +42,7 @@ import Testing
 struct AddItemFigmaSnapshotTests {
   @Test("renders the reviewed Add Item state")
   func rendersAddItem() {
-    let view = TimelineItemAddView(viewModel: .figmaExpenseFixture)
+    let view = ExampleItemView(viewModel: .figmaExpenseFixture)
       .environment(\.locale, Locale(identifier: "en_US"))
       .preferredColorScheme(.light)
 
@@ -52,7 +52,7 @@ struct AddItemFigmaSnapshotTests {
         layout: .fixed(width: 375, height: 812),
         traits: .init(displayScale: 1)
       ),
-      named: "TC_AddItem_Expense_Detail"
+      named: "Example_Item_Detail"
     )
   }
 }
@@ -74,7 +74,7 @@ struct ItemEditSnapshotTests {
         size: CGSize(width: 375, height: 812),
         traits: .init(displayScale: 1)
       ),
-      named: "TC_AddItem_Expense_Detail"
+      named: "Example_Item_Detail"
     )
   }
 }
@@ -102,7 +102,7 @@ assertSnapshot(
     traits: .init(displayScale: 1)
   ),
   record: .all,
-  named: "TC_AddItem_Expense_Detail"
+  named: "Example_Item_Detail"
 )
 ```
 
@@ -143,8 +143,8 @@ without opening an image first:
 
 ```text
 ❌ Figma pixel comparison failed
-Figma node: 419:31291 (TC_AddItem_Expense_Detail)
-Source: TimelineItemAddView
+Figma node: 12:34 (Example_Item_Detail)
+Source: ExampleItemView
 Expected: 375×812 Figma export
 Actual: 375×812 simulator capture
 Threshold: max RGB delta ≤ 16
@@ -164,14 +164,16 @@ percentage, and the first actionable text or geometry mismatches. If the Swift
 Testing assertion itself fails, preserve its reference and failure-diff paths
 in the same report.
 
+Set `FIGMA_GOLDEN_ROOT` to the absolute installed folder of this loaded skill.
 Extract or copy the actual PNG from the test attachment and compare it with the
 Figma export:
 
 ```sh
-swift skills/figma-golden-testing/scripts/overlay_diff.swift \
+swift "$FIGMA_GOLDEN_ROOT/scripts/overlay_diff.swift" \
   --figma evidence/figma.png \
   --actual evidence/actual.png \
-  --out evidence/report
+  --out evidence/report \
+  --threshold 16 --minimum-match 99
 ```
 
 The command must finish with identical input dimensions and creates
@@ -180,11 +182,19 @@ The command must finish with identical input dimensions and creates
 they are not perceptual similarity. Report the threshold, dimensions, exact
 and threshold-matching percentages, and the maximum/mean RGB delta.
 
+Choose the threshold and minimum percentage from the accepted project criteria;
+16 and 99 above are examples. Exit 2 means pixel comparison failed and retains
+the artifacts. Exit 1 means an input/tool error. Without `--minimum-match`, exit
+0 only means the report was generated, with `status: not_evaluated`. The renderer
+uses the explicit minimum and never invents a 99% acceptance criterion. Continue
+rendering the failure report after exit 2; do not hide it behind a success-only
+command chain. Semantic assertions remain separate from the pixel exit code.
+
 To show the JSON results as images in a pull request, run the Swift report
 renderer after the comparator:
 
 ```sh
-swift skills/figma-golden-testing/scripts/render_report.swift \
+swift "$FIGMA_GOLDEN_ROOT/scripts/render_report.swift" \
   --metrics evidence/report/metrics.json \
   --text evidence/report/text-results.json \
   --out evidence/report
@@ -207,8 +217,8 @@ comparison) so a wrong date/place cannot be hidden by a high pixel score:
 
   #expect(actual["time"] == "12:30")
   #expect(actual["date"] == "SEP 11, 2025")
-  #expect(actual["place"] == "Travelcrumb Coffee & Bread")
-  #expect(actual["address"] == "291 Geary St, San Francisco, CA 94102, USA")
+  #expect(actual["place"] == "Example Cafe")
+  #expect(actual["address"] == "1 Example Street")
 }
 ```
 
@@ -227,13 +237,8 @@ Record these independent outcomes in the PR or evidence directory:
 | Figma pixel comparison | `metrics.json`, `overlay.png`, `diff.png`, `side-by-side.png` | Raw image agreement with the node export |
 | Visible text | missing/extra/changed arrays | Date, time, place, buttons, and text views match semantically |
 
-For the TravelCrumb frame `419:31291`, the known capture ran on iPhone 17 Pro
-(iOS 27) at 375×812 and passed the one-test Swift Testing execution. Its Figma
-comparison was intentionally reported as **FAIL**: raw threshold match was
-`224269 / 304500 = 73.6516%` at the threshold because the development screen
-still differs from the Figma Expense detail state in status-bar treatment, time,
-currency, amount, categories, note, and lower content. This is
-the expected evidence shape for a capture that works but still needs UI/state
-repair.
+The failure message above is illustrative synthetic data, not an executed app
+result. The checked-in collection proof uses synthetic images only. App testing
+requires the consumer's real view, fixture, reviewed baseline and toolchain.
 
 Reference: [Point-Free SnapshotTesting usage and recording behavior](https://github.com/pointfreeco/swift-snapshot-testing#usage).

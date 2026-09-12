@@ -3,7 +3,7 @@
   "schema_version": "1.0.0",
   "decision": "approved",
   "github": {
-    "owner": "<approved-personal-owner>"
+    "owner": "<approved-user-or-organization>"
   },
   "apple": null
 }

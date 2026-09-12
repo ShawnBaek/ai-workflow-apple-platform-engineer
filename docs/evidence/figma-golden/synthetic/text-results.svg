@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="256" viewBox="0 0 1400 256">
+<rect width="100%" height="100%" fill="#f7f9fc"/>
+<text x="36" y="52" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="28px" font-weight="700" fill="#162033">Figma visible-text results</text>
+<line x1="36" y1="72" x2="1364" y2="72" stroke="#d5dce8"/>
+<text x="42" y="112" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="20px" font-weight="700" fill="#087f5b">Matches</text>
+<text x="56" y="142" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">title: expected &quot;Saved places&quot; -&gt; actual &quot;Saved places&quot; [synthetic:title]</text>
+<text x="56" y="165" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">first card: expected &quot;Morning coffee&quot; -&gt; actual &quot;Morning coffee&quot; [synthetic:card]</text>
+</svg>

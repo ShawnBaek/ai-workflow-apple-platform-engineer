@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+<rect width="100%" height="100%" fill="#f7f9fc"/>
+<text x="36" y="52" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="28px" font-weight="700" fill="#162033">Figma golden pixel metrics</text>
+<line x1="36" y1="72" x2="964" y2="72" stroke="#d5dce8"/>
+<text x="42" y="116" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="700" fill="#59667d">STATUS</text>
+<text x="42" y="158" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="34px" font-weight="700" fill="#c92a2a">FAIL</text>
+<text x="42" y="194" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="14px" font-weight="400" fill="#59667d">CoreGraphics device-RGB decode; no scale/crop/mask</text>
+<text x="42" y="250" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="600" fill="#162033">Required match percentage</text>
+<text x="390" y="250" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="400" fill="#33415c">99.0%</text>
+<line x1="42" y1="264" x2="958" y2="264" stroke="#e2e7ef"/>
+<text x="42" y="296" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="600" fill="#162033">Dimensions</text>
+<text x="390" y="296" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="400" fill="#33415c">560 x 840</text>
+<line x1="42" y1="310" x2="958" y2="310" stroke="#e2e7ef"/>
+<text x="42" y="342" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="600" fill="#162033">Threshold (max RGB delta)</text>
+<text x="390" y="342" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="400" fill="#33415c">16</text>
+<line x1="42" y1="356" x2="958" y2="356" stroke="#e2e7ef"/>
+<text x="42" y="388" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="600" fill="#162033">Matching pixels</text>
+<text x="390" y="388" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="400" fill="#33415c">454426 / 470400</text>
+<line x1="42" y1="402" x2="958" y2="402" stroke="#e2e7ef"/>
+<text x="42" y="434" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="600" fill="#162033">Match percentage</text>
+<text x="390" y="434" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="400" fill="#33415c">96.60416666666667%</text>
+<line x1="42" y1="448" x2="958" y2="448" stroke="#e2e7ef"/>
+<text x="42" y="480" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="600" fill="#162033">Exact pixels</text>
+<text x="390" y="480" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="400" fill="#33415c">441695 (93.89774659863946%)</text>
+<line x1="42" y1="494" x2="958" y2="494" stroke="#e2e7ef"/>
+<text x="42" y="526" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="600" fill="#162033">Mean / max RGB delta</text>
+<text x="390" y="526" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15px" font-weight="400" fill="#33415c">6.302393707482993 / 233</text>
+<line x1="42" y1="540" x2="958" y2="540" stroke="#e2e7ef"/>
+</svg>

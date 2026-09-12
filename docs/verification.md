@@ -52,6 +52,11 @@ the installed skill root still supplies trusted schemas and source identity.
 
 ## Evidence and limits
 
+The [open-source portability audit](evidence/open-source-portability.md) inventories
+all current skills and records synthetic consumer decision checks. Golden script
+regressions execute the real Swift scripts from an unrelated working directory;
+they do not require or validate a live Figma file or app capture.
+
 Choose checks by the observable failure they prevent. A layout change usually needs a relevant build and screenshot; add XCUITest only when a durable interaction regression warrants it. For animation, inspect a trimmed recording, interruption/reversal, and Reduce Motion; use Instruments or a device metric for performance claims.
 
 A comparison report proves the measured geometry of supplied images. It does not infer Figma coordinates, move pixels to hide differences, or turn a screenshot into an animation/performance test. Retain the clean images alongside guides. Use [code review](../skills/code-review/SKILL.md) to check the implementation and challenge findings with source references and reproductions.

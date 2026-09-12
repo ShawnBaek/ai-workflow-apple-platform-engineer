@@ -7,7 +7,9 @@ description: >-
 # Apple Platform Engineer
 
 Locate the task, choose the smallest safe path, and hand each concern to its
-owner. For task-to-PR, multi-agent, RAG, or resumable work, start with
+owner. Read [project customization](../agent-harness/references/project-customization.md)
+to select standalone guidance or guarded orchestration. Ordinary PR delivery uses
+`git-workflow`; coordinated multi-agent, RAG, or guarded resumable work uses
 `agent-harness`. Do not reimplement specialist guidance here.
 
 The entry skill is `apple-platform-engineer`: use `$apple-platform-engineer` in
@@ -33,7 +35,8 @@ before architecture and task breakdown. Routine work does not need a new ADR.
   validated candidates. Ambiguity remains a human selection gate.
 - Signing/App Store actions load the private Apple account/team policy before
   account discovery.
-- Broad work uses one writer lease and evidence-backed bounded attempts.
+- Broad work uses one repository writer and evidence-backed bounded attempts.
+  Guarded/shared-resource work additionally requires the configured live leases.
 - Preserve an explicit model choice. Otherwise use the [shared model policy](../agent-harness/references/cost-and-usage.md):
   efficient models for bounded mechanical work, balanced models for routine
   implementation/review, and stronger reasoning for demonstrated risk or ambiguity.
@@ -50,7 +53,7 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 
 | Need | Skill |
 |---|---|
-| graph/loop/RAG, Codex/Claude collaboration, task-to-PR | `agent-harness` |
+| graph/loop/RAG, Codex/Claude collaboration, guarded delivery | `agent-harness` |
 | first-run dependency setup, configuration or update | `apple-platform-setup` |
 | current CLI/skill/MCP/account/Spec Kit readiness | `apple-development-health` |
 | 1Password development ENV connection, secrets, or local mounts | `onepassword-environments` |
@@ -93,8 +96,8 @@ before architecture and task breakdown. Routine work does not need a new ADR.
    by default; add graph structure only when actual dependencies justify it.
    Split broad work into coherent reviewable PRs. Assign justified model classes
    and give workers the accepted brief without repeating intake.
-4. Start the first ready implementation slice with one repository writer and
-   scoped Apple resource leases. Run useful independent assignments alongside it;
+4. Start the first ready implementation slice with one repository writer and,
+   when coordinated resources are selected, scoped Apple resource leases. Run useful independent assignments alongside it;
    resource contention queues the affected operation, not the entire task.
 5. Run the minimum checks justified by impact and risk.
 6. Use `code-review` for an independent view of the frozen patch, assess findings

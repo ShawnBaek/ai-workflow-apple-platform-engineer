@@ -48,6 +48,12 @@ Consult existing ADRs. Record a new ADR for a consequential architectural or com
 
 ## Verify the change
 
+For public examples, use synthetic inputs and inspect the full diff, embedded
+media, JSON, logs and PR body for consumer data. Keep private design mappings,
+board/account identifiers and real app captures out of this collection. Public
+upstream source links are allowed provenance. Automated pattern checks are only
+a backstop; they cannot establish permission to publish an image or private URL.
+
 Use the [workflow test plan](docs/workflow-test-plan.md) for repeatable scenarios,
 pass criteria and a compact evidence record. Select the affected checks below;
 do not treat every scenario as mandatory for every PR.

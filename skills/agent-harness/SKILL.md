@@ -1,7 +1,7 @@
 ---
 name: agent-harness
 description: >-
-  Provider-neutral harness for taking an Apple-platform task from intake through an evidence-backed pull request using bounded execution, knowledge, and evidence graphs. Use for broad or end-to-end iOS, iPadOS, watchOS, or macOS work; when selecting Codex-only, Claude-only, or Codex-and-Claude collaboration; when adding local-LLM RAG; when the developer asks for graph engineering, loop engineering, autonomous task-to-PR delivery, independent review, resumable state, or minimum-sufficient verification.
+  Workflow guidance with an optional guarded Codex/Claude runtime for taking an Apple-platform task from intake through an evidence-backed pull request using bounded execution, knowledge, and evidence graphs. Use for broad or end-to-end iOS, iPadOS, watchOS, or macOS work; when selecting Codex-only, Claude-only, or Codex-and-Claude collaboration; when adding local-LLM RAG; when the developer asks for graph engineering, loop engineering, autonomous task-to-PR delivery, independent review, resumable state, or minimum-sufficient verification.
 ---
 
 # Apple Agent Harness
@@ -10,7 +10,19 @@ Coordinate the work; specialist skills own implementation details. The harness
 must make authority, state, resource ownership, verification, and stop reasons
 visible. A fluent answer is not evidence.
 
-## Start every run
+## Select guidance or guarded execution
+
+Read [project customization](references/project-customization.md) first. Standalone
+work uses the selected specialists, current client permissions, project guards,
+and appropriate evidence. An ordinary authorized PR can use `git-workflow`
+without creating an Issue or installing this runtime.
+
+The steps below apply when the guarded runtime is selected by the user/project,
+or needed for coordinated shared-resource work. Do not silently leave an active
+guarded run to bypass a failed authorization or lease. Its supported adapters are
+Codex and Claude; portable Markdown does not imply arbitrary runtime adapters.
+
+## Start every guarded run
 
 First clarify the intended outcome using [task intake](references/task-intake.md).
 Reuse prior answers and distinguish confirmed requirements from assumptions.

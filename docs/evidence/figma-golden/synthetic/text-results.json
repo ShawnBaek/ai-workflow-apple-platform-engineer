@@ -1,0 +1,10 @@
+{
+  "provenance": "Synthetic generator strings; no Figma or app hierarchy was queried",
+  "missing": [],
+  "extra": [],
+  "changed": [],
+  "matches": [
+    {"field": "title", "figmaNodeId": "synthetic:title", "expected": "Saved places", "actual": "Saved places"},
+    {"field": "first card", "figmaNodeId": "synthetic:card", "expected": "Morning coffee", "actual": "Morning coffee"}
+  ]
+}

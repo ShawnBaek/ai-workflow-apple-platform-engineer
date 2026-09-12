@@ -1,5 +1,9 @@
 # SwiftUI-For-Web API — verified surface
 
+Scope: optional SwiftUI-For-Web recipe, used only when selected by the project.
+Adapt example layout, tokens, sections and hosting to the accepted brief.
+
+
 What actually exists, what doesn't, and the canonical helper modules. Verified by reading https://github.com/ShawnBaek/SwiftUI-For-Web/blob/main/src/Core/View.js and the framework's own [AGENTS.md](https://github.com/ShawnBaek/SwiftUI-For-Web/blob/main/AGENTS.md).
 
 ## Real chainable modifiers

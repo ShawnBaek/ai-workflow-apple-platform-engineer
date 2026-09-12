@@ -171,6 +171,15 @@ final class ContractValidationTests: XCTestCase {
       ContractValidation.validateIconGenWorkflow(at: temporary).contains {
         $0.contains("forbidden privilege")
       })
+    let watcher = try String(
+      contentsOf: root.appendingPathComponent(".github/workflows/icongen-upstream-watch.yml"),
+      encoding: .utf8)
+    try watcher.replacingOccurrences(
+      of: "    if: github.repository == 'ShawnBaek/ai-workflow-apple-platform-engineer'\n",
+      with: "").write(to: temporary, atomically: true, encoding: .utf8)
+    XCTAssertTrue(ContractValidation.validateIconGenWorkflow(at: temporary).contains {
+      $0.contains("execution contract drifted")
+    })
   }
 
   func testCapabilityPoliciesRemainFullyBound() throws {

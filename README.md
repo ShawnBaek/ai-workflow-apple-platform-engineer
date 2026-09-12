@@ -57,7 +57,7 @@ Include your minimum OS, existing UI approach, reference apps and preferred styl
 
 For listing images and recorded previews, use **`$app-store-screenshots Prepare screenshots and a preview from this release build`** (Claude Code: `/app-store-screenshots`). Captures stay tied to the intended app version/build.
 
-See [all 36 skills](docs/skills.md). Each skill supplies guidance; it does not require a separate agent.
+See [all skills](docs/skills.md). Each skill supplies guidance; it does not require a separate agent.
 
 ## How the workflow works
 
@@ -87,6 +87,18 @@ Local result or approved PRs
 ```
 
 Small fixes skip unrelated stages. [Multiple tasks](skills/agent-harness/references/collaboration.md#delegate-a-batch-of-tasks) use a bounded worker pool with explicit checkout, folder and permission boundaries. Independent research/review can overlap; same-repository writes and heavy jobs follow their resource limits. For approved PR delivery, split larger changes into focused or stacked PRs with relevant screenshots, recordings or JSON evidence.
+
+## Adapt it to your project
+
+Use individual skills with your existing tools and project policy. Figma, Trello,
+GitHub Projects, 1Password, and the guarded Swift runtime are opt-in. Authorized
+personal and organization repositories are supported; this collection's owner
+is only the upstream installation/report destination.
+
+See [customization](docs/customization.md) for private preferences, supported
+runtime profiles, design sources, and evidence publication. Public examples use
+synthetic data. The collection is available under the [MIT license](LICENSE);
+linked third-party projects retain their own licenses.
 
 ## Explore
 

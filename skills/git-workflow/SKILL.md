@@ -16,10 +16,10 @@ See [PR delivery](references/pr-delivery.md) for the shared attachment commands.
 ## Start from the authoritative checkout
 
 - Use the exact repository and Xcode project directory the user identified. Inspect its top level, redacted remote, current branch, working state, and remote default branch before implementation.
-- A normal feature starts in that same checkout. Propose a concise branch name and obtain approval before creating or switching branches. `codex/<type>/<slug>` is a useful example, not a replacement for a repository's own naming policy.
+- A normal feature starts in that same checkout. Follow the user's and repository's branch-selection and approval policy before creating or switching branches. `codex/<type>/<slug>` is a useful example when neither defines one; it is not a replacement for a repository's own naming policy.
 - Apply the detailed [branch policy](references/branch-policy.md) before creating or switching a branch.
 - Update safely from the remote default branch only when the checkout is clean and the repository policy permits it. Do not use `--force`, reset, automatic pruning, or a replacement clone to work around a problem.
-- Before the first commit or push, show the repository name, absolute path, branch, and a credential-redacted remote, then obtain the repository-confirmation gate required by project policy.
+- Before the first commit or push, show the repository name, absolute path, branch, and a credential-redacted remote, then honor any repository-confirmation gate required by applicable policy. This skill does not add a separate author-preference approval gate.
 
 Resolve publication from this authoritative checkout's remote and intended base,
 including fork/upstream policy when applicable. Inspect those facts yourself;
@@ -30,7 +30,7 @@ task brief so publication does not restart discovery.
 
 ## Worktrees and Git metadata
 
-Create a linked worktree only on explicit per-task request. For an Xcode task, require a new Xcode session and re-confirm its authoritative project root. Put it at sibling path `../worktree/<sanitized-branch>`; never place it inside the main checkout or project directory.
+Create a linked worktree only when the current task or approved project policy authorizes it. Preserve stricter per-task approval rules when present. Use the configured location outside the main checkout; a sibling `../worktree/<sanitized-branch>` is an example, not a required path. For Xcode work, bind it to its own authoritative session/container. Never use a worktree to bypass sandbox restrictions.
 
 Before any operation that writes Git metadata in a linked worktree, run the read-only preflight in [linked-worktree and index recovery](references/linked-worktree-index-recovery.md). It identifies the actual git directory, common directory, index, and lock path rather than assuming `.git` is a directory.
 

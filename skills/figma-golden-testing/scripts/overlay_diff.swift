@@ -10,6 +10,7 @@ struct Arguments {
   let actual: URL
   let output: URL
   let threshold: Int
+  let minimumMatch: Double?
 }
 
 struct RGBAImage {
@@ -45,18 +46,25 @@ func value(after flag: String, in arguments: [String]) throws -> String {
 func parseArguments() throws -> Arguments {
   let arguments = Array(CommandLine.arguments.dropFirst())
   guard !arguments.contains("--help") else {
-    throw ScriptError.usage("Usage: overlay_diff.swift --figma <PNG> --actual <PNG> --out <directory> [--threshold <0...255>]")
+    throw ScriptError.usage("Usage: overlay_diff.swift --figma <PNG> --actual <PNG> --out <directory> [--threshold <0...255>] [--minimum-match <0...100>]")
   }
   let figma = URL(fileURLWithPath: try value(after: "--figma", in: arguments))
   let actual = URL(fileURLWithPath: try value(after: "--actual", in: arguments))
   let output = URL(fileURLWithPath: try value(after: "--out", in: arguments))
-  let threshold = arguments.contains("--threshold")
-    ? (Int(try value(after: "--threshold", in: arguments)) ?? 16)
-    : 16
-  guard (0...255).contains(threshold) else {
+  let thresholdText = arguments.contains("--threshold")
+    ? try value(after: "--threshold", in: arguments) : "16"
+  guard let threshold = Int(thresholdText), (0...255).contains(threshold) else {
     throw ScriptError.usage("--threshold must be between 0 and 255")
   }
-  return Arguments(figma: figma, actual: actual, output: output, threshold: threshold)
+  var minimumMatch: Double?
+  if arguments.contains("--minimum-match") {
+    guard let minimum = Double(try value(after: "--minimum-match", in: arguments)),
+          minimum.isFinite, (0...100).contains(minimum) else {
+      throw ScriptError.usage("--minimum-match must be a finite number between 0 and 100")
+    }
+    minimumMatch = minimum
+  }
+  return Arguments(figma: figma, actual: actual, output: output, threshold: threshold, minimumMatch: minimumMatch)
 }
 
 func loadImage(_ url: URL) throws -> RGBAImage {
@@ -152,7 +160,7 @@ func sideBySide(_ lhs: RGBAImage, _ rhs: RGBAImage) -> RGBAImage {
   return RGBAImage(width: lhs.width * 2, height: lhs.height, pixels: pixels)
 }
 
-func writeMetrics(figma: RGBAImage, actual: RGBAImage, threshold: Int, to url: URL) throws {
+func writeMetrics(figma: RGBAImage, actual: RGBAImage, threshold: Int, minimumMatch: Double?, to url: URL) throws -> Bool {
   var exact = 0
   var matching = 0
   var sumDelta = 0
@@ -165,7 +173,11 @@ func writeMetrics(figma: RGBAImage, actual: RGBAImage, threshold: Int, to url: U
     maxDelta = max(maxDelta, delta)
   }
   let count = figma.width * figma.height
+  let percentage = Double(matching) * 100 / Double(count)
+  let passed = minimumMatch.map { percentage >= $0 }
   let metrics: [String: Any] = [
+    "requiredMatchPercentage": minimumMatch.map { $0 as Any } ?? NSNull(),
+    "status": passed.map { $0 ? "passed" : "failed" } ?? "not_evaluated",
     "comparison": "raw pixel agreement; not perceptual correctness",
     "dimensions": ["width": figma.width, "height": figma.height],
     "threshold": threshold,
@@ -180,6 +192,7 @@ func writeMetrics(figma: RGBAImage, actual: RGBAImage, threshold: Int, to url: U
   ]
   let data = try JSONSerialization.data(withJSONObject: metrics, options: [.prettyPrinted, .sortedKeys])
   try data.write(to: url)
+  return passed != false
 }
 
 do {
@@ -196,8 +209,13 @@ do {
   try writePNG(blend(figma, actual), to: arguments.output.appendingPathComponent("overlay.png"))
   try writePNG(heatmap(figma, actual), to: arguments.output.appendingPathComponent("diff.png"))
   try writePNG(sideBySide(figma, actual), to: arguments.output.appendingPathComponent("side-by-side.png"))
-  try writeMetrics(figma: figma, actual: actual, threshold: arguments.threshold, to: arguments.output.appendingPathComponent("metrics.json"))
+  let accepted = try writeMetrics(figma: figma, actual: actual, threshold: arguments.threshold,
+    minimumMatch: arguments.minimumMatch, to: arguments.output.appendingPathComponent("metrics.json"))
   print(arguments.output.path)
+  if !accepted {
+    FileHandle.standardError.write(Data("Pixel comparison failed; see metrics.json and diff.png\n".utf8))
+    exit(2)
+  }
 } catch {
   FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))
   exit(1)

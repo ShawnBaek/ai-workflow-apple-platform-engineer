@@ -1,5 +1,9 @@
 # 3D Apple device showcases (`<model-viewer>` + USDZ/GLB)
 
+Scope: optional SwiftUI-For-Web recipe, used only when selected by the project.
+Adapt example layout, tokens, sections and hosting to the accepted brief.
+
+
 For an Apple-platform marketing site, a 3D iPhone / iPad / MacBook / Apple Watch you can spin and zoom is more memorable than a flat PNG. Use it in **exactly one place** (the parallax showcase, Section 3) — the same restraint as the parallax rule.
 
 **Tooling**: Google's [`<model-viewer>`](https://modelviewer.dev) web component. Drop in via a `<script type="module">` in `index.html`; works in every modern browser; supports both **GLB for the web** and **USDZ for iOS AR Quick Look** (tap-to-AR on iPhone visitors).
