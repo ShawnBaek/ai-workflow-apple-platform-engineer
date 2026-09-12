@@ -28,6 +28,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [core-simulator-health](../skills/core-simulator-health/SKILL.md) | Scoped CoreSimulator diagnosis and recovery |
 | [delivery-report](../skills/delivery-report/SKILL.md) | Evidence-backed completion previews and authorized channels |
 | [figma-bridge](../skills/figma-bridge/SKILL.md) | Implement an exact Figma state and compare runtime geometry |
+| [figma-golden-testing](../skills/figma-golden-testing/SKILL.md) | Swift Testing snapshots and node-specific Figma pixel/text parity |
 | [git-workflow](../skills/git-workflow/SKILL.md) | Branches, worktrees, Git recovery, and reviewable PR delivery |
 | [github-projects](../skills/github-projects/SKILL.md) | Issues and optional Projects tracking |
 | [icon-composer](../skills/icon-composer/SKILL.md) | Apple Icon Composer and app icon assets |

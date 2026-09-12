@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+<rect width="100%" height="100%" fill="#f7f9fc"/>
+<text x="36" y="52" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="28px" font-weight="700" fill="#162033">Figma visible-text results</text>
+<line x1="36" y1="72" x2="1364" y2="72" stroke="#d5dce8"/>
+<text x="42" y="112" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="20px" font-weight="700" fill="#c92a2a">Missing</text>
+<text x="56" y="142" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">time item label: expected &quot;Text 18&quot; [I419:31295;605:56325]</text>
+<text x="56" y="165" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">currency value: expected &quot;USD&quot; [I419:31300;317:23239]</text>
+<text x="56" y="188" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">items section: expected &quot;Add item&quot; [I1385:108937;317:23294]</text>
+<text x="56" y="211" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">share audience: expected &quot;Anika +8&quot; [I419:31302;404:26110]</text>
+<text x="42" y="252" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="20px" font-weight="700" fill="#a15c00">Extra</text>
+<text x="56" y="282" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">category label: actual &quot;Food&quot; [-]</text>
+<text x="56" y="305" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">category label: actual &quot;Sightseeing&quot; [-]</text>
+<text x="42" y="346" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="20px" font-weight="700" fill="#9b36a5">Changed</text>
+<text x="56" y="376" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">time: expected &quot;9:30 AM&quot; -&gt; actual &quot;8:00 PM&quot; [I419:31295;605:56331]</text>
+<text x="56" y="399" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">expense value: expected &quot;$0&quot; -&gt; actual &quot;₩0&quot; [I419:31299;403:24263]</text>
+<text x="56" y="422" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">note value: expected &quot;The best coffee place&quot; -&gt; actual &quot;Add note&quot; [I419:31301;317:23239]</text>
+<text x="56" y="445" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">category labels: expected &quot;Category name / Cafe / Drinks / Shopping / Groceries / Transport&quot; -&gt; actual &quot;Food / Drinks / Shopping / Transport / Sightseeing / Groceries&quot; [I419:31297;315:20418]</text>
+<text x="56" y="468" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">save button casing: expected &quot;Save&quot; -&gt; actual &quot;SAVE&quot; [I419:31303;96:8848]</text>
+<text x="56" y="491" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">selected tab casing: expected &quot;expense&quot; -&gt; actual &quot;EXPENSE&quot; [I419:31304;138:2312]</text>
+<text x="42" y="532" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="20px" font-weight="700" fill="#087f5b">Matches</text>
+<text x="56" y="562" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">place placeholder: expected &quot;Enter place name&quot; -&gt; actual &quot;Enter place name&quot; [I419:31296;406:25688]</text>
+<text x="56" y="585" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">address (whitespace normalized): expected &quot;291 Geary St, San Francisco, CA 94102, USA&quot; -&gt; actual &quot;291 Geary St, San Francisco, CA 94102, USA&quot; [I419:31296;406:25689]</text>
+<text x="56" y="608" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13px" font-weight="400" fill="#33415c">date: expected &quot;SEP 11, 2025&quot; -&gt; actual &quot;SEP 11, 2025&quot; [I419:31295;605:56335]</text>
+</svg>
