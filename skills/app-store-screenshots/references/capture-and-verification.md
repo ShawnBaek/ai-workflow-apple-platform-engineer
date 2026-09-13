@@ -79,6 +79,18 @@ approved listing implicitly. After upload, list the exact stored set, observe
 processing and verify the preview/poster in App Store Connect. For an uncertain
 response, read back before retrying to avoid duplicates or unnecessary deletion.
 
+An empty output chunk is not process completion. Retain the process/session ID
+and wait on that same upload until exit. Do not start another replacement while
+the first is running. After an interruption, check the original process and the
+remote set before resuming. Compare count, filename order, dimensions, processing
+states and available checksums with the approved export; six successful upload
+responses do not prove that the set contains exactly six unique assets.
+
+When a version is locked for review, report the exact state and obtain authority
+to cancel and resubmit unless already granted. Once granted, wait for cancellation
+readback, replace the media, verify processing, then resubmit the intended version
+and build. Do not report a submitted app as approved or publicly released.
+
 Sources: [ASC CLI](https://github.com/rorkai/App-Store-Connect-CLI),
 [Apple upload workflow](https://developer.apple.com/help/app-store-connect/manage-app-information/upload-app-previews-and-screenshots/),
 [poster frames](https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-preview-poster-frame/),

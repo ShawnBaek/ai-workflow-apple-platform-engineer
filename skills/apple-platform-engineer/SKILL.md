@@ -80,7 +80,7 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 | StoreKit local/sandbox/TestFlight purchase testing | `storekit-sandbox-testing` |
 | Xcode/Simulator disk pressure | `xcode-storage` |
 | visual acceptance and PR media evidence | `screenshot` |
-| App Store screenshots/previews from the target build | `app-store-screenshots` |
+| App Store screenshots/previews, editable Keynote, platform canvas sizes and marketing typography | `app-store-screenshots` |
 | completion summary or private message delivery | `delivery-report` |
 | TestFlight/App Store/Xcode Cloud | `app-store-connect` |
 | CI/CD | `cicd` |

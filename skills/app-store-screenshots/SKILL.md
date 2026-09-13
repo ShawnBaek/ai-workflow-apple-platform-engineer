@@ -4,7 +4,8 @@ description: >-
   Prepare or refresh App Store listing screenshots and app preview videos from
   the intended current app version/build. Resolve capture freshness, choose the
   product story, locales and Apple media slots, derive assets from real captures,
-  and verify the delivery set. Use for App Store marketing media; use screenshot
+  design editable Keynote layouts with platform-specific custom slide sizes and
+  readable typography, and verify the delivery set. Use for App Store marketing media; use screenshot
   for general PR evidence and app-store-connect for authorized upload.
 ---
 
@@ -78,6 +79,14 @@ and [review guidelines 2.3](https://developer.apple.com/app-store/review/guideli
 
 ## Capture and derive the deliverables
 
+For editable listing designs, use native Keynote when requested or already the
+approved source. Read [Keynote layout and delivery](references/keynote-design.md)
+before creating or changing the deck. It covers per-platform canvases, type
+hierarchy, truthful app captures, export order and source-control receipts.
+Keep an explicitly selected alternative design tool; do not convert it merely
+because Keynote is available. A request to reorder an approved deck changes order,
+not its copy, palette or layouts.
+
 Follow `screenshot` for stable state, destination ownership, privacy and capture.
 Use current supported Apple capture tools first. Read
 [capture and verification mechanics](references/capture-and-verification.md)
@@ -103,6 +112,8 @@ Custom composition, frame extraction and checks use Swift with Apple frameworks
 (ImageIO/CoreGraphics, AVFoundation and CryptoKit). Reuse existing helpers and
 project capture support; do not add Python, an XCUITest framework or a second
 media runtime merely to produce a listing set.
+Native Keynote editing and export use its supported UI or scripting dictionary;
+do not rebuild an editable presentation as flattened Swift-rendered slides.
 
 ## Verify, present and deliver
 
