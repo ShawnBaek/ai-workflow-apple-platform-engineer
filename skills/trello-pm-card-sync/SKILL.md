@@ -21,6 +21,30 @@ come from the user, board policy, or repository workflow. Do not assume a
 particular organization, personal owner, repository, list name, or companion
 tracker.
 
+## Target version for app Todo cards
+
+Before creating or normalizing a Todo card for an App Store app, verify the
+app's currently released App Store marketing version from live App Store or
+App Store Connect evidence. Confirm the app identity, such as its product page,
+bundle ID, or App Store ID, so a similarly named app or stale local project
+version is not treated as the current release.
+
+Use the requested scope to recommend the next target marketing version:
+
+- Recommend a patch increment for fixes and small maintenance changes.
+- Recommend a minor increment for a new user-facing capability.
+- Recommend a major increment only for an explicitly breaking or fundamental
+  product change.
+
+Tell the user the verified current version and the recommended next version,
+then ask them to confirm the target version. Do not create or normalize the
+Todo card, or attach its target-version label, until the user explicitly
+confirms. After confirmation, apply the board's established target-version
+label or visible custom-field convention and read the card back to verify it.
+If the board has no named version label/convention, or the required label does
+not exist, report that and ask how to proceed instead of guessing, reusing an
+unnamed label, or creating a new label without authorization.
+
 ## Audit
 
 Read the card, board/list, checklists, comments, labels, attachments, and
