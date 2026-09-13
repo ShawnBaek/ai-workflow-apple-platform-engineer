@@ -5,7 +5,7 @@ import Foundation
 public enum ContractValidation {
   public static let controlSpine = [
     "intake", "guard", "health", "discover", "discover_spec_kit", "plan", "approve_plan",
-    "branch_approval", "bind_spec_kit_snapshot", "bind_run_authorization",
+    "select_task_branch", "bind_spec_kit_snapshot", "bind_run_authorization",
     "claim_implementation_writer", "prepare_and_verify_branch", "claim_github_tracking",
     "ensure_issue_ready", "release_github_tracking", "claim_github_in_progress",
     "mark_issue_in_progress", "release_github_in_progress", "implement",

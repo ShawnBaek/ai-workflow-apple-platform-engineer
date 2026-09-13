@@ -37,8 +37,8 @@ registry candidate, an explicit root, and the opened container do not resolve
 to the same live Git top level, stop; never switch Xcode windows, checkouts, or
 worktrees to make the registry entry fit.
 
-Use `git-workflow` for remote-default discovery, branch-name approval, Git
-metadata preflight, and PR state. A worktree requires authority from the current
+Use `git-workflow` for remote-default discovery, task-derived branch selection,
+Git metadata preflight, and PR state. A worktree requires authority from the current
 task or project policy; if approved, it must become a separate
 authoritative Xcode session rather than borrowing the original open window.
 
@@ -90,7 +90,8 @@ Third-party build tooling is an explicit fallback, not a prerequisite.
 ## Stop conditions
 
 Stop without edits/builds when the root/container is unknown, the working tree
-has unexplained changes, the remote default or approved branch is unresolved,
+has pre-existing changes whose explicitly approved handling is absent, the remote
+default or intended branch base is unresolved,
 the Apple account boundary is unverified for an account action, Git metadata is
 not writable from the current environment, or XcodeGen requires new authority.
 

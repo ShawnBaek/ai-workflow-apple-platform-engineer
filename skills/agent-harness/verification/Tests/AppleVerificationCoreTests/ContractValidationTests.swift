@@ -75,6 +75,38 @@ final class ContractValidationTests: XCTestCase {
       })
   }
 
+  func testTaskBranchSelectionPreservesAuthorizationBoundaries() throws {
+    let workflow = try object("skills/agent-harness/contracts/workflow.json")
+    let resources = Set(ContractValidation.resources)
+    XCTAssertEqual(ContractValidation.validateWorkflowSemantics(workflow, resources: resources), [])
+
+    // Automatic naming must not let checkout mutation skip the bound run authorization.
+    var bypass = workflow
+    var nodes = try XCTUnwrap(workflow["nodes"] as? [[String: Any]])
+    let writer = try XCTUnwrap(nodes.firstIndex {
+      $0["id"] as? String == "claim_implementation_writer"
+    })
+    nodes[writer]["requires"] = ["select_task_branch"]
+    bypass["nodes"] = nodes
+    XCTAssertTrue(ContractValidation.validateWorkflowSemantics(bypass, resources: resources)
+      .contains("control-spine dependency drift at claim_implementation_writer"))
+
+    // A persisted old spine needs its pinned bundle, not silent rebinding to this one.
+    var legacy = workflow
+    legacy["nodes"] = try XCTUnwrap(workflow["nodes"] as? [[String: Any]]).map { node in
+      var result = node
+      if result["id"] as? String == "select_task_branch" {
+        result["id"] = "branch_approval"
+      }
+      result["requires"] = (result["requires"] as? [String])?.map {
+        $0 == "select_task_branch" ? "branch_approval" : $0
+      }
+      return result
+    }
+    XCTAssertTrue(ContractValidation.validateWorkflowSemantics(legacy, resources: resources)
+      .contains("workflow control-spine node order drifted"))
+  }
+
   func testDAGRejectsCyclesMissingEdgesAndDuplicateDependencies() {
     XCTAssertFalse(
       ContractValidation.validateDAG([
