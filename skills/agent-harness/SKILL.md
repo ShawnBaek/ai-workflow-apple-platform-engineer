@@ -143,6 +143,13 @@ Each added test must name a unique observable contract and prevented failure.
 Route test mechanics to `apple-platform-testing` and dependency resolution to
 `swift-package-manager`.
 
+App-change completion also requires
+[build and warning acceptance](../apple-platform-testing/SKILL.md#build-and-warning-acceptance)
+for the final integrated patch, in standalone and guarded workflows. A specialist
+report, passing snapshot or user-owned manual QA cannot replace app compilation
+and warning review. Keep blocked, failed and unverified builds out of completion
+claims even when implementation nodes have finished.
+
 Write new custom verification helpers and tests in Swift, including temporary
 scripts for JSON, Git-state checks and media processing. Use supported `git`,
 `gh`, `asc` and Apple CLI commands directly where sufficient; do not wrap them

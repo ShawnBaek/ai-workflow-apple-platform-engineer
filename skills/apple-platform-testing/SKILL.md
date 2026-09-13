@@ -43,6 +43,36 @@ Read [XCTest and UI automation practice](references/xctest-and-ui-automation.md)
 
 ## Run and report
 
+### Build and warning acceptance
+
+For app source, resources, dependencies, or build-setting changes, completion
+requires a successful build of the affected integrated app target from the final
+patch in the authoritative project/workspace. Use the `xcodebuild` skill to
+select an authorized official Xcode build tool.
+Record the patch identity, Xcode/SDK, scheme, configuration, destination, actual
+build result and log or result-bundle location. A package-only check, preview,
+snapshot, editor diagnostics, or an earlier revision's build does not establish
+that the final app compiles. Reuse matching build evidence; rebuild after changes
+that invalidate it. Documentation-only work needs its relevant validator.
+
+Inspect compiler, asset, linker, and build-script warnings in the build evidence,
+even when the command succeeds. Fix warnings introduced by the task and rerun
+the affected build. Classify other warnings using available baseline evidence;
+if their origin is unknown, report warning triage as pending and do not claim
+completion until classified. Report remaining warnings with location,
+reason and disposition. Do not suppress diagnostics, weaken concurrency checks,
+or remove warning-producing functionality merely to obtain a clean result.
+Unresolved task-introduced warnings block completion; pre-existing warnings may
+remain when outside scope, but must be disclosed and never called warning-free.
+
+“I will test it” delegates manual acceptance; it does not waive compilation or
+warning review. Respect an explicit instruction not to build or an execution
+blocker, and report `Build Unverified` with the reason instead of complete or
+ready for testing. A failed build is `Build Failed`. A passing build with manual
+acceptance outstanding is implementation verified with manual QA pending, not
+proof that the feature works. Keep build, warning review, automated tests and
+manual QA as separate reported outcomes.
+
 Use the authorized host environment and repository project-root rules for Xcode,
 Simulator, device, and signing operations. Reuse `build-for-testing` products
 with `test-without-building` when source/dependency identity, toolchain, scheme,

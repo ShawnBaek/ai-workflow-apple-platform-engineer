@@ -38,6 +38,18 @@ channel by default.
 
 ## Report contents
 
+For app changes, apply
+[build and warning acceptance](../apple-platform-testing/SKILL.md#build-and-warning-acceptance)
+before choosing the task status. State the final-patch build result and evidence,
+warning review and remaining warnings, automated checks, and manual QA separately.
+Use `Build Failed` or `Build Unverified` when applicable; do not report complete,
+100%, or Ready for Testing on implementation progress alone. A successful build
+does not prove runtime acceptance or TestFlight availability. Previously passing
+evidence invalidated by subsequent edits cannot support a completion report.
+These build labels are human-readable outcomes, not new JSON status values.
+For structured completion reports, retain the existing `partial` or `blocked`
+status as appropriate and record the build outcome in the checks and omissions.
+
 Include task/status, changes, phase PR links, minimum-sufficient checks,
 screenshots, trimmed videos, omissions/residual risk, and provider/client-reported
 token and cost status. Preserve `not_exposed`; never estimate tokens from text.
