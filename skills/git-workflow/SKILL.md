@@ -16,9 +16,10 @@ See [PR delivery](references/pr-delivery.md) for the shared attachment commands.
 ## Start from the authoritative checkout
 
 - Use the exact repository and Xcode project directory the user identified. Inspect its top level, redacted remote, current branch, working state, and remote default branch before implementation.
-- A normal feature starts in that same checkout. Follow the user's and repository's branch-selection and approval policy before creating or switching branches. `codex/<type>/<slug>` is a useful example when neither defines one; it is not a replacement for a repository's own naming policy.
+- A normal feature starts in that same checkout. Derive and create its branch automatically from the assigned task, following an explicit user or repository name when supplied. `codex/<type>/<slug>` is a useful example when neither defines one; it is not a replacement for a repository's own naming policy. Selecting a routine task-derived name needs no separate approval; ask only when the intended base, overlap with existing work, or requested continuation is materially unclear.
 - Apply the detailed [branch policy](references/branch-policy.md) before creating or switching a branch.
-- Update safely from the remote default branch only when the checkout is clean and the repository policy permits it. Do not use `--force`, reset, automatic pruning, or a replacement clone to work around a problem.
+- If pre-existing staged, unstaged, or untracked changes exist, follow the branch policy's read-only report and handling decision before checkout mutation. Explain the assigned work, actual changes, their relationship and exact preservation/exclusion proposal; wait for explicit approval or rejection. Reuse approval for unchanged handling, without asking again for the agent's own task edits.
+- Update safely from the remote default branch only when the checkout is clean or the user has explicitly approved handling of its existing changes, and the repository policy permits it. Do not use `--force`, reset, automatic pruning, or a replacement clone to work around a problem.
 - Before the first commit or push, show the repository name, absolute path, branch, and a credential-redacted remote, then honor any repository-confirmation gate required by applicable policy. This skill does not add a separate author-preference approval gate.
 
 Resolve publication from this authoritative checkout's remote and intended base,
@@ -53,9 +54,10 @@ implemented. A shared file alone does not require one large PR: consider a
 compatible prerequisite followed by its consumers. Keep genuinely incompatible
 changes together and name that dependency rather than citing line count alone.
 
-When phases depend on each other, use stacked PRs. Obtain approval for every
-branch name, base each branch and PR on its approved predecessor, and put the
-shared stack-plan link and immediate dependency in each body. Each phase gets its own diff, checks,
+When phases depend on each other, use stacked PRs. Derive each branch name from
+its assigned phase unless the user supplies one, base each branch and PR on its
+planned predecessor, and put the shared stack-plan link and immediate dependency
+in each body. Each phase gets its own diff, checks,
 evidence, and review status. A stacked PR does not grant merge, force-push, or
 branch-retarget authority.
 

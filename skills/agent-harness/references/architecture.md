@@ -39,8 +39,8 @@ or `superseded`. Do not use an unqualified `done` state.
 ```mermaid
 flowchart TB
     A["Authority and health<br/>intake → guard → health → discover"]
-    S["Spec and approval<br/>discover Spec Kit → plan → plan approval → branch approval<br/>→ immutable Spec snapshot → run authorization"]
-    B["Approved branch<br/>claim writer → prepare and verify exact branch"]
+    S["Spec and authorization<br/>discover Spec Kit → plan → plan approval → select task branch<br/>→ immutable Spec snapshot → run authorization"]
+    B["Task branch<br/>claim writer → prepare and verify exact branch"]
     T["Issue Ready<br/>claim GitHub → update → release"]
     I["Implementation<br/>Issue In Progress → implement → release writer → verify"]
     R["Convergence<br/>freeze → review → converge → reverify"]
@@ -52,7 +52,7 @@ flowchart TB
 The exact 41-node control spine is:
 
 `intake → guard → health → discover → discover_spec_kit → plan → approve_plan
-→ branch_approval → bind_spec_kit_snapshot → bind_run_authorization →
+→ select_task_branch → bind_spec_kit_snapshot → bind_run_authorization →
 claim_implementation_writer → prepare_and_verify_branch →
 claim_github_tracking → ensure_issue_ready → release_github_tracking →
 claim_github_in_progress → mark_issue_in_progress →
@@ -62,6 +62,22 @@ verify → freeze_review → review → converge → reverify → prepare_eviden
     claim_github_mutation → push → verify_remote_sha → release_delivery_writer →
     create_pr → mark_issue_in_review → publish_evidence →
 verify_published_evidence → checks → release_github_mutation → pr_ready`.
+
+`select_task_branch` derives a descriptive name from the assigned task and binds
+the intended base; it does not request separate branch-name approval. Follow
+[branch policy](../../git-workflow/references/branch-policy.md) during discovery:
+inspect pre-existing changes, summarize their contents and task relationship,
+propose exact handling, and wait for explicit approval or rejection before
+checkout mutation. Read-only discovery can continue while that decision is pending.
+Plan/run authorization and repository confirmation remain separate boundaries.
+
+Compatibility: new runs use `select_task_branch` in place of the historical
+`branch_approval` node. The JSON shape and 41-node count are unchanged, but the
+semantic validator requires the new spine. Do not rewrite persisted ledgers,
+Spec Kit `approved_git_branch` fields, or signed/hashed authorization records.
+Existing runs retain their pinned bundle and recorded gates; adopting this
+workflow requires a new run with current source identity and authorization.
+An existing approval must not be silently rebound to the changed workflow.
 
 `converge` is a decision node, not a hidden edit step. An accepted finding
 creates a new implementation attempt and supersedes the old downstream nodes.

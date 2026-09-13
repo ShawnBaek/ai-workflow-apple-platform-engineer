@@ -6,7 +6,7 @@ without routine prompts at every green-path step.
 
 The authorization is a finite capability envelope, not a general “yes.” Bind
 it to the exact repository fingerprint, canonical path, redacted remote, base
-SHA, approved branch, acceptance IDs, allowed paths, Spec Kit snapshot (when
+SHA, selected task branch, acceptance IDs, allowed paths, Spec Kit snapshot (when
 used), attempt/time bounds, GitHub objects, delivery target, and single-use
 action grants with a visible structured operation descriptor, its canonical
 SHA-256 constraint, canonical resource key, delivery phase, idempotency key, and
@@ -33,8 +33,13 @@ production release, and merge are not delivery targets here.
 
 ## One prompt without weaker guards
 
+Select the task-derived branch name before preparing the envelope; naming alone
+does not need a separate prompt. Pre-existing changes follow the read-only
+summary and handling decision in [branch policy](../../git-workflow/references/branch-policy.md).
+Approval for that handling is not permission to publish or broaden the envelope.
+
 Where project policy permits, one explicit user response may approve all exact
-records represented by the envelope. Record derived plan, branch, repository,
+records represented by the envelope. Record derived plan, repository,
 and external-write approvals against the same immutable authorization hash
 instead of prompting again for the same unchanged fact.
 
@@ -51,7 +56,7 @@ atomically appends a single-use reservation before returning authority. The
 external writer must use that exact descriptor while the same unexpired lease
 remains active and then append the result against the reservation.
 
-The envelope may bind the approved feature-branch name before that branch is
+The envelope may bind the selected feature-branch name before that branch is
 created, but no granted external action runs until the writer lease has prepared
 the branch from the bound base and a live read-only observation proves the exact
 root, sanitized remote, base ancestry, and checked-out branch.

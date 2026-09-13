@@ -28,7 +28,10 @@ and issue triage through a verified, reviewable fix.
 
 ## Change contract
 
-1. Confirm the remote default branch and start an approved feature branch.
+1. Inspect existing changes and follow `skills/git-workflow/references/branch-policy.md`.
+   Derive the branch name from the assigned task without a separate naming approval.
+   For pre-existing changes, report their contents, task relationship and proposed
+   handling, then wait for explicit approval or rejection before mutating the checkout.
 2. Clarify the requested outcome and acceptance criteria before architecture
    or task breakdown. Reuse prior answers; resolve only material uncertainty.
    Read relevant ADRs, creating one only for a significant decision. Use a

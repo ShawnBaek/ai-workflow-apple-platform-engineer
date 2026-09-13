@@ -11,7 +11,10 @@ not in a reusable public skill.
 - Authoritative Xcode container: `<absolute-project-or-workspace-path>`
 - Allowed GitHub owner: `<owner>`
 - Allowed Apple team: `<private-overlay>`
-- Branch policy and approval gates: `<project convention>`
+- Branch naming/base convention: `<project convention; derive names from assigned tasks>`
+- Pre-existing changes: summarize contents, task relationship and proposed handling;
+  wait for explicit approval or rejection before checkout mutation.
+- Publication and other approval gates: `<project convention>`
 - Workflow: `<standalone | guarded>`; tracking: `<none | Issues | configured board>`
 - Design source: `<Figma node | supplied image | code-first Preview | not applicable>`
 - Evidence: `<private output location and separately approved public artifacts>`
