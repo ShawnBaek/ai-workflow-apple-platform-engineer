@@ -34,6 +34,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [icon-composer](../skills/icon-composer/SKILL.md) | Apple Icon Composer and app icon assets |
 | [onepassword-environments](../skills/onepassword-environments/SKILL.md) | Official 1Password development environment connection, secrets and local mounts |
 | [screenshot](../skills/screenshot/SKILL.md) | Deterministic screenshots, recordings, and aligned comparisons |
+| [sketch-design-from-codebase](../skills/sketch-design-from-codebase/SKILL.md) | Sketch design system and every screen from the codebase, reproduced or redesigned |
 | [skill-maintenance](../skills/skill-maintenance/SKILL.md) | Report, investigate and fix collection skill or workflow problems |
 | [storekit-sandbox-testing](../skills/storekit-sandbox-testing/SKILL.md) | Verify StoreKit purchases, restoration, renewal and failure behavior in local and sandbox environments |
 | [swift-package-manager](../skills/swift-package-manager/SKILL.md) | Dependency resolution and compatible package/build reuse |
