@@ -9,10 +9,36 @@ reference code is context, not a guarantee of compiling SwiftUI.
 1. **Get the URL.** Engineer pastes the Figma frame URL: `https://www.figma.com/design/<fileKey>/<file>?node-id=42-7`.
 2. **Read context.** Use `get_design_context` for the exact file/node. Supply a framework hint only through a supported field. Surface access failures.
 3. **Narrow when necessary.** For truncated or oversized context, use `get_metadata` to select relevant children and fetch those.
-4. **Implement.** Translate the observed layout, assets and constraints into the project's SwiftUI/UIKit conventions; reuse mapped components.
+4. **Measure, then implement.** Read each node's bounds from `get_metadata`
+   and derive sibling gaps, alignment and the *visual* size of every glyph
+   before writing modifiers; the returned reference code is not the spec.
+   Translate that geometry into the project's SwiftUI/UIKit conventions and
+   reuse mapped components. For a control whose exported glyph is small
+   (roughly 12–24 pt), keep the glyph at design size, grow the tappable frame
+   to ≥44 pt with insets/padding/`contentShape`, then subtract that inset from
+   the outer spacing so the glyph still lands on its Figma coordinate; re-check
+   the neighboring gaps after the adjustment.
 5. **Write to the owning file.** Follow the actual project structure and existing screen, rather than inventing a `Views/` directory.
 6. **Add the `// figma:` code-connect-map comment** at the top of the file ([`code-connect-map.md`](code-connect-map.md)).
-7. **Hand off to `apple-platform-ui`** for the bounded production-view polish — semantic colors, Dynamic Type, architecture-compatible state boundaries, and SF Symbol substitution. Add `xcode-preview-design` only when Preview or motion review is requested.
+7. **Hand off to `apple-platform-ui`** for the bounded production-view polish — semantic colors, Dynamic Type, architecture-compatible state boundaries, and SF Symbol substitution where the design uses a system glyph. Add `xcode-preview-design` only when Preview or motion review is requested; route snapshot tests and pixel/text parity reports to `figma-golden-testing`.
+
+## Assets: exported artwork, not catalog names
+
+When the design provides an icon or image asset, the exported artwork is the
+contract. `get_design_context` returns download URLs for each asset; add the
+export (SVG or PDF, following the project's existing asset format) to the asset
+catalog instead of substituting an SF Symbol or reusing whatever catalog entry
+has a similar name. An existing asset is only acceptable after you render it and
+compare it with the export — names lie: a `_dark` suffix usually means *for dark
+backgrounds* (light artwork), and a `settings` asset may be a different glyph.
+Keep colored exports in original rendering mode; use template rendering plus a
+tint only when the design defines the color separately from the shape.
+
+System control chrome is part of the same check. Toolbar and bar-button items
+may receive an SDK-default background or shape that the flat design does not
+show; when you opt out (for example `.buttonStyle(.plain)`), verify that the
+label color did not fall back to the primary color — set the design's
+foreground color explicitly.
 
 ## Avoid large frames — the rule and the recovery
 
@@ -48,7 +74,7 @@ What it does **not** do well — these are why you hand off to `apple-platform-u
 | Minimum risk-relevant Preview matrix | `xcode-preview-design` selects only states that can change the review decision |
 | Architecture-compatible state boundary | `apple-platform-ui` preserves or narrows the project's existing seam |
 | Semantic `Color.primary` / `.secondary` / `.systemBackground` | Generated code uses literal hex; semantic colors handle dark mode |
-| SF Symbol substitution | Figma layers named `icon/chevron.right` → `Image(systemName: "chevron.right")` |
+| SF Symbol substitution for system glyphs | Figma layers that reproduce a system glyph (`icon/chevron.right`) → `Image(systemName: "chevron.right")`; design-system icons keep their exported artwork |
 | Deterministic fixture seam | Prefer a value; reuse a protocol or closure only when interaction needs it |
 | 44pt tap target audit | `apple-platform-ui` checks every `Button` / `.onTapGesture` |
 | Dynamic Type readability | `apple-platform-ui` confirms accessibility3 doesn't truncate |
@@ -100,7 +126,7 @@ Map the asset catalog colours to the Figma variable names directly. Now every ge
 
 Sometimes `get_screenshot(fileKey, nodeId)` is more useful than `get_design_context`:
 
-- For visual diff after build — render the as-built view, fetch the Figma screenshot, eyeball.
+- For visual diff after build — render the as-built view, fetch the Figma screenshot, and compare through `figma-golden-testing`; a glance at a downscaled preview is not verification.
 - For micro-interactions the MCP doesn't expose (subtle shadows, gradient stops not yet wired to variables) — read the screenshot for ground truth.
 
 Use a screenshot only when it answers the exact source-parity or acceptance
@@ -112,6 +138,8 @@ question; repeated captures without a changed hypothesis add noise.
 - [ ] `// figma:` comment at the top points at the exact node generated from.
 - [ ] No raw hex colours where a semantic / variable colour was available.
 - [ ] No empty `VStack {}` or `Spacer()` artefacts left from un-rendered nodes.
+- [ ] Design-system icons come from the Figma export (rendered and compared), not from a same-named catalog asset or an SF Symbol.
+- [ ] Every small-glyph control has a ≥44 pt frame and its glyph still sits on the Figma coordinate after the inset.
 - [ ] Routed to `apple-platform-ui` for the HIG polish (or told the engineer to).
 
 ## Self-review when a generate call fails

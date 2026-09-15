@@ -38,7 +38,12 @@ future run compares the same state.
    to interpret a pass, a missing baseline, or a pixel mismatch. The agent must
    write/update and run the test; a prose instruction to run snapshot testing is
    not a validation result. Use XCTest/XCUITest attachments and the supplied
-   comparator when the project does not use Point-Free SnapshotTesting.
+   comparator when the project does not use Point-Free SnapshotTesting. Do not
+   hand-roll SwiftUI capture: `UIGraphicsImageRenderer` with
+   `layer.render(in:)` draws UIKit-bridged SwiftUI controls (segmented pickers,
+   some toolbars) blank, and `ImageRenderer` returns a zero-size image without
+   an explicit frame — a blank control in such a capture is a capture defect,
+   not a layout bug to fix in the view.
 4. Resolve `FIGMA_GOLDEN_ROOT` to the absolute folder of this loaded skill (which
    contains `SKILL.md` and `scripts/`), not the app checkout. Choose a private
    output directory and an agreed RGB threshold and minimum pixel percentage.
@@ -51,7 +56,14 @@ future run compares the same state.
    error. Run the renderer even after exit 2 to make failure evidence reviewable.
    It writes `overlay.png` (50% aligned blend), `diff.png` (red difference heatmap),
    `side-by-side.png`, and `metrics.json`. Images must have identical dimensions;
-   never silently resize, crop, or mask them.
+   never silently resize, crop, or mask them. Match dimensions at the source:
+   capture on a device whose point size equals the frame, or export and capture
+   the same content node (Figma frames often bake a status bar and a fixed
+   device size into the artwork). Do not linearly stretch a different device
+   size to fit — the status-bar and safe-area rows then misalign everything
+   below them. When the match percentage plateaus, name the cause (device
+   size, baked chrome, system list spacing) instead of iterating crop offsets;
+   a plateau explained is a valid result, a hidden one is not.
    To make the JSON results directly visible in a PR, render them as SVG images:
    `swift "$FIGMA_GOLDEN_ROOT/scripts/render_report.swift" --metrics report/metrics.json --text report/text-results.json --out report`.
    This adds `metrics.svg` and `text-results.svg` without changing the source
@@ -72,6 +84,14 @@ Report device, OS, viewport, safe-area insets, fixture, source mapping, visible
 text results, threshold, matching pixels, and percentage. Use the comparator's
 `matchPercentage` only as raw pixel agreement; do not call it perceptual similarity
 or acceptance by itself. Name large gaps by component and likely owning constraint.
+
+Verify each requested element on four axes — color, size, position, hit area —
+with numbers. Sample the averaged foreground pixels of an element in both images
+and report the RGB pair; compare rendered frames with the node bounds; assert the
+tappable frame. Looking at a downscaled preview is not verification — dark text
+on a saturated field can pass as light at preview size and sample black — and
+an asset's catalog name is not evidence of its artwork. When the user repeats a
+color or position complaint, measure before explaining.
 
 ## Failure handling
 

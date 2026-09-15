@@ -62,6 +62,11 @@ profiles, or CI secrets never imply an override.
 
 - Detect whether XcodeGen is the declared source of truth, but do not regenerate
   merely because source files changed or a generated project looks stale.
+- XcodeGen enumerates globbed files at generation time. When an approved
+  generation accompanies adding or deleting globbed resources (snapshot
+  baselines, fixtures), make the file change first and generate after it;
+  deleting a file that the generated project still lists fails the build with
+  "Build input file cannot be found".
 - Before adding a project-referenced file, determine whether the existing
   container already discovers it through a synchronized group or whether the
   XcodeGen spec and regeneration are required. Do not create an orphan source
