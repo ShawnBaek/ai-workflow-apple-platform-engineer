@@ -61,7 +61,7 @@ do not treat every scenario as mandatory for every PR.
 | Change | Smallest useful proof |
 |---|---|
 | Typo, link or compact documentation edit | Inspect the changed content and run the repository validator |
-| New skill or changed decision/routing guidance | Replay one representative request and the nearest confusing case; inspect decisions and output, not just matching words |
+| New skill or changed decision/routing guidance | Replay one representative request and the nearest confusing case; inspect decisions and output, not just matching words. Add a case to [`tests/fixtures/skill-routing.json`](tests/fixtures/skill-routing.json) when a routing or rule defect actually shipped, so removing the fix fails the validator |
 | Bug fix in runtime or contracts | A Swift regression that fails for the original defect, passes after the fix, and preserves the relevant denial or boundary case |
 | Shared authorization, resource or lifecycle change | Relevant expiry/replay/contention/terminal regressions plus the full package and repository checks |
 | Visual or interaction guidance | A small real example when necessary; aligned screenshots for geometry, a recording for motion; state what was not exercised |

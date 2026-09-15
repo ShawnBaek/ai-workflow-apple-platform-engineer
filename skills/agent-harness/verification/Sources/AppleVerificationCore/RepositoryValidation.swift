@@ -153,6 +153,7 @@ public enum RepositoryValidation {
     if version.isEmpty || !(texts["README.md"] ?? "").contains("**Version:** \(version)") {
       errors.append("README version must match VERSION")
     }
+    errors += SkillRoutingValidation.validate(texts: texts)
     if includeContracts {
       errors += ContractValidation.validateRepository(
         context: RuntimeContext(

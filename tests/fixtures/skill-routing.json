@@ -1,0 +1,45 @@
+{
+  "purpose": "Deterministic text contracts for instruction defects that repository linting cannot see. Each case records a defect that actually shipped, so removing the fix fails CI. These check the cross-references and qualifiers a correct routing decision depends on; they do not run a model and do not prove an agent routes correctly.",
+  "capabilityRouting": [
+    {
+      "id": "figma-node-parity",
+      "capability": "Node-specific Figma pixel and text parity, and snapshot tests whose contract is a Figma frame.",
+      "request": "Compare this SwiftUI screen with Figma node 350-23232 and give me an aligned overlay, a pixel diff and a repeatable report.",
+      "owner": "figma-golden-testing",
+      "referencedFrom": [
+        "figma-bridge",
+        "apple-platform-ui",
+        "apple-platform-testing",
+        "apple-platform-engineer"
+      ],
+      "why": "Issue #58: the snapshot half of a Figma-contract request had no owner. Every plausible starting skill stayed silent about figma-golden-testing, so the request fell through to the generic testing skill, which then re-implemented capture and comparison by hand. Fixed in #59 by naming the owner from each starting point; this case keeps those references from being dropped again."
+    },
+    {
+      "id": "qa-screenshot-capture",
+      "capability": "Deterministic screenshot and recording capture for review evidence.",
+      "request": "Capture the as-built screen for the PR with a fixed locale, appearance and status bar.",
+      "owner": "screenshot",
+      "referencedFrom": ["apple-platform-testing"],
+      "why": "The testing skill selects evidence but does not own capture mechanics; without the reference, capture gets improvised inside a test."
+    }
+  ],
+  "ruleConsistency": [
+    {
+      "id": "design-source-color-fidelity",
+      "rule": "Substituting a semantic color is correct only where the design leaves the color open.",
+      "statesRule": "semantic colors? substitution|no hardcoded colors|Semantic `?Color\\.primary",
+      "patternNote": "Matches only text that prescribes the substitution. A passing mention of Color(.systemBackground) as an equivalent reference — for example the launch-screen asset-catalog note — is not the rule and must not be flagged.",
+      "requiresQualifier": "design leaves the color open|design source fixes|specified fill|read from the design|the design did not fix",
+      "appliesTo": ["figma-bridge", "apple-platform-ui"],
+      "why": "Issue #61: design-system icons had an explicit carve-out from SF Symbol substitution, but the color rule next to it did not, so the agent replaced fills the design had specified and judged colors by eye. Fixed in #62. A skill that states the substitution rule must also state where it stops."
+    },
+    {
+      "id": "design-source-icon-fidelity",
+      "rule": "SF Symbol substitution is limited to system glyphs; design-system icons keep their export.",
+      "statesRule": "SF Symbol substitution",
+      "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
+      "appliesTo": ["figma-bridge", "apple-platform-ui"],
+      "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
+    }
+  ]
+}
