@@ -85,6 +85,7 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 | App Store screenshots/previews, editable Keynote, platform canvas sizes and marketing typography | `app-store-screenshots` |
 | completion summary or private message delivery | `delivery-report` |
 | TestFlight/App Store/Xcode Cloud | `app-store-connect` |
+| build reached testers: stamp cards with the build, move them to QA, draft the What to Test note | `release-qa-handoff` |
 | CI/CD | `cicd` |
 | Issues/Projects board | `github-projects` |
 | marketing site | `app-website` |

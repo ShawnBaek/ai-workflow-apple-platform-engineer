@@ -33,6 +33,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [github-projects](../skills/github-projects/SKILL.md) | Issues and optional Projects tracking |
 | [icon-composer](../skills/icon-composer/SKILL.md) | Apple Icon Composer and app icon assets |
 | [onepassword-environments](../skills/onepassword-environments/SKILL.md) | Official 1Password development environment connection, secrets and local mounts |
+| [release-qa-handoff](../skills/release-qa-handoff/SKILL.md) | Hand a processed build to QA: stamp cards with version/build and what changed, move them, draft the tester note |
 | [screenshot](../skills/screenshot/SKILL.md) | Deterministic screenshots, recordings, and aligned comparisons |
 | [sketch-design-from-codebase](../skills/sketch-design-from-codebase/SKILL.md) | Sketch design system and every screen from the codebase, reproduced or redesigned |
 | [skill-maintenance](../skills/skill-maintenance/SKILL.md) | Report, investigate and fix collection skill or workflow problems |

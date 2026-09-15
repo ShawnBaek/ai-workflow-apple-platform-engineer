@@ -40,7 +40,8 @@ Do not collapse these into a single “release” permission:
 - read status/builds/crashes/feedback;
 - upload a built artifact;
 - distribute to a named TestFlight group;
-- change tester notes or store metadata;
+- change tester notes or store metadata (a note drafted by `release-qa-handoff`
+  is published here, after its explicit approval);
 - upload/replace screenshots;
 - upload/replace app preview videos or change their poster frames;
 - create/change bundle IDs, capabilities, certificates, or profiles;
