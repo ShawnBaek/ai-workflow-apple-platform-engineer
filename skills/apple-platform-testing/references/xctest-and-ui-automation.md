@@ -67,6 +67,28 @@ state. A tap followed by a swipe, a command exit, or an outer-container-only
 assertion does not prove the recognizer handled the intended gesture. Reverse
 gestures must use the element's new coordinates rather than stale ones.
 
+Two Simulator defaults silently turn a correct gesture or input into a no-op.
+Check both before concluding the app is at fault:
+
+- **A drag that starts at a screen edge becomes a system gesture.** Within a few
+  points of an edge the Simulator routes the touch to the OS — back, app
+  switcher, Notification Center, Control Center — so a bottom sheet dragged from
+  its lowest visible rows never reaches the app's recognizer, and the failure
+  looks like an unresponsive sheet. Start the gesture inside the content, away
+  from the edge, and confirm the app received it.
+- **A connected hardware keyboard suppresses the software keyboard.** With
+  `ConnectHardwareKeyboard` enabled, typing still succeeds while the on-screen
+  keyboard never appears — so keyboard-driven layout, safe-area insets,
+  scroll-to-field and accessory views cannot reproduce. Disable it for any
+  criterion that depends on the keyboard being on screen, and verify the
+  keyboard is actually visible in the hierarchy rather than assuming.
+
+A detented sheet also snaps by *velocity*, not only by distance: the same path
+delivered slowly settles at the nearest detent while a fast flick crosses to the
+next one. When the detent reached is the criterion, control the timing of the
+move samples and exercise both, rather than reporting the one that happened to
+land.
+
 If an official host interaction grammar does not expose pinch, do not invent an
 undocumented command or occupy the device session while searching for one. Use
 an enabled XCUITest target and call
