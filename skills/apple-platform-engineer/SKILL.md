@@ -63,6 +63,7 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 | new UI or substantial redesign without a design-tool reference | `xcode-preview-design`, then `apple-platform-ui` for the bounded view implementation |
 | Figma handoff | `figma-bridge` then `apple-platform-ui`; add `xcode-preview-design` when requested |
 | snapshot tests or pixel/text parity against a Figma node | `figma-golden-testing` (not `apple-platform-testing`) |
+| Sketch file of the app's screens or design system from the codebase (reproduction or reference-style redesign) | `sketch-design-from-codebase`; `apple-platform-ui` only if the result must become code |
 | Core Data/SwiftData/CloudKit choice | `apple-data` |
 | Core Data migration/concurrency detail | `core-data` |
 | performance diagnosis | `apple-platform-performance` |
@@ -120,7 +121,10 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 
 ## UI path
 
-If a Figma file is the design source, use `figma-bridge` first. New UI design
+If a Figma file is the design source, use `figma-bridge` first. A request for
+a Sketch document of the existing app — its current screens, or a redesign of
+them in a reference style — is design output, not view code: route it to
+`sketch-design-from-codebase`. New UI design
 without an external reference starts with
 `xcode-preview-design`, which gives only the bounded production view change to
 `apple-platform-ui` and then resumes its deterministic matrix, canvas review,
