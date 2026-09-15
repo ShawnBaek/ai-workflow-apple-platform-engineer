@@ -31,9 +31,10 @@ reason. Do not present required future proof as an already observed result.
 
 ## Handoff and sync
 - Current status: [existing mapped board status]
+- Board-visible title: [readiness status] [TestFlight version (build)] [outcome, in English]
 - Next owner and readiness condition: [configured workflow]
 - Blockers: [reason or None]
-- TestFlight, if selected: [exact processed build, source inclusion, tester access]
+- TestFlight, if selected: [marketing version; build number or Build TBD; processing state; source revision inclusion; tester/group access]
 - Links: [current card; issue/PR/proof only when selected and available]
 - Sync: [direction, field ownership, record IDs and last verified state]
 ```

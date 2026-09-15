@@ -21,6 +21,32 @@ come from the user, board policy, or repository workflow. Do not assume a
 particular organization, personal owner, repository, list name, or companion
 tracker.
 
+## English and board-visible QA status
+
+- Write all agent-authored Trello titles, descriptions, checklist names/items,
+  comments, and status text in English, even when the conversation is in Korean.
+  Preserve identifiers, URLs, and quoted original evidence. When translation is
+  requested, translate existing authored content without dropping requirements,
+  unresolved questions, historical results, or changing checklist completion.
+- For TestFlight QA cards, put the readiness status, marketing version, and
+  build number in the title so they are visible without opening the card:
+  `[Ready for Testing] [TestFlight 1.2.3 (456)] Verify <outcome>`.
+  Repeat the exact version/build and source revision in the description.
+- Use `Ready for Testing` only after the matching build is processed, includes
+  the intended revision, and is available to the intended tester/group. Until
+  then, use `Not Ready` in the title and explain the reason in the description
+  (for example, not uploaded, processing, access pending, or unconfirmed build).
+  Use `Build TBD` for an unconfirmed number. Never infer a TestFlight
+  build number from the local project, PR, or an older release. Ask for a missing
+  build identity while continuing independent card preparation.
+- Reuse existing board labels or visible custom fields when supported; always
+  retain version/build/status in the title. Do not change lists or create new
+  labels/fields merely to format a card. Testing readiness is not a QA pass.
+- Avoid accidental headings: never start a prose line with a ticket marker
+  such as `#111`; use `Tickets: #111, #114` or a bullet. Keep result paragraphs
+  short and use descriptive links such as `[PR #123](https://example.com/pr/123)`.
+  Verify saved text and rendered formatting when the UI is available.
+
 ## Target version for app Todo cards
 
 Before creating or normalizing a Todo card for an App Store app, verify the
