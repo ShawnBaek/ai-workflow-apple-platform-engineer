@@ -84,7 +84,7 @@ If the developer is already in a build-tweak-build spiral, compare observed beha
 
 ## Pre-flight self-review checklist (run before suggesting ⌘R)
 
-- [ ] No hardcoded colors (`#`, `Color(red:...)`) — only `.primary`, `.secondary`, `.tint`, `.background`, asset catalog.
+- [ ] No hardcoded colors (`#`, `Color(red:...)`) — only `.primary`, `.secondary`, `.tint`, `.background`, asset catalog. When a design source fixes a color, that value is the contract: carry it into the asset catalog (with its dark-mode variant) rather than substituting a semantic color, and read the value from the design file instead of judging it by eye.
 - [ ] Prefer system/semantic type (`.body`, `.headline`, etc.). Preserve an approved brand typeface through shared styles; verify Dynamic Type and readable layout.
 - [ ] No `.left` / `.right` — use `.leading` / `.trailing`.
 - [ ] No magic frame numbers — use `Spacer()`, `.frame(maxWidth:.infinity)`, `LazyVStack`, `Grid`.

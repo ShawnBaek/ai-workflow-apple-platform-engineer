@@ -20,7 +20,7 @@ reference code is context, not a guarantee of compiling SwiftUI.
    the neighboring gaps after the adjustment.
 5. **Write to the owning file.** Follow the actual project structure and existing screen, rather than inventing a `Views/` directory.
 6. **Add the `// figma:` code-connect-map comment** at the top of the file ([`code-connect-map.md`](code-connect-map.md)).
-7. **Hand off to `apple-platform-ui`** for the bounded production-view polish — semantic colors, Dynamic Type, architecture-compatible state boundaries, and SF Symbol substitution where the design uses a system glyph. Add `xcode-preview-design` only when Preview or motion review is requested; route snapshot tests and pixel/text parity reports to `figma-golden-testing`.
+7. **Hand off to `apple-platform-ui`** for the bounded production-view polish — semantic colors where the design leaves the color open, Dynamic Type, architecture-compatible state boundaries, and SF Symbol substitution where the design uses a system glyph. Add `xcode-preview-design` only when Preview or motion review is requested; route snapshot tests and pixel/text parity reports to `figma-golden-testing`.
 
 ## Assets: exported artwork, not catalog names
 
@@ -39,6 +39,38 @@ may receive an SDK-default background or shape that the flat design does not
 show; when you opt out (for example `.buttonStyle(.plain)`), verify that the
 label color did not fall back to the primary color — set the design's
 foreground color explicitly.
+
+## Colors: read the value, never judge it
+
+A color is a property you look up, not a shade you recognize. For every fill,
+stroke, text color, shadow and gradient stop in the node you are implementing,
+read the actual value out of the design source before writing a modifier:
+
+- `get_variable_defs(fileKey)` for anything bound to a variable or color
+  style — bind to the token, and map it once to an asset-catalog color so the
+  design system stays one edit wide.
+- `get_design_context` for the node's own fills and strokes when it is not
+  bound to a token. Carry the opacity with it; a 30%-alpha black track is not
+  a gray, and writing the gray loses the layer underneath.
+
+Never name a color from a rendered screenshot, from the component's name, or
+from what it looks like next to something else. "Looks blue" is not `#2260DC`,
+and a design's near-black is usually not `.primary`. If you cannot read the
+value for a node, say the value is unresolved and ask — do not approximate it
+and move on.
+
+**Tint is a resolved value, not a modifier you wrote.** A template-rendered
+asset, `.buttonStyle`, `.foregroundStyle`, a `List`/toolbar container, and the
+enabled state each re-resolve the color that actually paints. Setting a tint is
+not evidence it applied: a `.buttonStyle(.plain)` button drops the inherited
+tint and paints its label in the primary color, and a template asset with no
+explicit tint inherits whatever the container supplies. Set the design's color
+explicitly on the element that paints it, then confirm the rendered pixel —
+`figma-golden-testing` samples the capture, which is the only proof that the
+color you wrote is the color that shipped.
+
+The same rule covers the appearance axis: read the design's dark-mode values
+when the file defines them, rather than assuming the light value inverts.
 
 ## Avoid large frames — the rule and the recovery
 
@@ -73,7 +105,7 @@ What it does **not** do well — these are why you hand off to `apple-platform-u
 |---|---|
 | Minimum risk-relevant Preview matrix | `xcode-preview-design` selects only states that can change the review decision |
 | Architecture-compatible state boundary | `apple-platform-ui` preserves or narrows the project's existing seam |
-| Semantic `Color.primary` / `.secondary` / `.systemBackground` | Generated code uses literal hex; semantic colors handle dark mode |
+| Semantic `Color.primary` / `.secondary` / `.systemBackground` — only where the design leaves the color open | A semantic color is a substitution, so it applies where the design did not fix a value. Where the file specifies a fill, stroke or token, that value is the contract; carry it into the asset catalog with its dark-mode variant instead of swapping in a system color |
 | SF Symbol substitution for system glyphs | Figma layers that reproduce a system glyph (`icon/chevron.right`) → `Image(systemName: "chevron.right")`; design-system icons keep their exported artwork |
 | Deterministic fixture seam | Prefer a value; reuse a protocol or closure only when interaction needs it |
 | 44pt tap target audit | `apple-platform-ui` checks every `Button` / `.onTapGesture` |
@@ -136,7 +168,9 @@ question; repeated captures without a changed hypothesis add noise.
 
 - [ ] Compile or Preview claims come from the official Xcode path; mental rendering is planning, never evidence.
 - [ ] `// figma:` comment at the top points at the exact node generated from.
-- [ ] No raw hex colours where a semantic / variable colour was available.
+- [ ] Every fill, stroke, text and tint colour was read from `get_variable_defs` or the node's own properties — none was named by eye, and none of the design's specified values was swapped for a semantic colour.
+- [ ] Colours bound to a Figma variable are bound to the matching token, not pasted as hex.
+- [ ] The rendered tint was confirmed on the element that paints it, not assumed from the modifier written.
 - [ ] No empty `VStack {}` or `Spacer()` artefacts left from un-rendered nodes.
 - [ ] Design-system icons come from the Figma export (rendered and compared), not from a same-named catalog asset or an SF Symbol.
 - [ ] Every small-glyph control has a ≥44 pt frame and its glyph still sits on the Figma coordinate after the inset.
