@@ -62,6 +62,7 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 | UI implementation without Figma | `apple-platform-ui` |
 | new UI or substantial redesign without a design-tool reference | `xcode-preview-design`, then `apple-platform-ui` for the bounded view implementation |
 | Figma handoff | `figma-bridge` then `apple-platform-ui`; add `xcode-preview-design` when requested |
+| snapshot tests or pixel/text parity against a Figma node | `figma-golden-testing` (not `apple-platform-testing`) |
 | Core Data/SwiftData/CloudKit choice | `apple-data` |
 | Core Data migration/concurrency detail | `core-data` |
 | performance diagnosis | `apple-platform-performance` |
@@ -130,7 +131,9 @@ Design the actual SwiftUI/UIKit presentation before new domain logic. Preserve
 the affected feature's storyboard/XIB, programmatic, or hybrid construction;
 load its real scene/nib for preview when appropriate. A small logic fix does not
 need a design phase. Compare the accepted preview or Figma state with the
-integrated app through `screenshot`'s comparison guidance.
+integrated app through `screenshot`'s comparison guidance; when the Figma node
+is the contract and a repeatable pixel/text report or snapshot test is wanted,
+use `figma-golden-testing`.
 
 UI mocks are preview fixtures only. Prefer a value fixture; add a narrow protocol
 mock only when the interaction requires one. Acceptance for an existing

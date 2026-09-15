@@ -38,7 +38,11 @@ For repeated content, use a stable fixture/domain ID without PII and keep the
 semantic element unique inside its screen/container. Duplicate or missing IDs
 block the selector contract; do not fall through silently to coordinates. Seed
 deterministic state through an approved launch argument, environment variable,
-fixture, or dependency seam. Wait explicitly for the expected element or state;
+fixture, or dependency seam. Pass environment to the test process through the
+scheme, test plan, or `XCUIApplication.launchEnvironment`; `xcodebuild test`
+does not forward variables exported in the invoking shell, so a gate that reads
+`ProcessInfo.processInfo.environment` will silently skip. Wait explicitly for
+the expected element or state;
 do not use time-based sleeps as synchronization. Use hierarchy inspection before
 any documented coordinate fallback.
 

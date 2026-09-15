@@ -47,6 +47,7 @@ For depth on any topic, `Read` the matching file under [`./`](./):
 | Reviewing a Figma file for dev-friendliness (auto-layout, components, variants, naming, frame size, styles); the punch list to send back to the designer | [`figma-review.md`](./figma-review.md) |
 | Reading a Figma frame with `get_design_context` and implementing SwiftUI; selecting smaller nodes when needed | [`generate-from-frame.md`](./generate-from-frame.md) |
 | Comparing an exact Figma state with Simulator screenshots, hierarchy, safe areas, and component geometry | [`simulator-parity.md`](./simulator-parity.md) |
+| Snapshot tests plus node-specific pixel/text parity with an overlay, diff and JSON report | `figma-golden-testing` (separate skill; load it, do not re-implement its capture or comparator) |
 
 Read the sub-doc **before** answering — don't paraphrase from memory.
 
@@ -65,7 +66,10 @@ When the engineer brings you a task:
 3. **For a Figma-file review:** use `get_metadata` to walk the file, score it against the [`figma-review.md`](./figma-review.md) checklist, return a punch list grouped by severity.
 4. **For runtime parity:** lock exact Figma and app states, then follow
    [`simulator-parity.md`](./simulator-parity.md); an outer frame match is not
-   proof that internal anchors or interaction states match.
+   proof that internal anchors or interaction states match. When the request
+   includes snapshot tests or a pixel/text parity report, route that part to
+   `figma-golden-testing` — a generic testing skill will not know the Figma
+   capture and comparator contract.
 5. **Continue the authorized implementation.** Carry the view through the relevant preview, integration, and evidence checks. Ask only for missing design intent that materially changes the result. Publishing a message to a designer is a separate external action and needs explicit authorization.
 
 ---
@@ -77,7 +81,7 @@ When the engineer brings you a task:
 - the minimum risk-relevant Preview matrix;
 - an architecture split or fixture seam not present in the source design;
 - Dynamic Type audit
-- SF Symbol substitution for raster icons (Figma layers named `icon/...`)
+- SF Symbol substitution when the design uses a system glyph or ships no asset (design-system icons stay as their exported artwork — see [`generate-from-frame.md`](./generate-from-frame.md))
 - Semantic color substitution (`Color(.systemBackground)` instead of `Color(red:...)`)
 - 44-pt tap-target audit
 

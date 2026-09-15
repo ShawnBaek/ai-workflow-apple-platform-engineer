@@ -18,6 +18,8 @@ Use this skill when selecting, implementing, or running tests for iOS, iPadOS, w
 
 Avoid proving the same contract at unit, integration, and UI layers. Record omitted checks and residual risk in the handoff or PR. Read [test selection and evidence](references/test-selection-and-evidence.md) for the decision table and platform-specific proof.
 
+When a node-specific Figma frame is the visual contract — the request names a Figma URL and asks for snapshot, golden, or design-parity tests — load `figma-golden-testing`; it owns the SwiftUI/UIKit capture recipe and the overlay/diff comparator. This skill keeps test selection, execution, and result reporting.
+
 A critical flow is the shortest deterministic sequence from the nearest
 prepared scenario state to the changed observable outcome. Include Home, icon
 tap, launch, or first-run setup only when launch/startup behavior is the changed

@@ -58,6 +58,15 @@ struct AddItemFigmaSnapshotTests {
 }
 ```
 
+Use this strategy as written for SwiftUI. Do not substitute a hand-rolled
+`UIGraphicsImageRenderer` + `view.layer.render(in:)` capture even when a
+neighboring UIKit test already uses one: it renders UIKit-bridged SwiftUI
+controls such as `Picker(.segmented)` blank, and `ImageRenderer(content:)`
+yields a zero-size image unless the content carries an explicit `.frame`.
+`displayScale: 1` keeps the capture at the Figma frame's 1x pixel dimensions.
+The first run records the baseline and fails with "No reference was found";
+that is the expected recording path, not a regression.
+
 For a UIKit controller, snapshot the controller with the same explicit device
 configuration or snapshot its view at a fixed size:
 

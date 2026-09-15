@@ -29,7 +29,7 @@ references that can inform this feature; precise fixes skip this intake.
 
 ### When the developer has a Figma file
 
-This skill is the **no-designer / no-design-source** implementation path. If the developer supplies an exact Figma source, route to **`figma-bridge`** first; it handles MCP provenance, Code Connect, bounded frame generation, and then returns the draft for HIG and production-view polish. Without an exact Figma source, do not require Figma. Do not generate from a Figma URL yourself — `figma-bridge` owns its frame-size and source-link contracts.
+This skill is the **no-designer / no-design-source** implementation path. If the developer supplies an exact Figma source, route to **`figma-bridge`** first; it handles MCP provenance, Code Connect, bounded frame generation, and then returns the draft for HIG and production-view polish. Snapshot tests and pixel/text parity against that source belong to **`figma-golden-testing`**, not to a generic testing skill. Without an exact Figma source, do not require Figma. Do not generate from a Figma URL yourself — `figma-bridge` owns its frame-size and source-link contracts. When a design system supplies icon artwork, keep that exported asset; the SF Symbol checklist item below applies to system glyphs and to screens without a design source.
 
 ---
 
@@ -90,7 +90,7 @@ If the developer is already in a build-tweak-build spiral, compare observed beha
 - [ ] No magic frame numbers — use `Spacer()`, `.frame(maxWidth:.infinity)`, `LazyVStack`, `Grid`.
 - [ ] Every interactive control is ≥ 44pt tap target (≥ 44pt on Watch too).
 - [ ] Text scales: `.dynamicTypeSize(.accessibility3)` preview still readable, no truncation cliffs.
-- [ ] Symbols: `Image(systemName:)` not `Image("custom")`; multi-color via `.symbolRenderingMode(.hierarchical)` or `.palette`.
+- [ ] Symbols: `Image(systemName:)` not `Image("custom")` unless the design system supplies the artwork; multi-color via `.symbolRenderingMode(.hierarchical)` or `.palette`.
 - [ ] If you used `TextEditor`, you added `.scrollContentBackground(.hidden)` (otherwise gray box on macOS).
 - [ ] If you used `List`, custom row backgrounds use `.listRowBackground(...)`, not `.background(...)`.
 - [ ] If you set `.background()` and `.padding()`, padding is **before** background so the bg paints behind the padding.
