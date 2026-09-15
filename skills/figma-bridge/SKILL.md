@@ -82,7 +82,7 @@ When the engineer brings you a task:
 - an architecture split or fixture seam not present in the source design;
 - Dynamic Type audit
 - SF Symbol substitution when the design uses a system glyph or ships no asset (design-system icons stay as their exported artwork — see [`generate-from-frame.md`](./generate-from-frame.md))
-- Semantic color substitution (`Color(.systemBackground)` instead of `Color(red:...)`)
+- Semantic color substitution (`Color(.systemBackground)` instead of `Color(red:...)`) where the design leaves the color open — a fill, stroke or token the file specifies is the contract and keeps its value, exactly as design-system icons keep their exported artwork (see [`generate-from-frame.md`](./generate-from-frame.md))
 - 44-pt tap-target audit
 
 Production view polish belongs to `apple-platform-ui`; Preview and motion review
