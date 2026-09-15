@@ -61,6 +61,63 @@ your active copy is current.
   updater over custom links or rerun a one-off activation script without checking
   whether it supports an already installed revision.
 
+### Switching the active pointer without corrupting it
+
+A bundle layout usually has one pointer symlink (`…-active`) and a farm of
+per-skill links resolving through it. Repointing that symlink is the step most
+likely to fail silently, because the usual commands do something different when
+the existing link resolves to a *directory*:
+
+- `mv -f new.tmp active` **moves the new link inside the old bundle** instead of
+  replacing the pointer. Exit status is 0 and the pointer never changes.
+- `ln -sfn target active` has the same trap without `-n` on some shells, and
+  `cp` on a link can copy the tree rather than the link.
+
+Replace the pointer explicitly, then read it back:
+
+```sh
+rm -f "$HOME/.agents/<name>-active"
+ln -s "$HOME/.agents/skill-bundles/<name>/<revision>" "$HOME/.agents/<name>-active"
+readlink "$HOME/.agents/<name>-active"   # must print the new revision
+```
+
+If a previous attempt used `mv`, look for the stray link left inside the old
+bundle and delete it, so the rollback copy stays byte-identical to its revision.
+
+### Reconciling the per-skill link farm
+
+Switching the pointer does not change which skills the farm exposes. After
+activation, reconcile in both directions, and never clear the directory
+wholesale:
+
+1. **Protect local-only entries.** Some entries may be real directories or links
+   to other sources rather than into this bundle. Resolve each entry's target
+   first and leave anything that does not point into the bundle untouched — a
+   `rm -rf` and relink destroys them.
+2. **Prune stale links.** Remove bundle-managed links whose skill no longer
+   exists in the new revision; otherwise a renamed or removed skill stays as a
+   broken link that a client may still try to load.
+3. **Add new links.** A revision that introduces a skill contributes nothing
+   until it is linked; the farm will silently stay at the old skill set.
+4. Confirm no broken links remain:
+
+   ```sh
+   find "$HOME/.agents/skills" -maxdepth 1 -type l ! -exec test -e {} \; -print
+   ```
+
+### Local overrides are a decision, not just a copy
+
+When the active copy differs from the revision it claims, extract the delta
+before staging and decide per file rather than reapplying it by habit: upstream
+it (the drift then disappears for good), keep it deliberately, or drop it.
+Record kept and dropped overrides in the installation receipt, and keep the
+patch for anything dropped. Silently reapplying overrides is what makes an
+installation permanently diverge from every upstream revision.
+
+The strongest post-switch check is a direct comparison with the source
+revision — export it and diff against the activated bundle. Build outputs and
+other ignored artifacts are expected; anything else is unreconciled drift.
+
 The collection does not ship a general updater for custom versioned bundles.
 Ask your agent:
 
