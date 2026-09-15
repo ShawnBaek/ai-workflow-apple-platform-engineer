@@ -42,6 +42,10 @@ tracker.
 - Reuse existing board labels or visible custom fields when supported; always
   retain version/build/status in the title. Do not change lists or create new
   labels/fields merely to format a card. Testing readiness is not a QA pass.
+- When a processed build already contains the merged work, stamping its
+  version/build onto the cards, moving them to the QA list and drafting the
+  tester note belongs to `release-qa-handoff`; it resolves the build identity
+  and returns here for the card text conventions above.
 - Avoid accidental headings: never start a prose line with a ticket marker
   such as `#111`; use `Tickets: #111, #114` or a bullet. Keep result paragraphs
   short and use descriptive links such as `[PR #123](https://example.com/pr/123)`.
