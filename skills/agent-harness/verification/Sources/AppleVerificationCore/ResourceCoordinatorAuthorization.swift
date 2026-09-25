@@ -21,6 +21,18 @@ extension ResourceCoordinator {
     return response
   }
 
+  /// The approval window in the canonical form a registered run authority stores. An approver
+  /// may write any RFC 3339 instant, so compare this rather than the envelope's raw text; nil
+  /// when either bound cannot be parsed, which callers must treat as drift.
+  static func canonicalAuthorizationWindow(_ authorization: [String: Any]) -> (
+    issued: String, expires: String
+  )? {
+    guard let issued = try? parse(authorization["issued_at"]),
+      let expires = try? parse(authorization["expires_at"])
+    else { return nil }
+    return (stamp(issued), stamp(expires))
+  }
+
   public static func loadExistingRunAuthority(
     authorizationPath: URL, harnessPath: URL, harness: [String: Any], runID: String,
     context: RuntimeContext

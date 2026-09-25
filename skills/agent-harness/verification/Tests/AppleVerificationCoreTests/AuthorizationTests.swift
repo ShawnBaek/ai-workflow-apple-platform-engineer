@@ -720,6 +720,122 @@ final class AuthorizationTests: XCTestCase {
       })
   }
 
+  func testRegisteredRunAuthorityMatchesEquivalentApprovalInstantsAtReserveAndDispatch() throws {
+    // Registration stores canonical UTC millisecond stamps; an approver may write any RFC 3339 form.
+    for (issuedAt, expiresAt) in [
+      ("2026-01-01T00:00:00Z", "2098-01-02T00:00:00Z"),
+      ("2026-01-01T09:00:00+09:00", "2098-01-02T09:00:00+09:00"),
+    ] {
+      let run = try registeredRun(issuedAt: issuedAt, expiresAt: expiresAt)
+      XCTAssertEqual(
+        run.authority["authorization_issued_at"] as? String, "2026-01-01T00:00:00.000Z")
+      XCTAssertEqual(try reservationAuthorityErrors(run), [], issuedAt)
+      XCTAssertEqual(try dispatchAuthorityErrors(run), [], issuedAt)
+    }
+  }
+
+  func testRegisteredRunAuthorityRejectsADifferentApprovalInstantAtReserveAndDispatch() throws {
+    let reserveDrift = "coordination_required: run authority drifted or is unregistered"
+    let dispatchDrift = "coordination_required: dispatch run authority drifted"
+    for field in ["authorization_issued_at", "authorization_expires_at"] {
+      let run = try registeredRun(
+        issuedAt: "2026-01-01T09:00:00+09:00", expiresAt: "2098-01-02T00:00:00Z"
+      ) { authority in
+        let instant = try HarnessRuntime.parseTimestamp(authority[field] as! String)
+        authority[field] = HarnessRuntime.timestamp(instant.addingTimeInterval(1))
+      }
+      XCTAssertEqual(try reservationAuthorityErrors(run), [reserveDrift], field)
+      XCTAssertEqual(try dispatchAuthorityErrors(run), [dispatchDrift], field)
+    }
+    // The same wall-clock time in another offset is another instant; no timezone fails closed.
+    let run = try registeredRun(
+      issuedAt: "2026-01-01T09:00:00+09:00", expiresAt: "2098-01-02T00:00:00Z")
+    for issuedAt in ["2026-01-01T00:00:00+09:00", "2026-01-01T00:00:00"] {
+      var authorization = run.envelope
+      authorization["issued_at"] = issuedAt
+      XCTAssertEqual(
+        try dispatchAuthorityErrors(run, authorization: authorization), [dispatchDrift], issuedAt)
+    }
+    var undated = run.envelope
+    undated["issued_at"] = "2026-01-01T00:00:00"
+    var partial = run.authority
+    partial["authorization_hash"] = Authorization.authorizationHash(undated)
+    partial.removeValue(forKey: "authorization_issued_at")
+    XCTAssertEqual(
+      Authorization.reservationAuthorityErrors(
+        partial, envelope: undated, selectedWriter: run.harness["selected_writer"] as? String,
+        trustedHarnessSHA256: try ResourceCoordinator.portableDocumentSHA256(run.harness)),
+      [reserveDrift])
+  }
+
+  private struct RegisteredRun {
+    let envelope: [String: Any]
+    let harness: [String: Any]
+    let ledger: URL
+    let authority: [String: Any]
+  }
+
+  /// Registers the run authority the way initialize-run does, then reads back the authorization,
+  /// harness and stored authority the way reservation and dispatch do.
+  private func registeredRun(
+    issuedAt: String, expiresAt: String,
+    adjustAuthority: (inout [String: Any]) throws -> Void = { _ in }
+  ) throws -> RegisteredRun {
+    let root = try temporaryDirectory().resolvingSymlinksInPath()
+    var envelope = try currentApprovedEnvelope()
+    envelope["issued_at"] = issuedAt
+    envelope["expires_at"] = expiresAt
+    let runID = envelope["run_id"] as! String
+    let authorizationURL = root.appendingPathComponent("authorization.json")
+    let harnessURL = root.appendingPathComponent("harness.json")
+    let ledger = root.appendingPathComponent("ledger.jsonl")
+    let state = root.appendingPathComponent("coordinator.json")
+    try HarnessRuntime.atomicWriteJSON(envelope, to: authorizationURL)
+    let approval = try InitializeRun.approvalRecord(
+      authorization: envelope, recordedAt: Date(), context: context)
+    try (HarnessRuntime.canonicalJSON(approval) + Data([0x0a])).write(to: ledger)
+    var harness = try HarnessRuntime.object(
+      context.harnessRoot.appendingPathComponent("templates/harness-local.json"))
+    harness["authoritative_root"] = root.path
+    harness["private_policy_overlay"] = root.appendingPathComponent("policy.json").path
+    harness["run_authorization"] = authorizationURL.path
+    harness["run_ledger"] = ledger.path
+    try HarnessRuntime.atomicWriteJSON(harness, to: harnessURL)
+    var (_, authority) = try ResourceCoordinator.loadExistingRunAuthority(
+      authorizationPath: authorizationURL, harnessPath: harnessURL, harness: harness,
+      runID: runID, context: context)
+    try adjustAuthority(&authority)
+    _ = try ResourceCoordinator.bootstrap(statePath: state, legacyLeasesQuiesced: true)
+    _ = try ResourceCoordinator.registerRunAuthority(
+      statePath: state, runID: runID, runAuthority: authority)
+    let authorities =
+      try ResourceCoordinator.fullStatus(statePath: state)["run_authorities"] as? [String: Any]
+    return RegisteredRun(
+      envelope: try XCTUnwrap(
+        try Authorization.loadStablePrivateJSON(authorizationURL, root: root) as? [String: Any]),
+      harness: try ResourceCoordinator.loadTrustedHarness(harnessPath: harnessURL, context: context),
+      ledger: ledger, authority: try XCTUnwrap(authorities?[runID] as? [String: Any]))
+  }
+
+  private func reservationAuthorityErrors(_ run: RegisteredRun) throws -> [String] {
+    Authorization.reservationAuthorityErrors(
+      run.authority, envelope: run.envelope,
+      selectedWriter: run.harness["selected_writer"] as? String,
+      trustedHarnessSHA256: try ResourceCoordinator.portableDocumentSHA256(run.harness))
+  }
+
+  private func dispatchAuthorityErrors(
+    _ run: RegisteredRun, authorization: [String: Any]? = nil
+  ) throws -> [String] {
+    let digest = Authorization.authorizationHash(run.envelope)
+    return try Authorization.dispatchAuthorityErrors(
+      authority: run.authority, authorization: authorization ?? run.envelope,
+      reservation: ["authorization_hash": digest], trustedHarness: run.harness,
+      ledgerBindings: try ResourceCoordinator.ledgerBinding(
+        run.ledger, expectedRunID: run.envelope["run_id"] as? String,
+        expectedAuthorizationHash: digest))
+  }
+
   private func record(_ sequence: Int, _ type: String, _ payload: [String: Any], second: Int)
     -> [String: Any]
   {

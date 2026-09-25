@@ -392,12 +392,10 @@ extension Authorization {
       let status = try ResourceCoordinator.fullStatus(statePath: coordinatorState)
       let authority =
         (status["run_authorities"] as? [String: Any])?[text(envelope["run_id"])] as? [String: Any]
-      guard authority?["authorization_hash"] as? String == authorizationHash(envelope),
-        authority?["selected_writer"] as? String == selectedWriter,
-        authority?["harness_sha256"] as? String == trustedHarnessSHA256,
-        authority?["authorization_issued_at"] as? String == envelope["issued_at"] as? String,
-        authority?["authorization_expires_at"] as? String == envelope["expires_at"] as? String
-      else { return (["coordination_required: run authority drifted or is unregistered"], nil) }
+      let authorityErrors = reservationAuthorityErrors(
+        authority, envelope: envelope, selectedWriter: selectedWriter,
+        trustedHarnessSHA256: trustedHarnessSHA256)
+      if !authorityErrors.isEmpty { return (authorityErrors, nil) }
       guard safeDirectFile(ledgerPath, root: runRoot) else {
         return (
           ["authorization ledger must be a non-symlink file directly under the private run root"],
@@ -477,6 +475,20 @@ extension Authorization {
         return ([], record)
       }
     } catch { return (["coordination_required: \(errorCode(error))"], nil) }
+  }
+
+  static func reservationAuthorityErrors(
+    _ authority: [String: Any]?, envelope: [String: Any], selectedWriter: String?,
+    trustedHarnessSHA256: String
+  ) -> [String] {
+    guard let window = ResourceCoordinator.canonicalAuthorizationWindow(envelope),
+      authority?["authorization_hash"] as? String == authorizationHash(envelope),
+      authority?["selected_writer"] as? String == selectedWriter,
+      authority?["harness_sha256"] as? String == trustedHarnessSHA256,
+      authority?["authorization_issued_at"] as? String == window.issued,
+      authority?["authorization_expires_at"] as? String == window.expires
+    else { return ["coordination_required: run authority drifted or is unregistered"] }
+    return []
   }
 
   public static func dispatchSpecStateErrors(
