@@ -11,6 +11,10 @@ does not choose project roots, package policy, or test scope; load
 `xcode-project-workflow`, `swift-package-manager`, and `apple-platform-testing`
 for those decisions.
 
+When the user asks to see an agent's worktree, clone, sandbox or cloud changes
+in the Xcode they already have open, use `open-xcode-handoff` first; do not
+build the agent's workspace in place of the user's open checkout.
+
 ## Required preflight
 
 Resolve standalone versus coordinated ownership through

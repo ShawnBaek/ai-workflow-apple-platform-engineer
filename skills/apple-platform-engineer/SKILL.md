@@ -59,6 +59,7 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 | 1Password development ENV connection, secrets, or local mounts | `onepassword-environments` |
 | project root/container, host Xcode, XcodeGen | `xcode-project-workflow` |
 | branches, explicit worktrees, index locks, PR Git state | `git-workflow` |
+| on request, show an agent's worktree, clone or sandbox changes in the user's open Xcode | `open-xcode-handoff` |
 | UI implementation without Figma | `apple-platform-ui` |
 | new UI or substantial redesign without a design-tool reference | `xcode-preview-design`, then `apple-platform-ui` for the bounded view implementation |
 | Figma handoff | `figma-bridge` then `apple-platform-ui`; add `xcode-preview-design` when requested |

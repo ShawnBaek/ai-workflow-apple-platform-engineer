@@ -53,6 +53,7 @@ Include your minimum OS, existing UI approach, reference apps and preferred styl
 | Build or fix SwiftUI, UIKit or storyboard UI | `apple-platform-ui` |
 | Design a screen in Xcode Previews | `xcode-preview-design` |
 | Build, run or debug on Simulator | `xcodebuild` |
+| Show an agent's worktree or sandbox changes in the Xcode you have open | `open-xcode-handoff` |
 | Choose and run focused tests | `apple-platform-testing` |
 
 For listing images and recorded previews, use **`$app-store-screenshots Prepare screenshots and a preview from this release build`** (Claude Code: `/app-store-screenshots`). Captures stay tied to the intended app version/build.
