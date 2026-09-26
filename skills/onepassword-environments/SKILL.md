@@ -49,12 +49,21 @@ word “product” does not establish production use. Keep uncertain classificat
 explicit instead of silently assigning a live credential to a development ENV.
 
 For an authorized migration, inventory source paths and variable names without
-printing values. For file migration, use a local transfer that reads the values
-and constructs the official MCP's structured arguments without returning values
-to the agent. Structured arguments alone do not keep secrets out of model
-context. Never ask the user to paste secrets into chat. Keep values out of shell
-arguments, history, debug output, screenshots,
-reports, commits, and PRs. Never turn on unredacted logging to diagnose access.
+printing values. Move an existing `.env` file with 1Password's own import, which
+the user runs in the desktop app: **Developer** > **View Environments**, select
+or create the Environment, then choose **Import .env file**. The values then never pass
+through the agent. It needs the desktop app with the Developer experience
+enabled and the account's Environments policy on. Developer Watchtower's import
+also works but removes the original `.env` file, so use it only when the user
+has also approved that source cleanup. Do not improvise a transfer: reading
+values into `append_variables` calls puts them in the agent's context, and a
+script that feeds the server handles every value in unreviewed code whose output
+or errors can expose it. Reserve `append_variables` for non-secret configuration
+and values already legitimately in the agent's context, such as one it generated
+for this task. If the desktop import is unavailable, stop and report that
+blocker. Never ask the user to paste secrets into chat. Keep values out of shell
+arguments, history, debug output, screenshots, reports, commits, and PRs. Never
+turn on unredacted logging to diagnose access.
 Set `concealed: true` for keys, tokens, passwords, and private-key material.
 Use `concealed: false` only for configuration that is safe to display.
 
@@ -101,4 +110,6 @@ public troubleshooting examples.
 ## Sources
 
 - [Official 1Password MCP guide](https://www.1password.dev/environments/mcp-server)
+- [Create an Environment and import a .env file](https://www.1password.dev/environments)
+- [Developer Watchtower .env import](https://www.1password.dev/watchtower#import-plaintext-secrets-from-local-env-files)
 - [Local .env behavior and exposure](https://www.1password.dev/environments/local-env-file)

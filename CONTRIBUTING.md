@@ -6,7 +6,7 @@ Help an agent make a better decision or complete a real task reliably. Start wit
 
 Ask your agent to **use `skill-maintenance` to report this problem**, or open an issue using the [report template](.github/ISSUE_TEMPLATE/skill-problem.md). Include the loaded skill/version, expected and actual behavior, a small reproduction and relevant evidence. Unknown details are fine. Keep private sessions, app code and account information out of public reports.
 
-The agent searches existing issues, prepares a sanitized report and publishes when authorized. It then returns the issue URL or a concrete publication blocker. Reporting does not require contributing a fix. GitHub displays issue templates after they reach the default branch. [GitHub template guidance](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates).
+The agent searches existing issues and prepares a sanitized report. It shows you the exact title, body and attachments and publishes only after you confirm that content. It then returns the issue URL or a concrete publication blocker. Reporting does not require contributing a fix. GitHub displays issue templates after they reach the default branch. [GitHub template guidance](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates).
 
 ## Find the right place to change
 

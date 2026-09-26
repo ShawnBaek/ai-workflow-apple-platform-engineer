@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Check out the reviewed consumer contracts
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Build the Swift verifier
         run: swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1
       - name: Compare the public reference-only upstream

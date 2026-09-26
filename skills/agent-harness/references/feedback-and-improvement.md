@@ -8,9 +8,9 @@ superseded evidence instead of rewriting the earlier outcome.
 
 When a user reports incorrect or broken collection behavior, use
 [`skill-maintenance`](../../skill-maintenance/SKILL.md) to prepare a minimal
-reproduction, search existing upstream reports and file an authorized GitHub
-issue. A first failure can be reported without first approving a universal
-policy change. An assigned issue then follows investigation, a focused fix,
+reproduction, search existing upstream reports and file a GitHub issue only
+after the user confirms its exact title, body and attachments. A first failure
+can be reported without first approving a universal policy change. An assigned issue then follows investigation, a focused fix,
 verification and PR review. Keep the original app task's status separate.
 
 ## Apply feedback during the current run

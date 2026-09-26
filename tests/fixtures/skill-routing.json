@@ -228,6 +228,17 @@
         "core-simulator-health"
       ],
       "why": "Maintainer report: agents left many Simulator devices behind. concurrent-project-resources.md told separate projects to receive separate devices and core-simulator-health preferred a temporary device, and neither said to reuse an existing device first or to delete the device the task created."
+    },
+    {
+      "id": "public-report-confirmed-content",
+      "rule": "A public cross-repository report or comment is published only after the user sees and explicitly confirms its exact final title, body and attachments.",
+      "statesRule": "gh issue create",
+      "patternNote": "The publication command is the anchor, so rewording the approval sentence cannot drop the preview while the command remains.",
+      "requiresQualifier": "exact final title, body and attachment",
+      "appliesTo": [
+        "skill-maintenance"
+      ],
+      "why": "Review finding: skill-maintenance said a request to report a problem authorizes the report, so an agent could run gh issue create against the public collection with a body drafted from a private app session that only the agent had checked. One missed redaction becomes public. The request now authorizes drafting; publication needs confirmation of the exact content."
     }
   ]
 }
