@@ -100,6 +100,7 @@ public enum SkillRoutingValidation {
   }
 
   private static func matches(_ regex: NSRegularExpression, _ text: String) -> Bool {
-    regex.firstMatch(in: text, range: NSRange(location: 0, length: (text as NSString).length)) != nil
+    regex.firstMatch(in: text, range: NSRange(location: 0, length: (text as NSString).length))
+      != nil
   }
 }

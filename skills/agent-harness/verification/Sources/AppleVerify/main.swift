@@ -72,11 +72,12 @@ do {
   }
   let command = arguments.removeFirst()
   let installedContext = try runtimeContext(repositoryRoot: explicitRoot)
-  let context = appRoot.map {
-    RuntimeContext(
-      repositoryRoot: URL(fileURLWithPath: $0).standardizedFileURL.resolvingSymlinksInPath(),
-      harnessRoot: installedContext.harnessRoot)
-  } ?? installedContext
+  let context =
+    appRoot.map {
+      RuntimeContext(
+        repositoryRoot: URL(fileURLWithPath: $0).standardizedFileURL.resolvingSymlinksInPath(),
+        harnessRoot: installedContext.harnessRoot)
+    } ?? installedContext
   let code: Int32
   switch command {
   case "repository":

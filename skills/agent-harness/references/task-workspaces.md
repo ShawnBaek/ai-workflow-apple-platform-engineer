@@ -31,6 +31,9 @@ the task or current project policy, approved branch/base and Git metadata
 preflight. Use the project's selected location outside the app checkout. An Xcode worktree needs its own authoritative session/container
 under [xcode-project-workflow](../../xcode-project-workflow/SKILL.md). Do not
 create one worktree per assignment merely because several tasks exist.
+Record the container the user has open in Xcode at dispatch. When the user asks
+to see a worker's result there, the repository writer uses
+[open-xcode-handoff](../../open-xcode-handoff/SKILL.md).
 
 All worktrees of one repository still share the current coordinator's writer
 conflict. Transfer ownership before the next writer runs; separate branches or
