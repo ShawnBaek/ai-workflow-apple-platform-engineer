@@ -102,7 +102,10 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 4. Start the first ready implementation slice with one repository writer and,
    when coordinated resources are selected, scoped Apple resource leases. Run useful independent assignments alongside it;
    resource contention queues the affected operation, not the entire task.
-5. Run the minimum checks justified by impact and risk. App changes must satisfy
+5. Run the minimum checks justified by impact and risk. Every Swift change must
+   pass [Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance):
+   swift-format on the task's changed lines, lint, then a compile with no
+   errors. App changes must satisfy
    [build and warning acceptance](../apple-platform-testing/SKILL.md#build-and-warning-acceptance)
    on the final integrated patch before completion: a successful app build,
    reviewed warnings, and no unresolved task-introduced warnings. User-owned

@@ -1,5 +1,4 @@
 #!/usr/bin/env swift
-
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -27,11 +26,12 @@ enum ScriptError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case let .usage(message): return message
-    case let .invalidImage(url): return "Could not read PNG: \(url.path)"
-    case let .dimensionsDiffer(figma, actual):
-      return "input dimensions differ: figma=\(Int(figma.width))x\(Int(figma.height)), actual=\(Int(actual.width))x\(Int(actual.height))"
-    case let .couldNotWrite(url): return "Could not write PNG: \(url.path)"
+    case .usage(let message): return message
+    case .invalidImage(let url): return "Could not read PNG: \(url.path)"
+    case .dimensionsDiffer(let figma, let actual):
+      return
+        "input dimensions differ: figma=\(Int(figma.width))x\(Int(figma.height)), actual=\(Int(actual.width))x\(Int(actual.height))"
+    case .couldNotWrite(let url): return "Could not write PNG: \(url.path)"
     }
   }
 }
@@ -46,12 +46,15 @@ func value(after flag: String, in arguments: [String]) throws -> String {
 func parseArguments() throws -> Arguments {
   let arguments = Array(CommandLine.arguments.dropFirst())
   guard !arguments.contains("--help") else {
-    throw ScriptError.usage("Usage: overlay_diff.swift --figma <PNG> --actual <PNG> --out <directory> [--threshold <0...255>] [--minimum-match <0...100>]")
+    throw ScriptError.usage(
+      "Usage: overlay_diff.swift --figma <PNG> --actual <PNG> --out <directory> [--threshold <0...255>] [--minimum-match <0...100>]"
+    )
   }
   let figma = URL(fileURLWithPath: try value(after: "--figma", in: arguments))
   let actual = URL(fileURLWithPath: try value(after: "--actual", in: arguments))
   let output = URL(fileURLWithPath: try value(after: "--out", in: arguments))
-  let thresholdText = arguments.contains("--threshold")
+  let thresholdText =
+    arguments.contains("--threshold")
     ? try value(after: "--threshold", in: arguments) : "16"
   guard let threshold = Int(thresholdText), (0...255).contains(threshold) else {
     throw ScriptError.usage("--threshold must be between 0 and 255")
@@ -59,17 +62,19 @@ func parseArguments() throws -> Arguments {
   var minimumMatch: Double?
   if arguments.contains("--minimum-match") {
     guard let minimum = Double(try value(after: "--minimum-match", in: arguments)),
-          minimum.isFinite, (0...100).contains(minimum) else {
+      minimum.isFinite, (0...100).contains(minimum)
+    else {
       throw ScriptError.usage("--minimum-match must be a finite number between 0 and 100")
     }
     minimumMatch = minimum
   }
-  return Arguments(figma: figma, actual: actual, output: output, threshold: threshold, minimumMatch: minimumMatch)
+  return Arguments(
+    figma: figma, actual: actual, output: output, threshold: threshold, minimumMatch: minimumMatch)
 }
 
 func loadImage(_ url: URL) throws -> RGBAImage {
   guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-        let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+    let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
   else { throw ScriptError.invalidImage(url) }
 
   let width = image.width
@@ -79,15 +84,15 @@ func loadImage(_ url: URL) throws -> RGBAImage {
   let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
   let rendered = pixels.withUnsafeMutableBytes { bytes in
     guard let baseAddress = bytes.baseAddress,
-          let context = CGContext(
-            data: baseAddress,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: colorSpace,
-            bitmapInfo: bitmapInfo
-          )
+      let context = CGContext(
+        data: baseAddress,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: width * 4,
+        space: colorSpace,
+        bitmapInfo: bitmapInfo
+      )
     else { return false }
     context.interpolationQuality = .none
     context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
@@ -117,7 +122,8 @@ func makeCGImage(_ image: RGBAImage) -> CGImage? {
 
 func writePNG(_ image: RGBAImage, to url: URL) throws {
   guard let cgImage = makeCGImage(image),
-        let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
+    let destination = CGImageDestinationCreateWithURL(
+      url as CFURL, UTType.png.identifier as CFString, 1, nil)
   else { throw ScriptError.couldNotWrite(url) }
   CGImageDestinationAddImage(destination, cgImage, nil)
   guard CGImageDestinationFinalize(destination) else { throw ScriptError.couldNotWrite(url) }
@@ -127,7 +133,8 @@ func blend(_ lhs: RGBAImage, _ rhs: RGBAImage) -> RGBAImage {
   var pixels = lhs.pixels
   for index in stride(from: 0, to: pixels.count, by: 4) {
     for channel in 0..<4 {
-      pixels[index + channel] = UInt8((Int(lhs.pixels[index + channel]) + Int(rhs.pixels[index + channel])) / 2)
+      pixels[index + channel] = UInt8(
+        (Int(lhs.pixels[index + channel]) + Int(rhs.pixels[index + channel])) / 2)
     }
   }
   return RGBAImage(width: lhs.width, height: lhs.height, pixels: pixels)
@@ -160,13 +167,16 @@ func sideBySide(_ lhs: RGBAImage, _ rhs: RGBAImage) -> RGBAImage {
   return RGBAImage(width: lhs.width * 2, height: lhs.height, pixels: pixels)
 }
 
-func writeMetrics(figma: RGBAImage, actual: RGBAImage, threshold: Int, minimumMatch: Double?, to url: URL) throws -> Bool {
+func writeMetrics(
+  figma: RGBAImage, actual: RGBAImage, threshold: Int, minimumMatch: Double?, to url: URL
+) throws -> Bool {
   var exact = 0
   var matching = 0
   var sumDelta = 0
   var maxDelta = 0
   for index in stride(from: 0, to: figma.pixels.count, by: 4) {
-    let delta = (0..<3).map { abs(Int(figma.pixels[index + $0]) - Int(actual.pixels[index + $0])) }.max() ?? 0
+    let delta =
+      (0..<3).map { abs(Int(figma.pixels[index + $0]) - Int(actual.pixels[index + $0])) }.max() ?? 0
     exact += delta == 0 ? 1 : 0
     matching += delta <= threshold ? 1 : 0
     sumDelta += delta
@@ -188,9 +198,10 @@ func writeMetrics(figma: RGBAImage, actual: RGBAImage, threshold: Int, minimumMa
     "matchPercentage": Double(matching) * 100 / Double(count),
     "meanMaxRGBDelta": Double(sumDelta) / Double(count),
     "maxRGBDelta": maxDelta,
-    "transformations": "CoreGraphics device-RGB decode; no scaling, cropping, or masking"
+    "transformations": "CoreGraphics device-RGB decode; no scaling, cropping, or masking",
   ]
-  let data = try JSONSerialization.data(withJSONObject: metrics, options: [.prettyPrinted, .sortedKeys])
+  let data = try JSONSerialization.data(
+    withJSONObject: metrics, options: [.prettyPrinted, .sortedKeys])
   try data.write(to: url)
   return passed != false
 }
@@ -208,12 +219,16 @@ do {
   try FileManager.default.createDirectory(at: arguments.output, withIntermediateDirectories: true)
   try writePNG(blend(figma, actual), to: arguments.output.appendingPathComponent("overlay.png"))
   try writePNG(heatmap(figma, actual), to: arguments.output.appendingPathComponent("diff.png"))
-  try writePNG(sideBySide(figma, actual), to: arguments.output.appendingPathComponent("side-by-side.png"))
-  let accepted = try writeMetrics(figma: figma, actual: actual, threshold: arguments.threshold,
-    minimumMatch: arguments.minimumMatch, to: arguments.output.appendingPathComponent("metrics.json"))
+  try writePNG(
+    sideBySide(figma, actual), to: arguments.output.appendingPathComponent("side-by-side.png"))
+  let accepted = try writeMetrics(
+    figma: figma, actual: actual, threshold: arguments.threshold,
+    minimumMatch: arguments.minimumMatch,
+    to: arguments.output.appendingPathComponent("metrics.json"))
   print(arguments.output.path)
   if !accepted {
-    FileHandle.standardError.write(Data("Pixel comparison failed; see metrics.json and diff.png\n".utf8))
+    FileHandle.standardError.write(
+      Data("Pixel comparison failed; see metrics.json and diff.png\n".utf8))
     exit(2)
   }
 } catch {

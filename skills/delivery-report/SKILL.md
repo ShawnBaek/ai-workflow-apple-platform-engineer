@@ -38,11 +38,14 @@ channel by default.
 
 ## Report contents
 
-For app changes, apply
-[build and warning acceptance](../apple-platform-testing/SKILL.md#build-and-warning-acceptance)
-before choosing the task status. State the final-patch build result and evidence,
-warning review and remaining warnings, automated checks, and manual QA separately.
-Use `Build Failed` or `Build Unverified` when applicable; do not report complete,
+For Swift changes, apply
+[Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance),
+and for app changes
+[build and warning acceptance](../apple-platform-testing/SKILL.md#build-and-warning-acceptance),
+before choosing the task status. State the swift-format result, the final-patch
+build result and evidence, warning review and remaining warnings, automated
+checks, and manual QA separately. Use `Format Unverified`, `Build Failed` or
+`Build Unverified` when applicable; do not report complete,
 100%, or Ready for Testing on implementation progress alone. A successful build
 does not prove runtime acceptance or TestFlight availability. Previously passing
 evidence invalidated by subsequent edits cannot support a completion report.

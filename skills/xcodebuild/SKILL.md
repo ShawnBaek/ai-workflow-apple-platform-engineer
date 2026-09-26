@@ -69,7 +69,9 @@ owned by `app-store-connect`. Neither route creates a GitHub PR: use
 
 ## Smallest useful operations
 
-- Compile question: build the affected scheme/configuration/destination only.
+- Compile question: build the affected scheme/configuration/destination only,
+  after changed Swift passes the format and lint steps of
+  [Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance).
 - Unit test question: run the affected target/case chosen by
   `apple-platform-testing`.
 - Repeated test tuple: build-for-testing once and reuse only when every tuple
@@ -110,7 +112,9 @@ Classify before retrying:
 
 Environment or authority failures stop. A compiler/test failure is not blindly
 rerun: diagnose, change input or implementation, then create a new attempt. The
-same normalized failure twice stops the loop.
+same normalized failure twice stops the loop. When the fix edits Swift source, the
+new attempt first reruns the format and lint steps of
+[Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance).
 
 If install/launch hangs on two compatible destinations, or read-only Simulator
 and Xcode task queries also hang, classify the remaining runtime work as a

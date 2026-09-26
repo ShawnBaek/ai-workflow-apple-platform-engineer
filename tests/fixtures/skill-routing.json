@@ -40,6 +40,19 @@
       "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
       "appliesTo": ["figma-bridge", "apple-platform-ui"],
       "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
+    },
+    {
+      "id": "swift-format-and-compile-gate",
+      "rule": "A completion gate that cites build and warning acceptance also requires swift-format and an error-free compile for Swift changes.",
+      "statesRule": "build and warning acceptance",
+      "requiresQualifier": "swift format and compile acceptance",
+      "appliesTo": [
+        "apple-platform-engineer",
+        "agent-harness",
+        "delivery-report",
+        "apple-platform-testing"
+      ],
+      "why": "Swift patches were accepted on a build alone: no skill required swift-format, so formatting drift reached PRs unnoticed. The format-and-compile gate now lives beside build acceptance in apple-platform-testing; this case keeps every completion gate that cites build acceptance from dropping it."
     }
   ]
 }
