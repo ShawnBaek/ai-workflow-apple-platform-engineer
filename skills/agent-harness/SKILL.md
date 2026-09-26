@@ -190,6 +190,7 @@ only from provider/client records; unavailable totals remain explicit unknowns.
 |---|---|
 | Xcode root, container, and XcodeGen gate | `xcode-project-workflow` |
 | Git branch, worktree, index, and PR state | `git-workflow` |
+| Agent-workspace changes shown in the user's open Xcode, on request | `open-xcode-handoff` |
 | Swift package resolution and cache | `swift-package-manager` |
 | Minimal Swift/XCTest/XCUITest evidence | `apple-platform-testing` |
 | Independent review and evidence-backed comment triage | `code-review` |
