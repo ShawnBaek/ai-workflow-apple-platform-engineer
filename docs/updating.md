@@ -2,7 +2,8 @@
 
 Use your original installation method and client scope. Preserve local changes
 and the previous complete installation for rollback. Updating a repository
-checkout does not update a copied skill bundle.
+checkout does not update a copied skill bundle. Before updating, read the
+target version's Migration notes in the [changelog](../CHANGELOG.md).
 
 ## Identify the installation you actually have
 
