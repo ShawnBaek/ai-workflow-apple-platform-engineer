@@ -34,13 +34,13 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [icon-composer](../skills/icon-composer/SKILL.md) | Apple Icon Composer and app icon assets |
 | [onepassword-environments](../skills/onepassword-environments/SKILL.md) | Official 1Password development environment connection, secrets and local mounts |
 | [open-xcode-handoff](../skills/open-xcode-handoff/SKILL.md) | On request, apply an agent's worktree, clone or sandbox changes to the checkout your open Xcode uses, verify there, and undo |
-| [release-qa-handoff](../skills/release-qa-handoff/SKILL.md) | Hand a processed build to QA: stamp cards with version/build and what changed, move them, draft the tester note |
+| [release-qa-handoff](../skills/release-qa-handoff/SKILL.md) | On request, hand a processed build to QA: after one confirmation, stamp cards with version/build and what changed and move them; draft the tester note that `app-store-connect` publishes |
 | [screenshot](../skills/screenshot/SKILL.md) | Deterministic screenshots, recordings, and aligned comparisons |
 | [sketch-design-from-codebase](../skills/sketch-design-from-codebase/SKILL.md) | Sketch design system and every screen from the codebase, reproduced or redesigned |
 | [skill-maintenance](../skills/skill-maintenance/SKILL.md) | Report, investigate and fix collection skill or workflow problems |
 | [storekit-sandbox-testing](../skills/storekit-sandbox-testing/SKILL.md) | Verify StoreKit purchases, restoration, renewal and failure behavior in local and sandbox environments |
 | [swift-package-manager](../skills/swift-package-manager/SKILL.md) | Dependency resolution and compatible package/build reuse |
-| [trello-pm-card-sync](../skills/trello-pm-card-sync/SKILL.md) | Normalize PM cards and synchronize Figma, issues, proof, QA, and TestFlight state |
+| [trello-pm-card-sync](../skills/trello-pm-card-sync/SKILL.md) | Audit and normalize PM cards; sync design, issue and proof state only on request. Build-to-QA moves go to `release-qa-handoff` |
 | [xcode-preview-design](../skills/xcode-preview-design/SKILL.md) | Design in code before logic; Preview and motion review |
 | [xcode-project-workflow](../skills/xcode-project-workflow/SKILL.md) | Authoritative project, toolchain, target, and host preflight |
 | [xcode-storage](../skills/xcode-storage/SKILL.md) | Audit and safely reclaim owned Xcode storage |
