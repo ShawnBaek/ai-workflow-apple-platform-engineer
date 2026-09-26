@@ -269,7 +269,7 @@ public enum HarnessRuntime {
     while flock(fd, LOCK_EX | LOCK_NB) != 0 {
       guard errno == EWOULDBLOCK || errno == EINTR else { throw systemError("acquire lock") }
       guard ProcessInfo.processInfo.systemUptime < deadline else {
-        throw VerificationError.invalid("Lock acquisition timed out")
+        throw VerificationError.lockTimedOut
       }
       usleep(10_000)
     }

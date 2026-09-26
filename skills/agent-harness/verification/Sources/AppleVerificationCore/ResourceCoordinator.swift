@@ -374,8 +374,12 @@ public enum ResourceCoordinator {
       && build["container_path"] as? String == project["container_path"] as? String
   }
 
+  /// `URL(fileURLWithPath:)` resolves a relative spelling against the working directory, so its
+  /// `path` is always absolute; an absolute-path guard must check the caller's spelling.
+  static func spelledAbsolute(_ url: URL) -> Bool { url.relativePath.hasPrefix("/") }
+
   private static func statePath(_ url: URL) throws -> URL {
-    guard url.path.hasPrefix("/") else {
+    guard spelledAbsolute(url) else {
       throw ResourceCoordinatorError("invalid_state_path", "an absolute state path is required")
     }
     let parent = url.deletingLastPathComponent()
@@ -753,7 +757,7 @@ public enum ResourceCoordinator {
     let validationURL = path.deletingLastPathComponent().appendingPathComponent(
       ".coordinator-migration-validation-\(UUID().uuidString)")
     defer { try? FileManager.default.removeItem(at: validationURL) }
-    try HarnessRuntime.atomicWriteJSON(migrated, to: validationURL)
+    try persist(migrated, to: validationURL)
     return try load(validationURL)
   }
 
@@ -778,12 +782,30 @@ public enum ResourceCoordinator {
       throw ResourceCoordinatorError(
         "invalid_state_path", "bootstrapped coordinator lock is missing")
     }
-    return try HarnessRuntime.withFileLock(at: lock, timeout: 5) {
-      guard !isSymlink(lock), isRegular(lock) else {
-        throw ResourceCoordinatorError("invalid_state_path", "lock file must be regular")
+    // Only failures to take the lock are mapped here; the body reports its own errors.
+    var holdingLock = false
+    do {
+      return try HarnessRuntime.withFileLock(at: lock, timeout: 5) {
+        holdingLock = true
+        guard !isSymlink(lock), isRegular(lock) else {
+          throw ResourceCoordinatorError("invalid_state_path", "lock file must be regular")
+        }
+        var state = try (bootstrapCreate ? loadForBootstrap(path) : load(path))
+        return try body(path, &state)
       }
-      var state = try (bootstrapCreate ? loadForBootstrap(path) : load(path))
-      return try body(path, &state)
+    } catch VerificationError.lockTimedOut where !holdingLock {
+      throw ResourceCoordinatorError("coordinator_busy")
+    } catch let error as VerificationError where !holdingLock {
+      throw ResourceCoordinatorError("io_error", error.description)
+    }
+  }
+
+  /// A failed atomic replacement is host I/O, not a malformed request.
+  private static func persist(_ state: [String: Any], to path: URL) throws {
+    do {
+      try HarnessRuntime.atomicWriteJSON(state, to: path)
+    } catch let error as VerificationError {
+      throw ResourceCoordinatorError("io_error", error.description)
     }
   }
 
@@ -813,7 +835,7 @@ public enum ResourceCoordinator {
           ]
         ]
       }
-      try HarnessRuntime.atomicWriteJSON(state, to: path)
+      try persist(state, to: path)
       return [
         "coordinator_instance_id": state["coordinator_instance_id"]!, "already_bootstrapped": false,
         "migrated_legacy_state": wasLegacy,
@@ -856,7 +878,12 @@ public enum ResourceCoordinator {
         at: directory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])
       {
         for case let url as URL in enumerator {
-          let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+          guard
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+          else {
+            throw ResourceCoordinatorError(
+              "untrusted_binding", "installed contract bundle cannot be enumerated")
+          }
           if values.isRegularFile == true, values.isSymbolicLink != true,
             ["json", "swift"].contains(url.pathExtension)
           {
@@ -883,12 +910,20 @@ public enum ResourceCoordinator {
       let count = UInt32(name.count).bigEndian
       withUnsafeBytes(of: count) { bytes.append(contentsOf: $0) }
       bytes.append(name)
-      guard let hash = Data(hex: try HarnessRuntime.sha256File(file)) else {
+      guard let hash = Data(hex: try sha256File(file, failure: "untrusted_binding")) else {
         throw ResourceCoordinatorError("untrusted_binding")
       }
       bytes.append(hash)
     }
     return "sha256:" + HarnessRuntime.sha256(bytes)
+  }
+
+  /// A bound file that cannot be opened or read cannot prove its binding; report that instead
+  /// of letting the I/O error surface as a malformed request.
+  static func sha256File(_ url: URL, failure code: String) throws -> String {
+    do { return try HarnessRuntime.sha256File(url) } catch {
+      throw ResourceCoordinatorError(code, "\(url.lastPathComponent) cannot be hashed")
+    }
   }
 
   @available(*, deprecated, message: "Use sourceBundleSHA256(skillRoot:)")
@@ -900,7 +935,7 @@ public enum ResourceCoordinator {
     _ ledgerPath: URL, descriptor: Int32? = nil, expectedRunID: String? = nil,
     expectedAuthorizationHash: String? = nil
   ) throws -> [String: Any] {
-    guard ledgerPath.path.hasPrefix("/"), !isSymlink(ledgerPath) else {
+    guard spelledAbsolute(ledgerPath), !isSymlink(ledgerPath) else {
       throw ResourceCoordinatorError("untrusted_ledger", "ledger path is unsafe")
     }
     let openedHere = descriptor == nil
@@ -948,7 +983,7 @@ public enum ResourceCoordinator {
   public static func loadTrustedHarness(harnessPath: URL, context: RuntimeContext) throws
     -> [String: Any]
   {
-    guard harnessPath.path.hasPrefix("/"), !isSymlink(harnessPath), isRegular(harnessPath) else {
+    guard spelledAbsolute(harnessPath), !isSymlink(harnessPath), isRegular(harnessPath) else {
       throw ResourceCoordinatorError(
         "untrusted_binding", "harness must be an absolute regular file")
     }
@@ -1028,7 +1063,7 @@ public enum ResourceCoordinator {
     let executable = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
     guard FileManager.default.fileExists(atPath: executable.path),
       binding["executable_sha256"] as? String == "sha256:"
-        + (try HarnessRuntime.sha256File(executable))
+        + (try sha256File(executable, failure: "untrusted_binding"))
     else {
       throw ResourceCoordinatorError("untrusted_binding", "coordinator executable hash drifted")
     }
@@ -1073,7 +1108,7 @@ public enum ResourceCoordinator {
         "effective_at": stamp(now), "policy": normalized, "operator_confirmed": operatorConfirmed,
       ])
       state["policy_history"] = history
-      try HarnessRuntime.atomicWriteJSON(state, to: path)
+      try persist(state, to: path)
       return [
         "host_policy": normalized, "operator_confirmed": operatorConfirmed,
         "effective_at": stamp(now),
@@ -1233,7 +1268,7 @@ public enum ResourceCoordinator {
       if existing == nil {
         authorities[runID] = runAuthority
         state["run_authorities"] = authorities
-        try HarnessRuntime.atomicWriteJSON(state, to: path)
+        try persist(state, to: path)
       } else if !jsonEqual(existing, runAuthority) {
         throw ResourceCoordinatorError("untrusted_authority", "run authority is immutable")
       }
@@ -1287,7 +1322,7 @@ public enum ResourceCoordinator {
         state: &state, resource: resource, descriptor: descriptor, ownerRunID: ownerRunID,
         ownerActor: ownerActor, ttlSeconds: ttlSeconds, admission: admission,
         authorizationExpiresAt: window.1, now: now)
-      try HarnessRuntime.atomicWriteJSON(state, to: path)
+      try persist(state, to: path)
       return receipt(lease, instance: state["coordinator_instance_id"] as! String)
     }
   }
@@ -1372,16 +1407,17 @@ public enum ResourceCoordinator {
       guard now < window.1 else { throw ResourceCoordinatorError("authorization_inactive") }
       let old = try parse(lease["expires_at"])
       guard old > now else { throw ResourceCoordinatorError("expired_requires_recover") }
-      let next = now.addingTimeInterval(TimeInterval(ttlSeconds))
-      guard next > old else { throw ResourceCoordinatorError("heartbeat_must_extend") }
-      guard next <= window.1 else {
+      // Compare what is persisted: stamps round to the nearest millisecond.
+      let next = stamp(now.addingTimeInterval(TimeInterval(ttlSeconds)))
+      guard try parse(next) > old else { throw ResourceCoordinatorError("heartbeat_must_extend") }
+      guard try parse(next) <= window.1 else {
         throw ResourceCoordinatorError("authorization_window_too_short")
       }
-      lease["expires_at"] = stamp(next)
+      lease["expires_at"] = next
       var leases = state["leases"] as! [String: Any]
       leases[lease["lease_id"] as! String] = lease
       state["leases"] = leases
-      try HarnessRuntime.atomicWriteJSON(state, to: path)
+      try persist(state, to: path)
       return receipt(lease, instance: state["coordinator_instance_id"] as! String)
     }
   }
@@ -1396,16 +1432,20 @@ public enum ResourceCoordinator {
       if supportsActiveResolution(candidate: lease, activeLeases: active(state)) {
         throw ResourceCoordinatorError("dependent_lease_active")
       }
-      guard try parse(lease["expires_at"]) > now else {
+      // Stamps round to the nearest millisecond, so compare the persisted instant: a release in
+      // the last half millisecond would otherwise store released_at == expires_at, which every
+      // later load rejects as invalid state.
+      let releasedAt = stamp(now)
+      guard try parse(lease["expires_at"]) > parse(releasedAt) else {
         throw ResourceCoordinatorError("expired_requires_recover")
       }
       lease["status"] = "released"
       lease["release_id"] = UUID().uuidString.lowercased()
-      lease["released_at"] = stamp(now)
+      lease["released_at"] = releasedAt
       var leases = state["leases"] as! [String: Any]
       leases[lease["lease_id"] as! String] = lease
       state["leases"] = leases
-      try HarnessRuntime.atomicWriteJSON(state, to: path)
+      try persist(state, to: path)
       return [
         "coordinator_instance_id": state["coordinator_instance_id"]!,
         "release_id": lease["release_id"]!, "receipt_id": lease["receipt_id"]!,
@@ -1653,7 +1693,7 @@ public enum ResourceCoordinator {
           "replacement_requested": replacement != nil,
         ]
       }
-      try HarnessRuntime.atomicWriteJSON(state, to: path)
+      try persist(state, to: path)
       return [
         "coordinator_instance_id": state["coordinator_instance_id"]!,
         "recovery_id": lease["recovery_id"]!, "previous_receipt_id": lease["receipt_id"]!,
@@ -1690,14 +1730,25 @@ public enum ResourceCoordinator {
       statePath: statePath, resource: coreSimulator, descriptor: leaseDescriptor,
       ownerRunID: ownerRunID, ownerActor: ownerActor, ttlSeconds: ttlSeconds,
       runAuthority: runAuthority)
-    do {
-      let value = try body(acquired)
-      _ = try release(statePath: statePath, receipt: acquired, runAuthority: runAuthority)
-      return value
-    } catch {
-      _ = try? release(statePath: statePath, receipt: acquired, runAuthority: runAuthority)
+    // An unreleased registry lease conflicts with every destination claim on the host until it
+    // is recovered, so a failed release is reported whether or not the body succeeded.
+    func releaseAdmission(after bodyError: Error?) throws {
+      do {
+        _ = try release(statePath: statePath, receipt: acquired, runAuthority: runAuthority)
+      } catch {
+        let code = (error as? ResourceCoordinatorError)?.code ?? String(describing: error)
+        throw ResourceCoordinatorError(
+          "runtime_registry_release_failed",
+          bodyError.map { "\(code) after \(String(describing: $0))" } ?? code)
+      }
+    }
+    let value: T
+    do { value = try body(acquired) } catch {
+      try releaseAdmission(after: error)
       throw error
     }
+    try releaseAdmission(after: nil)
+    return value
   }
 
 }

@@ -15,7 +15,7 @@ public enum InitializeRun {
     (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
   }
   private static func loadObject(_ path: URL, label: String) throws -> [String: Any] {
-    guard path.path.hasPrefix("/"), !isSymlink(path), isRegular(path) else {
+    guard ResourceCoordinator.spelledAbsolute(path), !isSymlink(path), isRegular(path) else {
       throw InitializeError("\(label) must be an absolute regular non-symlink file")
     }
     do { return try HarnessRuntime.object(path) } catch {
@@ -86,10 +86,61 @@ public enum InitializeRun {
     }
   }
 
+  /// Stages the complete approval record beside the ledger and publishes it with an exclusive
+  /// rename, so an interrupted creation leaves no empty or truncated ledger that every rerun
+  /// would reject as drifted, and a concurrent reader never sees a partial record.
+  private static func publishLedger(_ record: [String: Any], at ledgerPath: URL, runRoot: URL)
+    throws
+  {
+    let line = try HarnessRuntime.canonicalJSON(record, ensureASCII: true) + Data([0x0a])
+    let staged = runRoot.appendingPathComponent(
+      ".\(ledgerPath.lastPathComponent).\(UUID().uuidString.lowercased()).partial")
+    let fd = open(
+      staged.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, S_IRUSR | S_IWUSR)
+    guard fd >= 0 else { throw InitializeError("ledger could not be created") }
+    defer { unlink(staged.path) }
+    do {
+      try line.withUnsafeBytes { buffer in
+        var offset = 0
+        while offset < buffer.count {
+          let count = Darwin.write(
+            fd, buffer.baseAddress!.advanced(by: offset), buffer.count - offset)
+          if count < 0, errno == EINTR { continue }
+          guard count > 0 else { throw InitializeError("ledger could not be created") }
+          offset += count
+        }
+      }
+      guard fsync(fd) == 0 else { throw InitializeError("ledger could not be created") }
+    } catch {
+      close(fd)
+      throw error
+    }
+    close(fd)
+    // RENAME_EXCL fails with EEXIST instead of replacing a ledger another process published.
+    var published = renamex_np(staged.path, ledgerPath.path, UInt32(RENAME_EXCL)) == 0
+    if !published, errno == ENOTSUP {
+      // link(2) is also an exclusive create on file systems without RENAME_EXCL.
+      published = link(staged.path, ledgerPath.path) == 0
+    }
+    guard published else {
+      throw InitializeError(
+        errno == EEXIST
+          ? "ledger was created concurrently; rerun to adopt it" : "ledger could not be created")
+    }
+    let dfd = open(runRoot.path, O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+    if dfd >= 0 {
+      _ = fsync(dfd)
+      close(dfd)
+    }
+  }
+
   public static func initialize(
     authorizationPath: URL, ledgerPath: URL, runRoot: URL, harnessPath: URL, coordinatorState: URL,
     recordedAt: Date = Date(), context: RuntimeContext
   ) throws -> [String: Any] {
+    guard ResourceCoordinator.spelledAbsolute(runRoot) else {
+      throw InitializeError("run root must be an absolute path")
+    }
     guard FileManager.default.fileExists(atPath: runRoot.path) else {
       throw InitializeError("run root must already exist")
     }
@@ -111,7 +162,7 @@ public enum InitializeRun {
       (harnessPath, "harness"), (authorizationPath, "authorization"),
       (URL(fileURLWithPath: harness["private_policy_overlay"] as? String ?? ""), "private policy"),
     ] {
-      guard candidate.path.hasPrefix("/"), !isSymlink(candidate),
+      guard ResourceCoordinator.spelledAbsolute(candidate), !isSymlink(candidate),
         candidate.deletingLastPathComponent().resolvingSymlinksInPath() == canonicalRoot
       else {
         throw InitializeError(
@@ -122,7 +173,7 @@ public enum InitializeRun {
       authorizationPath.resolvingSymlinksInPath()
         == URL(fileURLWithPath: harness["run_authorization"] as! String).resolvingSymlinksInPath()
     else { throw InitializeError("authorization drifted from the trusted harness") }
-    guard ledgerPath.path.hasPrefix("/"),
+    guard ResourceCoordinator.spelledAbsolute(ledgerPath),
       ledgerPath.deletingLastPathComponent().resolvingSymlinksInPath() == canonicalRoot
     else { throw InitializeError("ledger must be directly under the private run root") }
     let harnessLedger = URL(fileURLWithPath: harness["run_ledger"] as? String ?? "")
@@ -160,33 +211,8 @@ public enum InitializeRun {
       else { throw InitializeError("existing ledger approval drifted") }
       record = records[0]
     } else {
-      let fd = open(ledgerPath.path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)
-      guard fd >= 0 else { throw InitializeError("ledger could not be created") }
+      try publishLedger(record, at: ledgerPath, runRoot: canonicalRoot)
       created = true
-      do {
-        let line = try HarnessRuntime.canonicalJSON(record, ensureASCII: true) + Data([0x0a])
-        try line.withUnsafeBytes { buffer in
-          var offset = 0
-          while offset < buffer.count {
-            let count = Darwin.write(
-              fd, buffer.baseAddress!.advanced(by: offset), buffer.count - offset)
-            if count < 0, errno == EINTR { continue }
-            guard count > 0 else { throw InitializeError("ledger could not be created") }
-            offset += count
-          }
-        }
-        guard fsync(fd) == 0 else { throw InitializeError("ledger could not be created") }
-        close(fd)
-      } catch {
-        close(fd)
-        unlink(ledgerPath.path)
-        throw error
-      }
-      let dfd = open(canonicalRoot.path, O_RDONLY)
-      if dfd >= 0 {
-        _ = fsync(dfd)
-        close(dfd)
-      }
     }
     let authority: [String: Any]
     do {

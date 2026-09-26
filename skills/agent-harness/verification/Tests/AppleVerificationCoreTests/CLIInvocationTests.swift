@@ -84,6 +84,7 @@ final class CLIInvocationTests: XCTestCase {
       JSONSerialization.jsonObject(with: Data(result.stdout.utf8)) as? [String: Any])
     XCTAssertEqual(Set(response.keys), ["status", "reason_code"])
     XCTAssertEqual(response["status"] as? String, "blocked")
-    XCTAssertEqual(response["reason_code"] as? String, "migration_required")
+    // A relative state path is refused rather than resolved against the working directory.
+    XCTAssertEqual(response["reason_code"] as? String, "invalid_state_path")
   }
 }
