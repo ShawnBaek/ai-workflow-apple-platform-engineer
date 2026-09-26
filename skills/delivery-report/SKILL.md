@@ -10,6 +10,14 @@ Turn one validated `agent-harness/templates/completion-report.json` instance
 into a short, portable report. Formatting is read-only. An external message is
 a separate mutation with its own authority and receipt evidence.
 
+This collection ships no Telegram, WhatsApp, or iMessage transport.
+`apple-verify delivery-report` renders previews and checks an authorization; it
+never sends. Sending needs a private transport the user supplies that meets the
+[transport contract](references/setup.md#4-transport-contract). Without one,
+stop at the preview and hand over the text and reviewed media. Do not improvise
+a sender, call a provider API, or run a Shortcut directly during delivery;
+building a transport is a separate, reviewed task.
+
 ## Preview-first flow
 
 1. Validate the completion report and its provider/client usage attribution.
@@ -17,17 +25,21 @@ a separate mutation with its own authority and receipt evidence.
    Every `--channel` mode is preview-only and never invokes a transport.
 3. Confirm that every screenshot is reviewed and every recording is
    `trimmed_video`, never a raw recording.
-4. Load a private channel configuration and run only its read-only health
-   check. Public files contain aliases, never credentials or recipient IDs.
+4. Load a private channel configuration and run only the transport's
+   read-only health check. Public files contain aliases, never credentials or
+   recipient IDs.
 5. Stop at the preview unless an exact task authorization is active. Config
    alone is not authority.
 6. Instantiate `contracts/delivery-authorization.schema.json`, then make the
-   formatter verify `channel_id`, `destination_ref`, `report_sha256`,
-   `media_allowlist`, `transport_ref`, expiry, and `idempotency_key`.
-7. The private transport rechecks the same envelope and actual media hashes,
-   plus any WhatsApp template alias, language, and canonical request hash, then
-   sends the unchanged bytes once. An uncertain response blocks
-   blind retry; inspect the provider state using the same idempotency identity.
+   formatter check it: its schema, `channel_id`, `destination_ref`,
+   `transport_ref`, the active time window, `report_sha256` against the
+   rendered bytes, and any WhatsApp template request hash. The formatter
+   neither hashes media files nor consumes the `idempotency_key`.
+7. The user-supplied transport rechecks the same envelope and actual media
+   hashes, plus any WhatsApp template alias, language, and canonical request
+   hash, consumes the idempotency key, then sends the unchanged bytes once and
+   prints its receipt. An uncertain response blocks blind retry; inspect the
+   provider state using the same idempotency identity.
 8. Record API `accepted`, transport execution, and `delivered/read` as distinct
    states. Never promote a weaker observation into a stronger claim.
 
@@ -61,7 +73,7 @@ the acceptance target.
 
 ## Channel boundaries
 
-| Channel | Safe transport | Strongest automated claim |
+| Channel | User-supplied transport | Strongest automated claim |
 |---|---|---|
 | Telegram | Bot API with private token/chat alias | API accepted with message ID |
 | WhatsApp | Cloud API with opt-in/window/template checks | matching webhook status |

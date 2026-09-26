@@ -141,9 +141,10 @@ Each run authority also binds one `run_ledger` canonical path, device/inode
 identity, and initial approval digest. Reservation and dispatch use only the
 locked descriptor, compare pathname identity before and after fsync, and reject
 copied, hard-linked, renamed, or replaced ledgers.
-Verify the private-harness path/instance/script binding and the same live,
-unexpired coordinator receipt immediately before reserving a protected write,
-then reverify the unconsumed reservation immediately adjacent to dispatch.
+Verify the private-harness state-path/instance/executable/source-bundle binding
+and the same live, unexpired coordinator receipt immediately before reserving a
+protected write, then reverify the unconsumed reservation immediately adjacent
+to dispatch.
 Apple dispatch executes the private digest-pinned guarded ASC probe again,
 requires its observation timestamp to follow reservation, and compares stable
 account/app/build/group state without treating the timestamp itself as state.
@@ -198,10 +199,11 @@ If the state path or live receipt is unavailable, enter `blocked` with reason
 worktree as an implicit workaround.
 
 The private harness binds the canonical state path, coordinator instance, and
-SHA-256 of the exact installed coordinator script. Both clients use that one
-binding. A script update blocks until active leases are closed or recovered,
-the update is reviewed, the private binding is refreshed, and health passes;
-automatic rehashing or a second state is forbidden. See
+the SHA-256 of both the installed `apple-verify` executable and its source
+bundle; see [Swift runtime](swift-verification.md). Both clients use that one
+binding. A runtime update or rebuild blocks until active leases are closed or
+recovered, the update is reviewed, the private binding is refreshed, and health
+passes; automatic rehashing or a second state is forbidden. See
 [coordinator setup](coordinator-setup.md).
 
 Repository writer identity is versioned as `github_remote_v2`. Before first use
@@ -243,9 +245,10 @@ without consuming implementation attempts on unchanged busy responses.
 - authority, account, project-root, branch, signing, permission, or destructive
   action failure: no retry; wait for a human gate.
 
-## Completion predicate
+## Completion predicates
 
-All conditions are required:
+The selected workflow contract's `completion_requires` is authoritative, and
+every condition it lists is required. Both the local and PR profiles require:
 
 1. every required node passed in dependency order;
 2. the selected delivery-profile health report is fresh, target-bound, and
@@ -254,15 +257,28 @@ All conditions are required:
 4. the accepted Spec Kit snapshot is current, or Spec Kit is explicitly not
    applicable;
 5. the latest build/test/runtime evidence matches the current patch identity;
-6. no resource lease remains active;
-7. the immutable review identity still matches the delivered commit;
-8. every acceptance criterion has current evidence or a recorded residual risk;
-9. required screenshot, video, or artifact evidence is published and viewable;
-10. the pull request exists;
-11. its remote SHA matches the intended local commit;
-12. required checks reached their required state; and
-13. Issue/Project tracking is reconciled, or a non-rollback partial failure is
-    explicitly recorded.
+6. no resource lease remains active; and
+7. every acceptance criterion has current evidence or a recorded residual risk.
+
+The local profile (`contracts/local-workflow.json`, success `local_verified`)
+adds one condition: review evidence is current when the accepted plan requires
+review; otherwise the acceptance evidence records
+`independent_review:not_required_by_accepted_plan`. It has no pull request,
+remote SHA, published-evidence, CI, or Issue requirement; do not create them to
+complete a local task.
+
+The PR profile (`contracts/workflow.json`, success `pr_ready`) adds:
+
+- the immutable review identity still matches the delivered commit;
+- required screenshot, video, or artifact evidence is published and viewable;
+- the pull request exists;
+- its remote SHA matches the intended local commit;
+- required checks reached their required state; and
+- Issue/Project tracking is reconciled, or a non-rollback partial failure is
+  explicitly recorded.
+
+A TestFlight continuation (`contracts/testflight-workflow.json`) starts only
+after `pr_ready` and completes at its selected delivery target's terminal node.
 
 Loop exhaustion, partial platform success, or an uploaded artifact is not a
 completion predicate.

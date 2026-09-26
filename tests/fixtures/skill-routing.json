@@ -107,6 +107,37 @@
       "why": "Review finding: apple-data routed new apps to SwiftData without saying its CloudKit sync can't use the shared or public database, so a later sharing or public-data requirement forced a framework rewrite."
     },
     {
+      "id": "commit-subject-case-follows-repository",
+      "rule": "A commit-subject capitalization rule must keep Conventional Commits subjects lowercase after the colon by default.",
+      "statesRule": "capital",
+      "requiresQualifier": "lowercase after the colon",
+      "appliesTo": [
+        "commit-message"
+      ],
+      "why": "Review finding: commit-message rule 3 required a capitalized subject after the Conventional Commits colon, contradicting its own lowercase examples, this repository's history and commitlint's config-conventional subject-case rule, so following it could fail commit linting."
+    },
+    {
+      "id": "delivery-transport-not-shipped",
+      "rule": "Delivery text that hands a send to a private transport must say that this collection ships no transport.",
+      "statesRule": "private transport|private adapter|sends the unchanged bytes",
+      "patternNote": "Matches the shipped wording that delegated sending. The qualifier is the plain statement, so a delivery-report file that reintroduces that wording must also say the transport is not shipped; the contract itself lives in references/setup.md.",
+      "requiresQualifier": "ships no (Telegram, WhatsApp, or iMessage )?transport",
+      "appliesTo": [
+        "delivery-report"
+      ],
+      "why": "Review finding: delivery-report said reports are sent through Telegram, WhatsApp or iMessage by 'the private transport', but apple-verify delivery-report only previews and checks and no transport or transport contract existed, so an agent asked to send had to improvise a credential-handling sender."
+    },
+    {
+      "id": "completion-predicate-profile-scope",
+      "rule": "A completion predicate that requires a pull request must also give the local_verified predicate, which has none.",
+      "statesRule": "the pull request exists",
+      "requiresQualifier": "local_verified",
+      "appliesTo": [
+        "agent-harness"
+      ],
+      "why": "Review finding: architecture.md stated one unscoped completion predicate ending in a pull request and remote SHA, while contracts/local-workflow.json completes at local_verified with no PR, so a reader could open a PR to finish local work that delivery.md says must not get one."
+    },
+    {
       "id": "design-source-icon-fidelity",
       "rule": "SF Symbol substitution is limited to system glyphs; design-system icons keep their export.",
       "statesRule": "SF Symbol substitution",
