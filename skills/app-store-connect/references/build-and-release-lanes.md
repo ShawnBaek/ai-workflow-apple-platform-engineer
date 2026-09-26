@@ -31,6 +31,11 @@ build. Do not invent eligibility or switch accounts to get past missing access.
 Run from the authoritative app checkout after its Xcode and signing gates. Use
 task-owned output paths and the approved export plist; do not overwrite another
 task's archive or add `--clean` / provisioning-update flags by default.
+Choose the Xcode by the
+[distribution exception](../../xcode-project-workflow/references/xcode-selection.md#distribution-exception).
+A beta Xcode is limited to TestFlight-only uploads. Set that Xcode's
+`DEVELOPER_DIR` on each command, and check `DTXcodeBuild` in the archived app's
+`Info.plist` before you upload. Apply the same check to an existing IPA/PKG.
 
 ```sh
 asc xcode archive --workspace '<App.xcworkspace>' --scheme '<Scheme>' \

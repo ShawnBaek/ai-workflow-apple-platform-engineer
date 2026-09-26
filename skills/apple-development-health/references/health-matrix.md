@@ -67,7 +67,10 @@ are four separate facts. Report every provider injection layer:
 
 `xcrun mcp-server enable` enables an Apple service/permission; it is not Codex
 registration. Codex registration uses
-`codex mcp add xcode -- xcrun mcpbridge`. A newly registered tool may require a
+`codex mcp add xcode -- xcrun mcpbridge`, bound to the selected Xcode through
+the server's `DEVELOPER_DIR` as in
+[provider preflight](../../xcodebuild/references/xcode-mcp-provider-preflight.md#bind-the-bridge-to-the-selected-xcode).
+A newly registered tool may require a
 new client/task before it is exposed. Treat blanket
 `--unsafe-always-allow-all-agents` as a security warning.
 

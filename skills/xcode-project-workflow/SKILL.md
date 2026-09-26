@@ -1,7 +1,7 @@
 ---
 name: xcode-project-workflow
 description: >-
-  Mandatory Xcode project-root, container, branch, host-execution, and XcodeGen preflight for iOS, iPadOS, watchOS, macOS, tvOS, and visionOS tasks. Use before any Xcode project edit, build, test, Simulator, debugging, signing, archive, or project-generation operation.
+  Mandatory Xcode project-root, container, branch, Xcode-selection, host-execution, and XcodeGen preflight for iOS, iPadOS, watchOS, macOS, tvOS, and visionOS tasks. Use before any Xcode project edit, build, test, Simulator, debugging, signing, archive, or project-generation operation.
 ---
 
 # Xcode Project Workflow
@@ -16,7 +16,8 @@ happen; `xcodebuild` and other specialists define what to run there.
 2. If unknown, stop and ask. Do not search for a convenient checkout, substitute
    a project for a workspace, copy the project, or create a worktree.
 3. Record the real path, repository root, branch, HEAD, remote, dirty state,
-   selected Xcode build, and opened container.
+   the selected Xcode (see [Xcode selection](#xcode-selection)), and the
+   opened container.
 4. Return to that directory before every Xcode-related operation.
 
 Repository documentation and standalone Swift-package work use the explicitly
@@ -58,6 +59,39 @@ Before signing or an Apple account operation, resolve the account/team required
 by the current private project policy. Cached Xcode state, environment variables,
 profiles, or CI secrets never imply an override.
 
+## Xcode selection
+
+This skill decides which installed Xcode every other skill means by "selected
+Xcode". Resolve it once per task, before the first Xcode, `xcrun`, `swift`,
+Simulator, or Xcode MCP operation. Apply the first rule that fits:
+
+1. use an Xcode that the user names for the task, or that the private project
+   or user policy sets;
+2. otherwise use a project pin found in the authoritative repository:
+   `.xcode-version`, a documented Xcode requirement, or a CI workflow or
+   project script that sets `DEVELOPER_DIR` to a specific Xcode version (a
+   path without a version is not a pin);
+3. otherwise use the newest installed full Xcode: the highest version, betas
+   included. When a beta and a release report the same version, break the tie
+   by Apple's release status (release, then release candidate, then beta),
+   never by comparing build numbers across statuses; if the status is unclear,
+   ask. `xcode-select -p` is one candidate, not a preference.
+
+Run each command with `DEVELOPER_DIR=<Xcode>.app/Contents/Developer`. Never
+switch `xcode-select` or change the user's global toolchain in any other way.
+Record the path, version, build, and the reason it won. A newer SDK does not
+raise any deployment target. If the developer's open Xcode window belongs to a
+different installation, report both and ask before mixing them.
+
+Distribution is the exception. App Store Connect accepts builds from a beta
+Xcode only for TestFlight testing, and only for betas it has announced. An
+archive or upload that may be submitted to the App Store must use an installed
+release Xcode or an announced release-candidate Xcode. If none is installed, or
+eligibility is unclear, stop and let the user choose.
+
+For discovery commands, pins, tie-breaks, eligibility sources, and binding the
+Xcode MCP bridge, see [Xcode selection](references/xcode-selection.md).
+
 ## XcodeGen gate
 
 - Detect whether XcodeGen is the declared source of truth, but do not regenerate
@@ -98,7 +132,8 @@ Stop without edits/builds when the root/container is unknown, the working tree
 has pre-existing changes whose explicitly approved handling is absent, the remote
 default or intended branch base is unresolved,
 the Apple account boundary is unverified for an account action, Git metadata is
-not writable from the current environment, or XcodeGen requires new authority.
+not writable from the current environment, a user-named or project-pinned Xcode
+is not installed, or XcodeGen requires new authority.
 
 References:
 

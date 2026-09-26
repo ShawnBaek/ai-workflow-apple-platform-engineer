@@ -87,7 +87,7 @@ APE="$APE_BIN_DIR/apple-verify"
 "$APE" --help
 ```
 
-If `xcode-select -p` points to Command Line Tools, select an existing full Xcode for this command using `DEVELOPER_DIR`; do not change the user's global toolchain automatically. Keep the built executable in its skill directory so it can locate the matching contracts.
+Run these commands with `DEVELOPER_DIR` set to the Xcode that the [selection rule](../skills/xcode-project-workflow/references/xcode-selection.md) chooses. That is the newest installed full Xcode unless the user or project pins one, whatever `xcode-select -p` points to (it may be Command Line Tools or an older Xcode). An App Store archive follows the rule's distribution exception instead. Do not change the user's global toolchain. Keep the built executable in its skill directory so it can locate the matching contracts.
 
 Use the same toolchain, configuration and build flags for the build and `--show-bin-path`; a guessed `.build/release` path may select an older executable. Check `--help` for `--app-root`, then observe `runtime-identity` before binding this executable in private setup.
 
