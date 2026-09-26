@@ -79,4 +79,4 @@ await MainActor.run { self.items.append(contentsOf: items) }
 Window → Organizer → **Hangs** tab. Prioritize by affected users, duration,
 frequency, and the interrupted task. A ranking alone does not define release risk.
 
-For local development, enable **Edit Scheme → Run → Diagnostics → Thread Performance Checker**. It surfaces hangs in real time during dev.
+For local development, keep **Edit Scheme → Run → Diagnostics → Thread Performance Checker** enabled. It flags hang risks — synchronous I/O and other non-UI work on the main thread, and priority inversions — as you run; measure actual hang durations with the Hangs instrument.

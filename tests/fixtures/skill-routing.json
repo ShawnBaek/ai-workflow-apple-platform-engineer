@@ -39,6 +39,17 @@
   ],
   "ruleConsistency": [
     {
+      "id": "catalyst-build-not-ios-proof",
+      "rule": "A Mac Catalyst build is evidence only for the Catalyst target; compile each affected target.",
+      "statesRule": "catalyst build",
+      "requiresQualifier": "does not prove|actual affected target|each affected target",
+      "appliesTo": [
+        "apple-platform-performance",
+        "apple-platform-ui"
+      ],
+      "why": "apple-platform-performance Part V said a clean macCatalyst build meant iOS would build too, while apple-platform-ui said the opposite, so an agent could skip the iOS build that completion requires. A skill that mentions a Catalyst build as evidence must also say it does not stand in for the affected target."
+    },
+    {
       "id": "design-source-color-fidelity",
       "rule": "Substituting a semantic color is correct only where the design leaves the color open.",
       "statesRule": "semantic colors? substitution|no hardcoded colors|Semantic `?Color\\.primary",

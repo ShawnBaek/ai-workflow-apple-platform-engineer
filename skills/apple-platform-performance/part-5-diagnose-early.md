@@ -63,7 +63,7 @@ Then in Instruments, the Points of Interest track shows you exactly how long `lo
 
 ## Item 22 — Enable Thread Performance Checker during dev
 
-Edit Scheme → Run → Diagnostics → **Thread Performance Checker**. Surfaces hangs and priority inversions while you develop, before they ship.
+Edit Scheme → Run → Diagnostics → **Thread Performance Checker** (on by default for Run; macOS and iOS only). Flags priority inversions and non-UI work on the main thread — the causes of many hangs — while you develop, before they ship.
 
 ## Item 23 — Watch MetricKit in production
 
@@ -95,17 +95,18 @@ final class PerfReporter: NSObject, MXMetricManagerSubscriber {
     nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
         let log = Logger(subsystem: "com.myapp", category: "metrics")
         for p in payloads {
-            // Symbolicated crash, hang, CPU, disk-write exceptions.
+            // Crash, hang, CPU and disk-write diagnostics. Call-stack trees are
+            // unsymbolicated: symbolicate off-device with the build's dSYM.
             log.error("MXDiagnosticPayload: \(p.jsonRepresentation(), privacy: .public)")
         }
     }
 }
 ```
 
-Wire `PerfReporter.shared.start()` from `AppDelegate.application(_:didFinishLaunchingWithOptions:)`. Apple delivers one payload per day per install — subscribe early or you miss the first one.
+Wire `PerfReporter.shared.start()` from `AppDelegate.application(_:didFinishLaunchingWithOptions:)`. MetricKit starts accumulating reports on the first `MXMetricManager.shared` access. Metric payloads cover the previous 24 hours and arrive at most once per day per metric source (so possibly more than one per day); diagnostic payloads arrive immediately on iOS 15 / macOS 12 and later.
 
-**Swift 6 strict-concurrency gotcha.** A `static let shared` without an actor declaration trips the "not concurrency-safe because non-Sendable type may have shared mutable state" diagnostic. The standard fix for UIKit-touching singletons (TTSPlayer, NoteRepository, PerfReporter) is `@MainActor` on the class **plus** `nonisolated` on any protocol callback the framework delivers from a non-isolated context (MetricKit, WCSession, AVAudioPlayerNode completion handlers, NotificationCenter selectors are common cases). The macCatalyst build is strictest about this — if it builds clean, iOS will too.
+**Swift 6 strict-concurrency gotcha.** A `static let shared` without an actor declaration trips the "not concurrency-safe because non-Sendable type may have shared mutable state" diagnostic. The standard fix for UIKit-touching singletons (TTSPlayer, NoteRepository, PerfReporter) is `@MainActor` on the class **plus** `nonisolated` on any protocol callback the framework delivers from a non-isolated context (MetricKit, WCSession, AVAudioPlayerNode completion handlers, NotificationCenter selectors are common cases). Compile each affected target; a clean Mac Catalyst build does not prove the iOS build or its runtime behavior (see `apple-platform-ui`).
 
-**Reading the unified log.** During development: `xcrun simctl spawn booted log stream --predicate 'subsystem == "com.myapp" && category == "metrics"'`. On a TestFlight build: Console.app → connected device → filter by subsystem.
+**Reading the unified log.** MetricKit reports and `didReceive(_:)` callbacks arrive only on a physical device, not in Simulator. During development, run the app from Xcode on that device (select the destination by UDID when scripting), choose **Debug → Simulate MetricKit Payloads**, and read the logged JSON in Xcode's console. On a TestFlight build: Console.app → that device → filter by subsystem `com.myapp`. Command-line collection (`log collect --device-udid <UDID>`) requires root, so ask before using it.
 
 Pipe payloads to your crash reporter or analytics once you have one. Until then, the unified log is enough to spot regressions when you run a TestFlight build against your own device.
