@@ -1,7 +1,7 @@
 ---
 name: apple-ads
 description: >-
-  Safely inspects, plans, creates, and optimizes Apple Ads Advanced campaigns, ad groups, search-result keywords, bids, budgets, audiences, Search Match, ad variations, attribution, and reporting. Use for Apple Ads, Apple Search Ads, asc ads, CPT, CPA, TTR, impression share, paid keyword work, attributed ad revenue, or read-only ASO evidence for a paid-acquisition test. Do not use to mutate App Store metadata; route those writes to app-store-connect.
+  Inspect, plan and optimize Apple Ads campaigns, keywords, bids, budgets and attribution. Use for Apple Search Ads or paid keywords. Not for App Store metadata writes (use app-store-connect).
 ---
 
 # Apple Ads

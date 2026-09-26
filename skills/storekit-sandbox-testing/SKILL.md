@@ -1,7 +1,7 @@
 ---
 name: storekit-sandbox-testing
 description: >-
-  Sets up, exercises, diagnoses, and verifies Apple In-App Purchase flows with StoreKit Testing in Xcode, App Store sandbox accounts, or TestFlight sandbox builds. Use for sandbox purchases, subscription renewals or expiry, billing retry, refunds, restores, offer eligibility, missing products, or sandbox transaction evidence. Do not use it as proof of production purchase readiness or as authorization to submit an app.
+  Verify In-App Purchase flows with StoreKit Testing, sandbox accounts or TestFlight: purchases, renewals, refunds, restores, offers. Use for sandbox purchase testing, not production-readiness proof.
 ---
 
 # StoreKit Sandbox Testing

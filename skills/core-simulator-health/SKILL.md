@@ -1,10 +1,7 @@
 ---
 name: core-simulator-health
 description: >-
-  Diagnose and recover CoreSimulator, simctl, simdiskimaged, runtime, boot,
-  install, launch, screenshot, and Xcode MCP failures without rebooting the Mac
-  or deleting global state. Use before simulator-dependent Apple-platform work
-  and whenever simulator infrastructure becomes slow, stuck, or inconsistent.
+  Diagnose and recover CoreSimulator, simctl, runtime, boot, install and Xcode MCP failures without rebooting or deleting global state. Use before Simulator work or when it is slow or stuck.
 ---
 
 # Core Simulator Health

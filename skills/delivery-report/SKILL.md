@@ -1,7 +1,7 @@
 ---
 name: delivery-report
 description: >-
-  Formats an Apple-development completion report and, only when privately configured and exactly authorized, delivers its PRs, checks, screenshots, trimmed recordings, omissions, and provider-reported usage through Telegram, WhatsApp, or iMessage Shortcuts. Use for end-of-task summaries or delivery-channel setup.
+  Format an Apple-development completion report and, only when privately configured and exactly authorized, send it via Telegram, WhatsApp or iMessage. Use for end-of-task summaries or channel setup.
 ---
 
 # Delivery Report

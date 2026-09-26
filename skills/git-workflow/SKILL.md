@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: Safely prepare Apple-project branches, worktrees, Git metadata recovery, and pull-request delivery without losing index or repository state.
+description: Prepare Apple-project branches, worktrees and pull requests without losing index or repository state; recover Git metadata. Use for branch, index, worktree, push or PR actions in an Apple project.
 ---
 
 # Git Workflow

@@ -1,6 +1,6 @@
 ---
 name: app-versioning
-description: Safely change Apple app marketing and build versions while preserving the project’s real version source of truth.
+description: Change Apple app marketing and build versions at the project's real source of truth. Use when bumping a version or build number (MARKETING_VERSION, CURRENT_PROJECT_VERSION).
 ---
 
 # App Versioning

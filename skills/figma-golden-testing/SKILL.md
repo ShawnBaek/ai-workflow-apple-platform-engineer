@@ -1,10 +1,7 @@
 ---
 name: figma-golden-testing
 description: >-
-  Capture an Apple UI screen and compare it with a node-specific Figma frame using
-  an aligned overlay, side-by-side image, pixel diff, visible-text checks, and a
-  repeatable JSON report. Use for SwiftUI/UIKit visual parity and golden snapshot
-  review when a Figma URL is the source of truth.
+  Compare an Apple UI capture with a node-specific Figma frame: aligned overlay, pixel diff, visible-text checks and a JSON report. Use for visual parity or golden snapshots against a Figma URL.
 ---
 
 # Figma golden testing

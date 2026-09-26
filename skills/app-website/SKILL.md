@@ -1,10 +1,7 @@
 ---
 name: app-website
 description: >-
-  Build or improve an app introduction, marketing or download website using the
-  project's chosen web stack and visual identity. Resolve content, references,
-  accessibility, runtime proof and hosting scope. Includes an optional
-  SwiftUI-For-Web recipe for projects that select it.
+  Build or improve an app's marketing or download website in the project's web stack and style. Use for an app landing page, optionally with the SwiftUI-For-Web recipe.
 ---
 
 # App website

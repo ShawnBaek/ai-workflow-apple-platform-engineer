@@ -1,6 +1,6 @@
 ---
 name: xcode-storage
-description: Audit and safely reclaim Xcode, Simulator, Swift package, archive, and build storage on Apple-platform development machines. Use for disk-pressure investigation or approved cleanup; do not use for normal builds or broad cache deletion.
+description: Audit and safely reclaim Xcode, Simulator, Swift package, archive and build storage. Use for disk-pressure investigation or approved cleanup. Not for normal builds or broad cache deletion.
 ---
 
 # Xcode Storage Audit

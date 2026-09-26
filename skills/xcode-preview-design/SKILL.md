@@ -1,7 +1,7 @@
 ---
 name: xcode-preview-design
 description: >-
-  Designs SwiftUI, UIKit, or AppKit interfaces in code with Xcode Previews, deterministic value or protocol fixtures, human-review screenshots, purposeful interaction motion, selective Disney animation principles, and Reduce Motion validation. Use when the developer wants to design without a Figma dependency, review rendered UI before full runtime work, or specify and verify an interaction animation.
+  Design SwiftUI, UIKit or AppKit screens in code with Xcode Previews, fixtures, review screenshots and Reduce Motion-checked motion. Use to design a new screen without Figma or to specify an animation.
 ---
 
 # Xcode Preview Design

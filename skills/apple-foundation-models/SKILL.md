@@ -1,6 +1,6 @@
 ---
 name: apple-foundation-models
-description: Build and verify Apple Foundation Models features and bounded agentic app experiences in Swift. Use for LanguageModelSession, guided generation, model tools, streaming, context management, or supported local and server model routing. Check the app's minimum OS, SDK, and actual model availability first.
+description: Build and verify Foundation Models features and bounded agentic app experiences in Swift. Use for LanguageModelSession, guided generation, model tools, streaming or context management.
 ---
 
 # Apple Foundation Models

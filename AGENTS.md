@@ -1,8 +1,10 @@
 # Apple Platform Engineer maintainer guidance
 
 This repository publishes agent-neutral skills for Apple-platform development.
-Before changing it, read `skills/agent-harness/SKILL.md` and the reference it
-routes to for the task.
+Before changing it, read `skills/apple-platform-engineer/SKILL.md` and the
+reference it routes to for the task. Read `skills/agent-harness/SKILL.md` only
+when guarded execution is selected or the change touches the harness's runtime
+or contracts.
 
 Read `CONTRIBUTING.md` when adding a skill or changing a workflow. Reported
 collection problems follow `skills/skill-maintenance/SKILL.md` from reproduction
@@ -36,7 +38,7 @@ and issue triage through a verified, reviewable fix.
    or task breakdown. Reuse prior answers; resolve only material uncertainty.
    Read relevant ADRs, creating one only for a significant decision. Use a
    simple plan unless actual dependencies justify graph complexity.
-3. Use the smallest affected skill and the harness's risk-derived checks.
+3. Use the smallest affected skill and risk-derived checks.
 4. Keep graph, capability, schema, skill catalog, and version data aligned.
 5. Follow the current validation commands in `docs/verification.md` before
    proposing a commit. After any Swift change, format it with swift-format and

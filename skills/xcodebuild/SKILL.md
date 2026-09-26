@@ -1,7 +1,7 @@
 ---
 name: xcodebuild
 description: >-
-  Builds, tests, archives, exports, runs, debugs, and captures Apple-platform apps with Xcode's official tools first. Use for iOS, iPadOS, watchOS, macOS, tvOS, or visionOS compile failures, archive/export, Simulator/device runs, logs, debugger work, UI interaction, screenshots, or xcresult evidence. Routes external Codex/Claude through Apple's supported Xcode bridge and uses third-party adapters only by explicit fallback.
+  Build, run, debug and archive Apple-platform apps with Xcode's official tools. Use for compile failures, Simulator or device runs, logs, debugger or export work. Not for choosing tests (use apple-platform-testing).
 ---
 
 # Xcode Build and Runtime

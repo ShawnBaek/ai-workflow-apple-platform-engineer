@@ -1,11 +1,7 @@
 ---
 name: apple-platform-setup
 description: >-
-  Guide first-run setup and upgrades for Apple Platform Engineer. Inventory the
-  selected client's skills, Xcode/Swift, GitHub CLI, ASC and optional integrations;
-  carry authorized installation/configuration through verification. Use after
-  installing this collection or when dependencies are missing. Route read-only
-  readiness to apple-development-health and app defects to their owning skill.
+  Set up or upgrade this collection and its tools with authorized installs. Use after installing or when a dependency is missing. Not for read-only checks (use apple-development-health).
 ---
 
 # Apple Platform Setup

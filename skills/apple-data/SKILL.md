@@ -1,6 +1,6 @@
 ---
 name: apple-data
-description: Choose and safely evolve Core Data, SwiftData, CloudKit sync and sharing, or CloudKit Web Services for Apple-platform apps. Use for data architecture, migration, sync, sharing, or server-access decisions; route detailed Core Data work to the core-data skill.
+description: Choose and evolve Core Data, SwiftData, CloudKit sync and sharing, or CloudKit Web Services. Use for data architecture, SwiftData migration or sync decisions. Not for Core Data detail (use core-data).
 ---
 
 # Apple Data Platform

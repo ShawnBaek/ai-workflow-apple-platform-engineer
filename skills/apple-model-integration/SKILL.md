@@ -1,6 +1,6 @@
 ---
 name: apple-model-integration
-description: Integrate custom machine-learning model artifacts into Apple apps with an appropriate supported runtime, bounded loading and caching, and Swift verification. Use for Core AI or Core ML model deployment and justified MLX integration; route language-model app behavior to apple-foundation-models and profiling to apple-platform-performance.
+description: Integrate custom Core AI, Core ML or justified MLX models with bounded loading, caching and Swift checks. Use for model deployment. Not for language-model features (use apple-foundation-models).
 ---
 
 # Apple Model Integration

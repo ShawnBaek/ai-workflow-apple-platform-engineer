@@ -1,6 +1,6 @@
 ---
 name: github-projects
-description: Plan and track repository work with GitHub Issues and Projects v2, including safe task-to-branch-to-PR linkage. Use for a Trello-like GitHub workflow; not for changing GitHub access, rulesets, or merge policy.
+description: Plan and track work with GitHub Issues and Projects v2, linking tasks to branches and PRs. Use for a Trello-like GitHub workflow. Not for GitHub access, rulesets or merge policy.
 ---
 
 # GitHub Issues and Projects

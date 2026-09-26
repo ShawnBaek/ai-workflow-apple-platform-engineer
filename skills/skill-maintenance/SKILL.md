@@ -1,6 +1,6 @@
 ---
 name: skill-maintenance
-description: Report, investigate, and fix incorrect or broken Apple Platform Engineer skills and workflows. Use when a user wants to report a skill problem, a maintainer assigns an upstream issue, or a contributor improves this collection. Distinguish collection defects from consuming-app bugs and local setup failures.
+description: Report, investigate and fix broken skills and workflows in this Apple Platform Engineer collection. Use when a user reports a skill problem or a maintainer improves it. Not for app bugs or setup failures.
 ---
 
 # Report and improve a skill

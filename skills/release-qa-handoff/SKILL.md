@@ -1,7 +1,7 @@
 ---
 name: release-qa-handoff
 description: >-
-  Hands a processed Xcode Cloud or uploaded TestFlight build to QA: correlates the build with the merged pull requests it contains and the tracker cards those close, records the exact version/build and what changed on each card, moves cards to the configured QA list, and drafts a short What to Test note for approval. Use after a merge reaches a tester-accessible build, or when asked to move cards to QA, stamp a build number onto cards, or write TestFlight release notes for testers. Do not use to upload, distribute or submit; those stay with app-store-connect.
+  Hand a processed TestFlight build to QA: link merged PRs and cards, stamp version/build, move cards, draft What to Test. Use after a merge reaches testers. Not for upload (use app-store-connect).
 ---
 
 You connect three things that already have owners but no one joins: a **build**,

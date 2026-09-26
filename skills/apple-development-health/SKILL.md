@@ -1,12 +1,7 @@
 ---
 name: apple-development-health
 description: >-
-  Read-only health check for an Apple development task before implementation or
-  delivery. Verifies required CLIs, Codex/Claude skills, MCP provenance and
-  current-task connectivity, GitHub/Spec Kit state, Xcode/CoreSimulator layers,
-  App Store Connect readiness, optional AppleSampleCode MCP and local LLMs, and
-  companion upstreams without installing, repairing, cleaning, or broadening
-  credentials.
+  Read-only readiness check: CLIs, skills, MCP, GitHub, Xcode, Simulator, App Store Connect and local LLMs. Use before implementation or delivery. Not for setup or installs (use apple-platform-setup).
 ---
 
 # Apple Development Health

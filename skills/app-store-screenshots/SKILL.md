@@ -1,12 +1,7 @@
 ---
 name: app-store-screenshots
 description: >-
-  Prepare or refresh App Store listing screenshots and app preview videos from
-  the intended current app version/build. Resolve capture freshness, choose the
-  product story, locales and Apple media slots, derive assets from real captures,
-  design editable Keynote layouts with platform-specific custom slide sizes and
-  readable typography, and verify the delivery set. Use for App Store marketing media; use screenshot
-  for general PR evidence and app-store-connect for authorized upload.
+  Prepare App Store screenshots and preview videos from the intended build as editable Keynote layouts. Use for App Store listing media. Not for PR evidence (use screenshot).
 ---
 
 # App Store Screenshots and Previews

@@ -1,11 +1,7 @@
 ---
 name: onepassword-environments
 description: >-
-  Connect and use the official local 1Password Environments MCP server for
-  development secrets, environment variables, and optional local .env mounts.
-  Diagnose startup, macOS app-data permission, authentication, and current-agent
-  tool exposure failures. Use for 1Password development ENV work, not software
-  license inventory or general vault-item management.
+  Connect the official local 1Password Environments MCP for development secrets, env vars and .env mounts; diagnose its failures. Use for 1Password development ENV work, not vault items.
 ---
 
 # 1Password Environments

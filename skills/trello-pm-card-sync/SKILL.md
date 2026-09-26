@@ -1,9 +1,7 @@
 ---
 name: trello-pm-card-sync
 description: >-
-  Turn rough Trello intake cards into reusable agent-ready work units, and,
-  when explicitly requested, synchronize confirmed delivery state with the
-  configured tracker. Use for card cleanup, handoff, or opt-in tracker sync.
+  Turn rough Trello intake cards into agent-ready work units and, when explicitly requested, sync confirmed delivery state to the tracker. Use for card cleanup, handoff or opt-in tracker sync.
 ---
 
 # Trello PM card sync

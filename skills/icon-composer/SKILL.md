@@ -1,13 +1,7 @@
 ---
 name: icon-composer
 description: >-
-  Design, author, inspect, and install Apple-platform app icons with Apple Icon
-  Composer, layered SVG or PNG artwork, SF Symbols, SF Pro typography, Xcode
-  .icon packages, legacy AppIcon asset catalogs, macOS .icns files, and opaque
-  App Store exports. Use for iOS, iPadOS, macOS, or watchOS icon concepts;
-  typography or monogram icons; Default, Dark, Clear, or Tinted appearances;
-  Xcode app-icon replacement; platform-size generation; or archive icon
-  verification; or reference-only review of IconGen companion-upstream drift.
+  Design and install Apple app icons with Icon Composer, layered artwork and SF Symbols (.icon, AppIcon, .icns). Use for icon concepts, appearances, replacement or archive checks.
 ---
 
 # Icon Composer

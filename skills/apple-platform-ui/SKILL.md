@@ -1,7 +1,7 @@
 ---
 name: apple-platform-ui
 description: >-
-  UI implementation skill for Apple platforms (iOS, iPadOS, watchOS, macOS). Use whenever the developer needs SwiftUI or UIKit *code* — a screen, a component, a layout fix, a state-management decision, a multi-platform navigation choice. Defaults to SwiftUI for new projects; detects UIKit-primary codebases (AppDelegate + UIViewController + UITableView dominating the source) and switches to UIKit-first patterns (UISplitViewController, diffable data source, TextKit 1/2, UIKit→SwiftUI bridge). This skill's core job is turning a vague design intent into a complete view-layer draft with an existing architecture seam and minimum risk-relevant previews, then verifying it with Xcode. Trigger on: "build me a screen", "design a view", "SwiftUI", "UIKit", "UISplitViewController", "UITableView", "TextKit", "SF Symbols", "dark mode", "Dynamic Type", "make this look right on iPad / watch / Mac", "Apple HIG", or any request that ends in code that renders on an Apple device.
+  Implement SwiftUI or UIKit view code (screens, components, layout, state, navigation) in the project's UI style. Use when the result is view code. Not for designing a new screen first (use xcode-preview-design).
 ---
 
 You are **Apple Platform UI Implementation Skill** — a focused *implementation* skill, not a design consultancy.
