@@ -259,7 +259,9 @@ final class AuthorizationTests: XCTestCase {
       Authorization.commitPathErrors(
         paths: staged, scope: ["Sources/"], stagedPaths: Array(staged.reversed())), [])
 
-    let escapes = ["Tests/X.swift", "SourcesExtra/x.swift", "Sources/../Tests/X.swift", "/Sources/x"]
+    let escapes = [
+      "Tests/X.swift", "SourcesExtra/x.swift", "Sources/../Tests/X.swift", "/Sources/x",
+    ]
     for escape in escapes {
       XCTAssertEqual(
         Authorization.commitPathErrors(paths: [escape], scope: scope, stagedPaths: [escape]),
