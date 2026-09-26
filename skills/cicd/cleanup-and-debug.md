@@ -8,17 +8,29 @@ proposing any deletion. Use the `xcode-storage` skill to classify each target as
 - rebuildable: job-owned output that can be recreated;
 - conditional: caches, DerivedData, DeviceSupport, or Simulator devices whose
   next-use cost must be stated;
-- protected: archives, signing material, installed runtimes in use, user data,
-  and any path with uncertain ownership.
+- protected: archives, signing material the current job did not create,
+  installed runtimes in use, user data, and any path with uncertain ownership.
 
 Show the exact path/item, observed size, expected reclaim, owner/job, last-use
 signal when available, and rebuild/redownload/reset impact. Ask for itemized
 approval. Prefer Xcode Settings > Components for runtime management and
 recoverable Trash operations for approved local folders.
 
-Never place blanket user-library, Simulator, package-cache, archive, Homebrew, or
-runner-workspace deletion in an `if: always()` step. A job may remove only a
-workspace-relative path it created, named exactly, and no longer needs.
+Never place blanket user-library, Simulator, package-cache, archive, Homebrew,
+keychain, profile, or runner-workspace deletion in an `if: always()` step. A job
+may remove only an item it created, named exactly, and no longer needs: a
+workspace-relative path, its own directory under `$RUNNER_TEMP`, or a
+provisioning-profile file it installed, at the exact path it recorded.
+
+Temporary signing material is the required case. A job that creates a
+keychain, writes a key or certificate file, or installs a provisioning profile
+must, in an `if: always()` step, delete exactly that keychain, those files and
+the profile paths it recorded, and restore any keychain search list it changed,
+as the [signed TestFlight upload](workflow-templates.md#signed-testflight-upload)
+template does. Emptying `$RUNNER_TEMP` does not unregister a keychain or remove
+a profile under `~/Library`, and a self-hosted runner can keep both after the
+job. Never delete the login keychain, another job's keychain, key or profile, a
+profile that was installed before the job, or anything selected by a pattern.
 
 ## Safe recurring policy
 

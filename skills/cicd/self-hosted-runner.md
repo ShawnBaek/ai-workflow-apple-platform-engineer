@@ -62,6 +62,11 @@ complete.
 - Never execute untrusted fork code on this runner or in a privileged workflow.
 - Keep runner software and macOS/Xcode updates intentional and recorded.
 - Use least-privilege repository/environment secrets and protected environments.
+- A signing job never imports certificates into the runner user's login
+  keychain. It uses a temporary keychain and, in an always-run step, removes
+  it, its key files and any profile it installed, and restores the search
+  list, as in the
+  [signed TestFlight upload](workflow-templates.md#signed-testflight-upload).
 - Monitor disk with `xcode-storage`; never schedule blanket cache/Simulator/
   archive/workspace deletion.
 - Remove a runner through GitHub's current removal flow. Do not delete its
