@@ -35,9 +35,35 @@
         "agent-harness"
       ],
       "why": "Maintainer report: agents worked in worktrees, clones or sandboxes that the open Xcode could not see, and the only guidance told a worktree to open its own Xcode session. With no owner, the request fell to xcodebuild, which builds the agent's checkout, or to git-workflow, which would switch the user's branch. This case keeps the handoff reachable from each starting skill."
+    },
+    {
+      "id": "selected-xcode-owner",
+      "capability": "Choosing which installed Xcode is the selected Xcode (user choice, then project pin, then newest; per-command DEVELOPER_DIR), including the Xcode that an MCP bridge answers from and the one an App Store archive uses.",
+      "request": "Xcode 27.1 and a newer 27.2 beta are installed and I work in the beta. Build this with the right Xcode and make the Xcode MCP answer from the window I have open.",
+      "owner": "xcode-project-workflow",
+      "referencedFrom": [
+        "xcodebuild",
+        "app-store-connect",
+        "apple-platform-setup",
+        "core-simulator-health",
+        "xcode-preview-design",
+        "apple-development-health"
+      ],
+      "why": "Skills said \"selected Xcode\" without defining how it is selected, so agents followed the global xcode-select. With an older Xcode selected globally and a newer beta open, the Xcode MCP bridge, registered without DEVELOPER_DIR, answered from a hidden instance of the older Xcode. The fix makes xcode-project-workflow own the rule. This case keeps each skill where such a request starts pointing at that owner."
     }
   ],
   "ruleConsistency": [
+    {
+      "id": "newest-xcode-distribution",
+      "rule": "The newest installed Xcode, betas included, is the default; an archive or upload that may reach the App Store uses an Xcode that App Store Connect accepts for it.",
+      "statesRule": "newest installed",
+      "requiresQualifier": "distribution exception|distribution is the exception",
+      "appliesTo": [
+        "xcode-project-workflow",
+        "apple-platform-setup"
+      ],
+      "why": "The newest-installed default includes betas, and App Store Connect accepts beta-built uploads only for TestFlight. A skill that states the default without its distribution exception can send a beta-built archive toward App Review."
+    },
     {
       "id": "catalyst-build-not-ios-proof",
       "rule": "A Mac Catalyst build is evidence only for the Catalyst target; compile each affected target.",

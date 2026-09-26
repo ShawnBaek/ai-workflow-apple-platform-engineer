@@ -69,6 +69,10 @@ artifact, group, compliance, signing, or permission drift blocks the run.
    `asc xcode` wrappers) in the authoritative host project to archive/export.
    Verify the relevant source, signing, entitlements, platform and artifact/build
    identity. A green CI check alone does not establish an eligible release build.
+   An archive or upload that may reach App Review needs an Xcode that App Store
+   Connect accepts for the App Store, not a beta. Follow the
+   [distribution exception](../xcode-project-workflow/references/xcode-selection.md#distribution-exception)
+   of `xcode-project-workflow`.
 3. Run the smallest supported App Store Connect operation with explicit app and
    account/profile flags where available.
 4. Prefer structured output for identifiers/state; do not parse a decorative

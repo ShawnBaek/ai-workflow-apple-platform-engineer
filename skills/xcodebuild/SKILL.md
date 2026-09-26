@@ -25,8 +25,10 @@ requires exclusive ownership and must not bypass an active coordinator.
 1. Complete `xcode-project-workflow` and work from its exact root/container.
 2. Verify logged-in host execution before any Xcode or Simulator call. Never run
    a sandbox probe.
-3. Record selected Xcode build, SDK, platform, scheme, configuration,
-   destination, architecture, and package-lock fingerprint.
+3. Record the selected Xcode (path, version, and build), SDK, platform,
+   scheme, configuration, destination, architecture, and package-lock
+   fingerprint. `xcode-project-workflow` chooses the Xcode; run Xcode tools
+   with its `DEVELOPER_DIR`.
 4. Acquire the needed scoped resource lease: build tuple, Simulator/device,
    host CoreSimulator runtime registry, Xcode project mutation, or signing. Do
    not serialize unrelated read-only work.

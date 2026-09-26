@@ -23,7 +23,9 @@ For a new screen or substantial redesign, use [design discovery](../agent-harnes
 
 1. Complete `xcode-project-workflow`; the exact opened project/container,
    selected Xcode toolchain, deployment targets, and repository conventions are
-   authoritative.
+   authoritative. The canvas renders in the Xcode that owns the open window. If
+   that is not the selected installation, resolve the difference through the
+   workflow before you compare previews with CLI builds.
 2. Prefer the official preview canvas and Xcode-integrated tools already exposed
    by that Xcode window. Do not load a duplicate third-party preview provider.
 3. Read Apple's current preview and motion guidance in

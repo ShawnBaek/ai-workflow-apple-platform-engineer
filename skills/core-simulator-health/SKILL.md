@@ -49,7 +49,7 @@ and do not bypass an active coordinator or repair a resource owned by another ta
 
 Use Apple's official Xcode MCP or direct Apple tools first. Record:
 
-- selected Xcode path and build;
+- selected Xcode path, version, and build, chosen by `xcode-project-workflow`;
 - opened workspace/project and selected scheme;
 - exact runtime version/build and destination UUID;
 - the active Simulator/MCP provider owner;
