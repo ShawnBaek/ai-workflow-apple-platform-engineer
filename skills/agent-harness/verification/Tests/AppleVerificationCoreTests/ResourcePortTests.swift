@@ -1,3 +1,4 @@
+import CryptoKit
 import Darwin
 import XCTest
 
@@ -8,6 +9,61 @@ final class ResourcePortTests: XCTestCase {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
+  }
+
+  private func physical(_ url: URL) throws -> URL {
+    let resolved = try XCTUnwrap(realpath(url.path, nil))
+    defer { free(resolved) }
+    return URL(fileURLWithPath: String(cString: resolved))
+  }
+
+  private func writeSourceBundle(at skill: URL) throws {
+    for (path, text) in [
+      ("contracts/capabilities.json", "{}\n"),
+      ("contracts/schemas/harness.schema.json", "{\"type\":\"object\"}\n"),
+      ("verification/Sources/AppleVerificationCore/Core.swift", "enum Core {}\n"),
+      ("verification/Sources/AppleVerify/main.swift", "print(Core.self)\n"),
+      ("verification/Sources/README.md", "not a source bundle extension\n"),
+      ("verification/Package.swift", "// outside the hashed directories\n"),
+    ] {
+      let file = skill.appendingPathComponent(path)
+      try FileManager.default.createDirectory(
+        at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try Data(text.utf8).write(to: file)
+    }
+    try FileManager.default.createSymbolicLink(
+      atPath: skill.appendingPathComponent("contracts/alias.json").path,
+      withDestinationPath: "capabilities.json")
+  }
+
+  /// The pre-fix algorithm, kept verbatim so a physical root proves the byte stream is unchanged.
+  private func legacySourceBundleSHA256(skillRoot: URL) throws -> String {
+    var files: [URL] = []
+    for directory in [
+      skillRoot.appendingPathComponent("contracts"),
+      skillRoot.appendingPathComponent("verification/Sources"),
+    ] {
+      guard
+        let enumerator = FileManager.default.enumerator(
+          at: directory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+      else { continue }
+      for case let url as URL in enumerator {
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        if values.isRegularFile == true, values.isSymbolicLink != true,
+          ["json", "swift"].contains(url.pathExtension)
+        {
+          files.append(url)
+        }
+      }
+    }
+    var bytes = Data()
+    for file in files.sorted(by: { $0.path < $1.path }) {
+      let name = Data(file.path.replacingOccurrences(of: skillRoot.path + "/", with: "").utf8)
+      withUnsafeBytes(of: UInt32(name.count).bigEndian) { bytes.append(contentsOf: $0) }
+      bytes.append(name)
+      bytes.append(Data(SHA256.hash(data: try Data(contentsOf: file))))
+    }
+    return "sha256:" + HarnessRuntime.sha256(bytes)
   }
 
   private func authority(now: Date = Date(), actor: String = "codex") -> [String: Any] {
@@ -410,6 +466,65 @@ final class ResourcePortTests: XCTestCase {
     _ = try FileManager.default.replaceItemAt(ledger, withItemAt: replacement)
     XCTAssertThrowsError(try ResourceCoordinator.ledgerBinding(ledger, descriptor: fd)) {
       XCTAssertEqual(($0 as? ResourceCoordinatorError)?.code, "untrusted_ledger")
+    }
+  }
+
+  func testSourceBundleDigestIsIndependentOfRootSpellingAndLocation() throws {
+    let base = try physical(temporaryDirectory())
+    defer { try? FileManager.default.removeItem(at: base) }
+    let skill = base.appendingPathComponent("checkout/skills/agent-harness")
+    try writeSourceBundle(at: skill)
+    let canonical = try ResourceCoordinator.sourceBundleSHA256(skillRoot: skill)
+    XCTAssertEqual(canonical, try legacySourceBundleSHA256(skillRoot: skill))
+
+    // A checkout reached through a symlinked parent, as agent worktrees often are.
+    let link = base.appendingPathComponent("link")
+    try FileManager.default.createSymbolicLink(
+      at: link, withDestinationURL: base.appendingPathComponent("checkout"))
+    XCTAssertEqual(
+      try ResourceCoordinator.sourceBundleSHA256(
+        skillRoot: link.appendingPathComponent("skills/agent-harness")), canonical)
+    // The CLI resolves roots to the short `/private` alias; enumeration reports the long form.
+    XCTAssertEqual(
+      try ResourceCoordinator.sourceBundleSHA256(skillRoot: skill.resolvingSymlinksInPath()),
+      canonical)
+    if skill.path.hasPrefix("/private/") {
+      XCTAssertEqual(
+        try ResourceCoordinator.sourceBundleSHA256(
+          skillRoot: URL(fileURLWithPath: String(skill.path.dropFirst("/private".count)))),
+        canonical)
+    }
+
+    // The same content checked out under `/tmp` has the same identity under either spelling.
+    let tmp = URL(fileURLWithPath: "/private/tmp").appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    try writeSourceBundle(at: tmp.appendingPathComponent("agent-harness"))
+    for spelling in ["/private/tmp", "/tmp"] {
+      XCTAssertEqual(
+        try ResourceCoordinator.sourceBundleSHA256(
+          skillRoot: URL(fileURLWithPath: spelling).appendingPathComponent(
+            tmp.lastPathComponent + "/agent-harness")), canonical, spelling)
+    }
+  }
+
+  func testSourceBundleDigestRejectsFilesOutsideTheSkillRoot() throws {
+    let base = try physical(temporaryDirectory())
+    defer { try? FileManager.default.removeItem(at: base) }
+    let skill = base.appendingPathComponent("skill")
+    try writeSourceBundle(at: skill)
+    XCTAssertNoThrow(try ResourceCoordinator.sourceBundleSHA256(skillRoot: skill))
+    // Hashed sources reached through a directory link would be named by their outside location.
+    let outside = base.appendingPathComponent("outside")
+    try FileManager.default.moveItem(at: skill.appendingPathComponent("verification"), to: outside)
+    try FileManager.default.createSymbolicLink(
+      at: skill.appendingPathComponent("verification"), withDestinationURL: outside)
+    XCTAssertThrowsError(try ResourceCoordinator.sourceBundleSHA256(skillRoot: skill)) {
+      XCTAssertEqual(($0 as? ResourceCoordinatorError)?.code, "untrusted_binding")
+    }
+    XCTAssertThrowsError(
+      try ResourceCoordinator.sourceBundleSHA256(skillRoot: base.appendingPathComponent("missing"))
+    ) {
+      XCTAssertEqual(($0 as? ResourceCoordinatorError)?.code, "untrusted_binding")
     }
   }
 

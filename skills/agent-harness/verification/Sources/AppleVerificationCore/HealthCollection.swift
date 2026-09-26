@@ -23,15 +23,19 @@ public enum HealthCollection {
     guard info.isDirectory == true, info.isSymbolicLink != true,
       fm.fileExists(atPath: root.appendingPathComponent("SKILL.md").path)
     else { throw VerificationError.invalid("installed skill lacks a regular SKILL.md") }
-    guard
+    guard let physicalRoot = HarnessRuntime.physicalPathComponents(root),
       let iterator = fm.enumerator(
         at: root,
         includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey],
         options: [])
     else { throw VerificationError.invalid("installed skill bundle is unavailable") }
-    var files: [URL] = []
+    var files: [(String, URL)] = []
     for case let candidate as URL in iterator {
-      let relative = candidate.path.replacingOccurrences(of: root.path + "/", with: "")
+      // `resolvingSymlinksInPath` drops `/private` while enumeration keeps it; name physically.
+      guard
+        let relative = HarnessRuntime.relativePath(
+          of: candidate, belowPhysicalRoot: physicalRoot)
+      else { throw VerificationError.invalid("installed skill contains a path outside its root") }
       if excludedDirectories.contains(candidate.lastPathComponent) {
         iterator.skipDescendants()
         continue
@@ -50,7 +54,7 @@ public enum HealthCollection {
         throw VerificationError.invalid("installed skill contains an unsupported nested symlink")
       }
       if info.isRegularFile == true {
-        files.append(candidate)
+        files.append((relative, candidate))
         if files.count > maximumFiles {
           throw VerificationError.invalid("installed skill bundle contains too many files")
         }
@@ -91,8 +95,7 @@ public enum HealthCollection {
     }
     var bundleHasher = SHA256()
     var totalBytes: Int64 = 0
-    for file in files.sorted(by: { $0.path < $1.path }) {
-      let relative = file.path.replacingOccurrences(of: root.path + "/", with: "")
+    for (relative, file) in files.sorted(by: { $0.0 < $1.0 }) {
       let name = Data(relative.utf8)
       var length = UInt32(name.count).bigEndian
       bundleHasher.update(data: Data(bytes: &length, count: 4))
