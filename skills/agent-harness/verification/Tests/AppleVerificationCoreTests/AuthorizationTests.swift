@@ -813,7 +813,8 @@ final class AuthorizationTests: XCTestCase {
     return RegisteredRun(
       envelope: try XCTUnwrap(
         try Authorization.loadStablePrivateJSON(authorizationURL, root: root) as? [String: Any]),
-      harness: try ResourceCoordinator.loadTrustedHarness(harnessPath: harnessURL, context: context),
+      harness: try ResourceCoordinator.loadTrustedHarness(
+        harnessPath: harnessURL, context: context),
       ledger: ledger, authority: try XCTUnwrap(authorities?[runID] as? [String: Any]))
   }
 
