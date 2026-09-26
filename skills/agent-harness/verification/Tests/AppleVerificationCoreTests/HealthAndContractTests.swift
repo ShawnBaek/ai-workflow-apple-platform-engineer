@@ -1,3 +1,4 @@
+import CryptoKit
 import XCTest
 
 @testable import AppleVerificationCore
@@ -276,6 +277,40 @@ final class HealthAndContractTests: XCTestCase {
     try Data("generated churn".utf8).write(to: root.appendingPathComponent(".build/cache/object"))
     try Data("more churn".utf8).write(to: root.appendingPathComponent(".swiftpm/config/state"))
     XCTAssertEqual(first, try HealthCollection.skillSHA256(root))
+  }
+
+  func testSkillDigestNamesFilesRelativeToThePhysicalSkillRoot() throws {
+    let resolved = try XCTUnwrap(realpath(NSTemporaryDirectory(), nil))
+    defer { free(resolved) }
+    let base = URL(fileURLWithPath: String(cString: resolved)).appendingPathComponent(
+      UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: base) }
+    let skill = base.appendingPathComponent("installed/demo")
+    let files = [("SKILL.md", "---\nname: demo\n---\n"), ("references/guide.md", "guide\n")]
+    var stream = Data()
+    for (path, text) in files {
+      let file = skill.appendingPathComponent(path)
+      try FileManager.default.createDirectory(
+        at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try Data(text.utf8).write(to: file)
+      let name = Data(path.utf8)
+      withUnsafeBytes(of: UInt32(name.count).bigEndian) { stream.append(contentsOf: $0) }
+      stream.append(name)
+      stream.append(Data(SHA256.hash(data: Data(text.utf8))))
+    }
+    let link = base.appendingPathComponent("link")
+    try FileManager.default.createSymbolicLink(
+      at: link, withDestinationURL: base.appendingPathComponent("installed"))
+    var spellings = [skill, link.appendingPathComponent("demo"), skill.resolvingSymlinksInPath()]
+    if skill.path.hasPrefix("/private/") {
+      spellings.append(URL(fileURLWithPath: String(skill.path.dropFirst("/private".count))))
+    }
+    // Names are relative to the skill wherever it is installed; the location is bound separately.
+    for spelling in spellings {
+      XCTAssertEqual(
+        try HealthCollection.skillSHA256(spelling), "sha256:" + HarnessRuntime.sha256(stream),
+        spelling.path)
+    }
   }
 
   func testSkillManifestBootstrapDiscoversObservedHashButHealthRejectsPlaceholderAndDrift() throws {

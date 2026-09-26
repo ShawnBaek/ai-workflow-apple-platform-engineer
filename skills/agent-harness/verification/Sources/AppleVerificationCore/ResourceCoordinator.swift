@@ -865,12 +865,20 @@ public enum ResourceCoordinator {
         }
       }
     }
-    guard !files.isEmpty else {
+    guard !files.isEmpty, let root = HarnessRuntime.physicalPathComponents(skillRoot) else {
       throw ResourceCoordinatorError("untrusted_binding", "installed contract bundle is empty")
     }
+    // Enumeration reports physical paths whatever alias spelled the root (`/tmp`, a linked
+    // checkout), so names come from physical components and never carry a location.
+    let named = try files.map { file in
+      guard let relative = HarnessRuntime.relativePath(of: file, belowPhysicalRoot: root) else {
+        throw ResourceCoordinatorError(
+          "untrusted_binding", "installed contract bundle file is outside its root")
+      }
+      return (relative, file)
+    }
     var bytes = Data()
-    for file in files.sorted(by: { $0.path < $1.path }) {
-      let relative = file.path.replacingOccurrences(of: skillRoot.path + "/", with: "")
+    for (relative, file) in named.sorted(by: { $0.0 < $1.0 }) {
       let name = Data(relative.utf8)
       let count = UInt32(name.count).bigEndian
       withUnsafeBytes(of: count) { bytes.append(contentsOf: $0) }
