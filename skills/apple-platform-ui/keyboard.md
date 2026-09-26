@@ -72,7 +72,7 @@ For forms that don't have a natural submit:
 
 ```swift
 ScrollView {
-    // …form content
+    // …fields in a VStack (on a Form or List, apply the modifier to it directly)
 }
 .scrollDismissesKeyboard(.interactively)   // or .immediately, or .never
 ```
@@ -115,29 +115,31 @@ Use when you've designed for the keyboard explicitly (e.g., the text field is *m
 The "Save" button that has to stay visible:
 
 ```swift
-ScrollView {
-    Form { /* fields */ }
-}
-.safeAreaInset(edge: .bottom) {
-    Button("Save", action: save)
-        .buttonStyle(.borderedProminent)
-        .padding()
-        .background(.bar)
-}
+Form { /* fields */ }
+    .safeAreaInset(edge: .bottom) {
+        Button("Save", action: save)
+            .buttonStyle(.borderedProminent)
+            .padding()
+            .background(.bar)
+    }
 ```
 
 `safeAreaInset(edge: .bottom)` puts the button in a region the keyboard pushes up too — sits just above the keyboard automatically, and just above the home indicator when the keyboard is hidden.
 
+Attach the inset directly to the scrolling container — the `Form`, `List`, or `ScrollView` itself. **Never wrap a `Form` or `List` in a `ScrollView`:** on iOS a `Form` is already a scrolling grouped list, and inside another scroll view it has no height to fill, so the fields render empty.
+
 ## UIKit pattern (when you must)
 
-For a UIKit screen with a `UIScrollView` (e.g., a legacy form), use `keyboardLayoutGuide` — the modern, declarative way:
+For a UIKit screen with a `UIScrollView` (e.g., a legacy form), use `keyboardLayoutGuide` — the modern, declarative way. Pin the scroll view's own bottom edge (replacing its existing bottom constraint):
 
 ```swift
-scrollView.contentLayoutGuide.bottomAnchor
+scrollView.bottomAnchor   // or scrollView.frameLayoutGuide.bottomAnchor
     .constraint(equalTo: view.keyboardLayoutGuide.topAnchor).isActive = true
 ```
 
-`keyboardLayoutGuide` tracks the keyboard frame automatically — no `NotificationCenter` observers, no `keyboardWillShow` handlers, no manual `contentInset` math. Pin whatever you want to it.
+Don't use `scrollView.contentLayoutGuide` here: it describes the scrollable content area, not the scroll view's frame, so pinning it fights the content's own constraints and leaves the visible frame under the keyboard.
+
+`keyboardLayoutGuide` tracks the keyboard frame automatically — no `NotificationCenter` observers, no `keyboardWillShow` handlers, no manual `contentInset` math. Pin whatever you want to it. With the keyboard hidden, the guide's height is the bottom safe-area inset, so the pinned scroll view ends at the safe area.
 
 For a UIKit screen wrapped in SwiftUI via `UIViewControllerRepresentable`, **the SwiftUI side already handles keyboard avoidance** — don't double-implement.
 
@@ -152,6 +154,7 @@ For a UIKit screen wrapped in SwiftUI via `UIViewControllerRepresentable`, **the
 - [ ] Every `TextField` / `SecureField` has `.keyboardType`, `.textContentType`, `.submitLabel`.
 - [ ] Focus flows naturally (Next → Next → Go) via `@FocusState` + `.onSubmit`.
 - [ ] If there's no natural submit, the keyboard has a `Done` button in the toolbar.
-- [ ] On a screen with a primary action button, the button stays visible above the keyboard (`safeAreaInset(edge: .bottom)` or scrolls into view).
+- [ ] On a screen with a primary action button, the button stays visible above the keyboard (`safeAreaInset(edge: .bottom)` on the `Form` / `List` / `ScrollView` itself, or scrolls into view). No `Form` or `List` is nested inside a `ScrollView`.
+- [ ] UIKit: the scroll view's `bottomAnchor` (or `frameLayoutGuide`), not its `contentLayoutGuide`, is pinned to `view.keyboardLayoutGuide.topAnchor`.
 - [ ] On a long form: `.scrollDismissesKeyboard(.interactively)` is set.
 - [ ] You verified by running on a small device (iPhone SE / iPhone mini) — those expose keyboard cover bugs that 6.9" devices hide.

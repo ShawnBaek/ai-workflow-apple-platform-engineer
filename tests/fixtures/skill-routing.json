@@ -21,6 +21,20 @@
       "owner": "screenshot",
       "referencedFrom": ["apple-platform-testing"],
       "why": "The testing skill selects evidence but does not own capture mechanics; without the reference, capture gets improvised inside a test."
+    },
+    {
+      "id": "open-xcode-handoff",
+      "capability": "On request, apply an agent's worktree, clone, sandbox or cloud changes to the checkout behind the user's open Xcode as a reversible patch, and verify there without switching the user's scheme or destination.",
+      "request": "Xcode is open on my main checkout. Put the changes from your worktree there so I can check them with the Xcode MCP tools.",
+      "owner": "open-xcode-handoff",
+      "referencedFrom": [
+        "xcodebuild",
+        "xcode-project-workflow",
+        "git-workflow",
+        "apple-platform-engineer",
+        "agent-harness"
+      ],
+      "why": "Maintainer report: agents worked in worktrees, clones or sandboxes that the open Xcode could not see, and the only guidance told a worktree to open its own Xcode session. With no owner, the request fell to xcodebuild, which builds the agent's checkout, or to git-workflow, which would switch the user's branch. This case keeps the handoff reachable from each starting skill."
     }
   ],
   "ruleConsistency": [
@@ -57,6 +71,19 @@
       "requiresQualifier": "SwiftData('s CloudKit sync mirrors| syncs) only the private database",
       "appliesTo": ["apple-data"],
       "why": "Review finding: apple-data routed new apps to SwiftData without saying its CloudKit sync can't use the shared or public database, so a later sharing or public-data requirement forced a framework rewrite."
+    },
+    {
+      "id": "swift-format-and-compile-gate",
+      "rule": "A completion gate that cites build and warning acceptance also requires swift-format and an error-free compile for Swift changes.",
+      "statesRule": "build and warning acceptance",
+      "requiresQualifier": "swift format and compile acceptance",
+      "appliesTo": [
+        "apple-platform-engineer",
+        "agent-harness",
+        "delivery-report",
+        "apple-platform-testing"
+      ],
+      "why": "Swift patches were accepted on a build alone: no skill required swift-format, so formatting drift reached PRs unnoticed. The format-and-compile gate now lives beside build acceptance in apple-platform-testing; this case keeps every completion gate that cites build acceptance from dropping it."
     }
   ]
 }

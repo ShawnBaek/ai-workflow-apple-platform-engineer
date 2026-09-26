@@ -39,12 +39,20 @@ and issue triage through a verified, reviewable fix.
 3. Use the smallest affected skill and the harness's risk-derived checks.
 4. Keep graph, capability, schema, skill catalog, and version data aligned.
 5. Follow the current validation commands in `docs/verification.md` before
-   proposing a commit. New custom verification code and tests use Swift;
-   keep meaningful behavior and denial coverage when changing the runtime.
+   proposing a commit. After any Swift change, format it with swift-format and
+   compile it with no errors, as described there: tracked `.swift` files whole
+   with the root `.swift-format`, Swift snippets in skills under the gate's
+   snippet mode rule.
+   New custom verification code and tests use Swift; keep meaningful behavior
+   and denial coverage when changing the runtime.
 6. Before the first commit or push, honor the active project's repository
    confirmation policy. Never infer approval from the task itself.
-7. A pull request is ready only when its required evidence is present and all
-   omitted checks and their remaining risk are stated. Do not auto-merge.
+7. Open the pull request only after the independent reviewer approves its
+   current head through the `skills/code-review/SKILL.md` verdict loop, or the
+   user decides otherwise when that loop escalates; a later change to the
+   approved content needs re-review first. That approval is an internal gate, not a GitHub
+   approval. A pull request is ready only when its required evidence is present
+   and all omitted checks and their remaining risk are stated. Do not auto-merge.
 
 ## Collaboration
 

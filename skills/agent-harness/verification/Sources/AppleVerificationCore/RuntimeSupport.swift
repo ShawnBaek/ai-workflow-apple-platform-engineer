@@ -162,6 +162,27 @@ public enum HarnessRuntime {
     return digest.finalize().map { String(format: "%02x", $0) }.joined()
   }
 
+  /// Physical components of an existing path. FileManager enumeration reports entries in
+  /// this form (`/private/tmp/...`) however the caller spelled its starting directory.
+  public static func physicalPathComponents(_ url: URL) -> [String]? {
+    guard let resolved = realpath(url.path, nil) else { return nil }
+    defer { free(resolved) }
+    return URL(fileURLWithPath: String(cString: resolved)).pathComponents
+  }
+
+  /// Names an enumerated entry below a physical root without following the entry itself.
+  /// Returns nil unless the entry is strictly inside the root, so no location leaks into
+  /// a content digest.
+  public static func relativePath(of entry: URL, belowPhysicalRoot root: [String]) -> String? {
+    let name = entry.lastPathComponent
+    guard name != ".", name != "..",
+      let parent = physicalPathComponents(entry.deletingLastPathComponent())
+    else { return nil }
+    let components = parent + [name]
+    guard components.count > root.count, components.starts(with: root) else { return nil }
+    return components.dropFirst(root.count).joined(separator: "/")
+  }
+
   public static func atomicWriteJSON(_ value: Any, to url: URL) throws {
     var data = try canonicalJSON(value)
     data.append(10)

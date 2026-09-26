@@ -387,10 +387,8 @@ public enum HealthEvaluation {
         guard repository.split(separator: "/", maxSplits: 1).first?.lowercased() == owner,
           !owner.isEmpty
         else { throw ProbeError.invalid }
-        let identity = try successful(
-          runner.run(
-            executable: "gh", arguments: ["api", "user", "--jq", ".login"], directory: nil,
-            environment: nil, timeout: 15, maxOutputBytes: 1_048_576))
+        // The policy owner may be an organization, which is never the authenticated login, so
+        // the viewer's permission on the exact repository is the authority test.
         let repositoryResult = try successful(
           runner.run(
             executable: "gh",
@@ -399,7 +397,7 @@ public enum HealthEvaluation {
               "nameWithOwner,viewerPermission,hasIssuesEnabled",
             ], directory: nil, environment: nil, timeout: 15, maxOutputBytes: 1_048_576))
         let repositoryValue = try jsonObject(repositoryResult.stdout)
-        guard identity.stdout.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == owner,
+        guard
           (repositoryValue["nameWithOwner"] as? String)?.lowercased() == repository.lowercased(),
           repositoryValue["hasIssuesEnabled"] as? Bool == true,
           ["WRITE", "MAINTAIN", "ADMIN"].contains(
@@ -520,15 +518,22 @@ public enum HealthEvaluation {
               runner.run(
                 executable: "asc",
                 arguments: [
-                  "--profile", profile, "testflight", "beta-groups", "list", "--app", appID,
+                  "--profile", profile, "testflight", "groups", "list", "--app", appID,
                   "--paginate", "--output", "json",
                 ], directory: nil, environment: nil, timeout: 15, maxOutputBytes: 1_048_576))
-            let live = Set(
-              (try jsonObject(groups.stdout)["data"] as? [[String: Any]] ?? []).compactMap {
-                $0["id"] as? String
-              })
+            let live = try jsonObject(groups.stdout)["data"] as? [[String: Any]] ?? []
             let expected = Set(authorizedApple["internal_group_ids"] as? [String] ?? [])
-            guard !expected.isEmpty, expected.isSubset(of: live) else { throw ProbeError.mismatch }
+            // Distribution is internal-groups-only. asc omits a false isInternalGroup, so each
+            // authorized ID needs exactly one live group whose attribute is the JSON boolean true.
+            guard !expected.isEmpty,
+              expected.allSatisfy({ id in
+                let matches = live.filter { $0["id"] as? String == id }
+                guard matches.count == 1,
+                  let flag = (matches[0]["attributes"] as? [String: Any])?["isInternalGroup"]
+                else { return false }
+                return HarnessRuntime.isBoolean(flag) && flag as? Bool == true
+              })
+            else { throw ProbeError.mismatch }
             record(
               "testflight.internal_groups", true, "exact_internal_groups",
               ["group_ids": expected.sorted()])

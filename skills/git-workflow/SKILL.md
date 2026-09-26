@@ -31,7 +31,7 @@ task brief so publication does not restart discovery.
 
 ## Worktrees and Git metadata
 
-Create a linked worktree only when the current task or approved project policy authorizes it. Preserve stricter per-task approval rules when present. Use the configured location outside the main checkout; a sibling `../worktree/<sanitized-branch>` is an example, not a required path. For Xcode work, bind it to its own authoritative session/container. Never use a worktree to bypass sandbox restrictions.
+Create a linked worktree only when the current task or approved project policy authorizes it. Preserve stricter per-task approval rules when present. Use the configured location outside the main checkout; a sibling `../worktree/<sanitized-branch>` is an example, not a required path. For Xcode work, bind it to its own authoritative session/container. Never use a worktree to bypass sandbox restrictions. To show a worktree's or clone's changes in the Xcode the user already has open, use `open-xcode-handoff`; it applies a reversible uncommitted patch and never switches the user's branch.
 
 Before any operation that writes Git metadata in a linked worktree, run the read-only preflight in [linked-worktree and index recovery](references/linked-worktree-index-recovery.md). It identifies the actual git directory, common directory, index, and lock path rather than assuming `.git` is a directory.
 
