@@ -109,6 +109,6 @@ linked third-party projects retain their own licenses.
 
 ## Explore
 
-[Skills](docs/skills.md) · [Workflow](skills/agent-harness/SKILL.md) · [Verification](docs/verification.md) · [Contribute](CONTRIBUTING.md) · [Report a problem](skills/skill-maintenance/SKILL.md)
+[Skills](docs/skills.md) · [Workflow](skills/agent-harness/SKILL.md) · [Verification](docs/verification.md) · [Changelog](CHANGELOG.md) · [Contribute](CONTRIBUTING.md) · [Report a problem](skills/skill-maintenance/SKILL.md)
 
-**Version:** 2.0.0-beta.9
+**Version:** 2.0.0-beta.10
