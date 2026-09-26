@@ -53,6 +53,43 @@ final class AuthorizationTests: XCTestCase {
       ]))
   }
 
+  func testObservedPathsListBothSidesOfARenameSoTheSourceIsPathChecked() throws {
+    let root = try temporaryDirectory()
+    func git(_ arguments: [String]) throws {
+      let result = try HarnessRuntime.run(
+        executable: "/usr/bin/git",
+        arguments: ["-C", root.path, "-c", "user.name=Test", "-c", "user.email=test@example.com"]
+          + arguments, timeout: 15)
+      XCTAssertEqual(result.exitCode, 0, "\(arguments): \(result.stderr)")
+    }
+    try git(["init", "-q", "-b", "main"])
+    // Force rename detection on so a user or system default cannot hide the defect.
+    try git(["config", "diff.renames", "true"])
+    try git(["remote", "add", "origin", "https://github.com/ExampleOrg/Sample.git"])
+    for directory in ["Sources", "Tests"] {
+      try FileManager.default.createDirectory(
+        at: root.appendingPathComponent(directory), withIntermediateDirectories: true)
+    }
+    try Data("final class Old {}\n".utf8).write(to: root.appendingPathComponent("Tests/Old.swift"))
+    try git(["add", "Tests/Old.swift"])
+    try git(["commit", "-q", "-m", "base"])
+    let base = try HarnessRuntime.run(
+      executable: "/usr/bin/git", arguments: ["-C", root.path, "rev-parse", "HEAD"], timeout: 15
+    ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    try git(["mv", "Tests/Old.swift", "Sources/New.swift"])
+
+    // A rename moves content out of Tests/, so Tests/Old.swift must stay visible to the
+    // commit path scope and allowed_paths checks, as it already is in the patch manifest.
+    let staged = try Authorization.observeRepository(root, expectedBaseSHA: base)
+    XCTAssertEqual(staged["staged_paths"] as? [String], ["Sources/New.swift", "Tests/Old.swift"])
+
+    try git(["commit", "-q", "-m", "move"])
+    let committed = try Authorization.observeRepository(root, expectedBaseSHA: base)
+    XCTAssertEqual(
+      committed["outgoing_paths"] as? [String], ["Sources/New.swift", "Tests/Old.swift"])
+    XCTAssertEqual(committed["staged_paths"] as? [String], [])
+  }
+
   func testGitHubIdentityNormalizesTransportAndStripsCredentials() throws {
     let forms = [
       "https://github.com/Example/Repo.git", "git@github.com:example/repo.git",
@@ -718,43 +755,6 @@ final class AuthorizationTests: XCTestCase {
       Authorization.standaloneLedgerLifecycleErrors([fractional], context: context).contains {
         $0.contains("strictly increase")
       })
-  }
-
-  func testObservedPathsListBothSidesOfARenameSoTheSourceIsPathChecked() throws {
-    let root = try temporaryDirectory()
-    func git(_ arguments: [String]) throws {
-      let result = try HarnessRuntime.run(
-        executable: "/usr/bin/git",
-        arguments: ["-C", root.path, "-c", "user.name=Test", "-c", "user.email=test@example.com"]
-          + arguments, timeout: 15)
-      XCTAssertEqual(result.exitCode, 0, "\(arguments): \(result.stderr)")
-    }
-    try git(["init", "-q", "-b", "main"])
-    // Force rename detection on so a user or system default cannot hide the defect.
-    try git(["config", "diff.renames", "true"])
-    try git(["remote", "add", "origin", "https://github.com/ExampleOrg/Sample.git"])
-    for directory in ["Sources", "Tests"] {
-      try FileManager.default.createDirectory(
-        at: root.appendingPathComponent(directory), withIntermediateDirectories: true)
-    }
-    try Data("final class Old {}\n".utf8).write(to: root.appendingPathComponent("Tests/Old.swift"))
-    try git(["add", "Tests/Old.swift"])
-    try git(["commit", "-q", "-m", "base"])
-    let base = try HarnessRuntime.run(
-      executable: "/usr/bin/git", arguments: ["-C", root.path, "rev-parse", "HEAD"], timeout: 15
-    ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-    try git(["mv", "Tests/Old.swift", "Sources/New.swift"])
-
-    // A rename moves content out of Tests/, so Tests/Old.swift must stay visible to the
-    // commit path scope and allowed_paths checks, as it already is in the patch manifest.
-    let staged = try Authorization.observeRepository(root, expectedBaseSHA: base)
-    XCTAssertEqual(staged["staged_paths"] as? [String], ["Sources/New.swift", "Tests/Old.swift"])
-
-    try git(["commit", "-q", "-m", "move"])
-    let committed = try Authorization.observeRepository(root, expectedBaseSHA: base)
-    XCTAssertEqual(
-      committed["outgoing_paths"] as? [String], ["Sources/New.swift", "Tests/Old.swift"])
-    XCTAssertEqual(committed["staged_paths"] as? [String], [])
   }
 
   private func record(_ sequence: Int, _ type: String, _ payload: [String: Any], second: Int)
