@@ -20,7 +20,9 @@ build the agent's workspace in place of the user's open checkout.
 Resolve standalone versus coordinated ownership through
 [project customization](../agent-harness/references/project-customization.md).
 The lease steps below apply to coordinated/guarded work; standalone work still
-requires exclusive ownership and must not bypass an active coordinator.
+requires exclusive ownership, established by the
+[standalone ownership check](../agent-harness/references/project-customization.md#standalone-ownership-check),
+and must not bypass an active coordinator.
 
 1. Complete `xcode-project-workflow` and work from its exact root/container.
 2. Verify logged-in host execution before any Xcode or Simulator call. Never run

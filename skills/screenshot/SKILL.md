@@ -8,7 +8,8 @@ description: >-
 
 Use [project customization](../agent-harness/references/project-customization.md)
 to resolve standalone or guarded execution. Destination lease steps apply to
-coordinated work; standalone capture still needs exclusive destination ownership.
+coordinated work; standalone capture still needs exclusive destination ownership
+from the [standalone ownership check](../agent-harness/references/project-customization.md#standalone-ownership-check).
 
 Own the scenario, deterministic state, raw capture matrix, privacy, artifact
 integrity and PR evidence publication. Route build/run/UI mechanics to `xcodebuild`.

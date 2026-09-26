@@ -78,7 +78,7 @@ sanitized fixtures and mocked publication, not test issues in the live repositor
 
 ## Command map
 
-Set `APE` to the absolute built executable as shown in [setup](getting-started.md). A copied executable requires `--repository-root <skills-repository>` before its subcommand.
+Set `APE` to the absolute built executable as shown in [Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier), which also carries this map for installed copies. A copied executable requires `--repository-root <skills-repository>` before its subcommand.
 For app health, use `"$APE" --app-root <absolute-app-repository> health ...`;
 the installed skill root still supplies trusted schemas and source identity.
 

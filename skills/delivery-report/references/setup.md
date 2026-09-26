@@ -1,6 +1,6 @@
 # Private delivery-channel setup
 
-Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+Set `APE` to the built Swift verifier; see [Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
 
 Choose one channel first. Telegram is the simplest unattended option; iMessage
 Shortcuts suits a personal Mac; WhatsApp is appropriate only when its opt-in,

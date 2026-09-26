@@ -24,20 +24,26 @@ A documentation-only task need not install Xcode; a Simulator task need not conn
 an Apple release account. Optional tools become required only when selected work
 uses them. Read [the dependency matrix](references/dependencies.md).
 
-For an explicit read-only readiness request, use `apple-development-health` when
-its prerequisites exist, or report bounded local observations if they do not.
-Do not build, boot, install or configure during a no-change inspection. Report
-“prerequisites observed” separately from a successfully executed build.
+For an explicit read-only readiness request, use `apple-development-health`: a
+guarded profile when a private harness exists, otherwise its
+[standalone readiness](../apple-development-health/SKILL.md#standalone-readiness-no-harness)
+check. Do not build, boot, install or configure during a no-change inspection.
+Report “prerequisites observed” separately from a successfully executed build.
 
 Resolve installed skill paths, installation method and client scope. Record
 observable provenance: a bundle commit/receipt or per-skill source/hash; mark an
 unavailable repository revision unknown. A selective copy need not contain a
 commit ID. Check local edits, duplicates, broken links and active consumers.
-Installing skills does not install tools or configure accounts. If a selected
-specialist is missing, use the known matching snapshot; if it cannot be recovered,
-stage the selected dependent skills together from one reviewed source snapshot,
-preserving scope and rollback. Do not silently mix current upstream with an
-unidentified old copy. Missing provenance does not block inventory or preparation.
+Each skill folder installs on its own, so a relative link into a sibling skill
+(`../<skill>/…`) resolves only when that sibling is installed in the same skill
+root. `agent-harness` is a required companion of this skill, the lead and every
+specialist that links its references; its absence is a missing dependency to
+install, not an optional runtime. Installing skills does not install tools or
+configure accounts. If a selected specialist is missing, use the known matching
+snapshot; if it cannot be recovered, stage the selected dependent skills together
+from one reviewed source snapshot, preserving scope and rollback. Do not silently
+mix current upstream with an unidentified old copy. Missing provenance does not
+block inventory or preparation.
 
 ## Inventory, then perform authorized setup
 
@@ -75,7 +81,7 @@ unidentified old copy. Missing provenance does not block inventory or preparatio
 First-run inventory and preparation must work before a private harness exists.
 Do not require a passing harness health report in order to discover its missing
 runtime. For coordinated work, use the installed harness's
-[Swift setup](../agent-harness/references/swift-verification.md) and
+[Swift setup](../agent-harness/references/swift-verification.md#build-and-locate-the-verifier) and
 [private coordinator setup](../agent-harness/references/coordinator-setup.md):
 resolve a tested matching executable or build once, verify `--help` and
 `runtime-identity`, and read the existing coordinator before any new bootstrap.

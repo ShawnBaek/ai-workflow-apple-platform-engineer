@@ -131,7 +131,7 @@ Ask your agent:
 1. Check actual loaded paths and observable source revision/hash, not only the README
    version label. Confirm one discoverable copy of each selected skill.
 2. When the selected setup uses the harness Swift runtime, build the changed executable once with the
-   selected full Xcode and run the relevant [Swift verification](../../agent-harness/references/swift-verification.md).
+   selected full Xcode as in [Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
    Keep executable, sources and contracts together. A documentation-only update
    does not by itself justify a new build.
 3. If a private coordinator/runtime binding is configured, follow the explicit
