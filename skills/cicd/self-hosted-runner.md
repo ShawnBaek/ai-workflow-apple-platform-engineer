@@ -9,8 +9,19 @@ with GitHub-hosted macOS before choosing.
 
 1. Verify the exact GitHub account, repository/organization, and private project
    policy. Do not register against a convenient cached login.
-2. Decide whether fork/outside-collaborator code can ever reach the runner.
-   Public untrusted PR code must not run with secrets or write access.
+2. Decide which code can ever reach the runner. Untrusted pull-request code,
+   including every fork or outside-collaborator PR, never runs on a persistent
+   self-hosted runner, even without secrets or write access. It can persist on
+   the host, read the runner user's files and keychain, and poison DerivedData
+   or SwiftPM caches that later trusted jobs reuse. GitHub advises against
+   self-hosted runners for public repositories. Build that code on GitHub-hosted
+   runners, or on ephemeral just-in-time runners whose VM or machine is reset
+   after its one job. When such a change needs an Xcode build only this runner
+   has, a maintainer first reviews it and then runs the protected
+   `workflow_dispatch` job at its pinned head SHA described in
+   [workflow templates](workflow-templates.md#build-and-minimum-sufficient-test).
+   A private repository needs the same rule when people outside the trusted
+   group can fork it and open pull requests.
 3. Dedicate an OS user and runner directory when practical. Do not reuse a user
    that holds broad Apple/GitHub credentials.
 4. Record architecture, macOS, Xcode build, available disk, labels, signing
@@ -48,7 +59,7 @@ complete.
 
 ## Security and maintenance
 
-- Never execute untrusted fork code in a privileged workflow.
+- Never execute untrusted fork code on this runner or in a privileged workflow.
 - Keep runner software and macOS/Xcode updates intentional and recorded.
 - Use least-privilege repository/environment secrets and protected environments.
 - Monitor disk with `xcode-storage`; never schedule blanket cache/Simulator/
@@ -62,4 +73,4 @@ References:
 
 - [Adding self-hosted runners](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/adding-self-hosted-runners)
 - [Configuring the runner as a macOS service](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/configuring-the-self-hosted-runner-application-as-a-service)
-- [Self-hosted runner security](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#hardening-for-self-hosted-runners)
+- [Self-hosted runner security](https://docs.github.com/en/actions/reference/security/secure-use#hardening-for-self-hosted-runners)

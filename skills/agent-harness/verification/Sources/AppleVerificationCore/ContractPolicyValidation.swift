@@ -314,6 +314,15 @@ extension ContractValidation {
     ] {
       errors.append("IconGen watcher may use only the pinned checkout action")
     }
+    // By default actions/checkout stores the job's issue-write token in .git/config, where every
+    // later step, including the Swift build, can read it. gh receives the token through env.
+    if text.range(
+      of:
+        #"(?m)^\s*uses:\s*actions/checkout@\S+[^\n]*\n\s+with:\n\s+persist-credentials: false\s*$"#,
+      options: .regularExpression) == nil
+    {
+      errors.append("IconGen watcher checkout must set persist-credentials: false")
+    }
     guard let jobs = capture(text, #"(?ms)^jobs:\n(?<body>.*)\z"#, name: "body") else {
       return errors + ["IconGen watcher jobs block is missing"]
     }

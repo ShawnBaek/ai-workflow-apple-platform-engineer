@@ -7,6 +7,8 @@ public protocol CompanionGitHubClient {
 /// Reference-only provenance tracking; never fetches or executes upstream source.
 public enum CompanionWatcher {
   private static let markerPrefix = "<!-- ios-experts-companion-upstream:"
+  /// The login GitHub records for an issue created with a workflow's `GITHUB_TOKEN`.
+  private static let issueAuthor = "github-actions[bot]"
   public static func loadManifest(_ url: URL) throws -> [String: Any] {
     let manifest = try HarnessRuntime.object(url)
     try validateManifest(manifest)
@@ -122,12 +124,16 @@ public enum CompanionWatcher {
       throw VerificationError.invalid("Too many open issues to reconcile safely")
     }
     let marker = "\(markerPrefix)\(repository) -->"
+    // The marker is public and anyone can open an issue, so only an issue created with the
+    // workflow's own token is the drift record. Other authors are ignored, never adopted.
     let existing = issues.filter {
       $0["pull_request"] == nil && ($0["body"] as? String ?? "").contains(marker)
+        && ($0["user"] as? [String: Any])?["login"] as? String == issueAuthor
     }
     guard existing.count <= 1 else {
       throw VerificationError.invalid(
-        "Multiple issues match the companion marker; resolve the duplicate before retrying")
+        "Multiple \(issueAuthor) issues match the companion marker; resolve the duplicate before retrying"
+      )
     }
     let sources = (manifest["sources"] as! [[String: Any]]).map { "- `\($0["path"]!)`" }.joined(
       separator: "\n")

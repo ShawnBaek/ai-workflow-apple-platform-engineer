@@ -30,7 +30,10 @@ blobs are recorded in
 The repository workflow performs a weekly and manual read-only HEAD comparison.
 When HEAD differs from the reviewed revision, it creates or updates one
 Apple Platform Engineer Issue containing the compare link, changed revision, selected
-review surface, license state, and no-copy reminder.
+review surface, license state, and no-copy reminder. Its hidden marker is public,
+so the watcher adopts only an open Issue authored by `github-actions[bot]` and
+ignores marker Issues from anyone else. Treat only that bot-authored Issue as the
+drift record, and check its compare link against the manifest before acting.
 
 The watcher does not edit this skill, open a PR, execute generators, broaden a
 token, or merge. A maintainer or approved harness run then:

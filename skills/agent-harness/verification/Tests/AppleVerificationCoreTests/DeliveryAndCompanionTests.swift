@@ -144,6 +144,7 @@ private final class CompanionFixture: CompanionGitHubClient {
     if path.contains("/issues?") {
       let issue: [String: Any] = [
         "number": 1, "body": "<!-- ios-experts-companion-upstream:example/upstream -->",
+        "user": ["login": "github-actions[bot]"],
       ]
       return duplicateIssues ? [issue, issue] : [] as [[String: Any]]
     }

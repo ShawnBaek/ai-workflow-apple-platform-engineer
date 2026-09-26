@@ -41,9 +41,12 @@ signing, hardware, queue, and isolation needs rather than declaring one universa
 
 Sensitive values are secrets; non-sensitive configuration is a variable. Use
 environment/repository scoping and least privilege. Do not echo or interpolate
-private key material into logs or command history. Upload, TestFlight
-distribution, App Store submission, certificate changes, Project updates, and
-branch/ruleset changes are separate gated external mutations.
+private key material into logs or command history. `actions/checkout` stores the
+job token in the checkout's Git config by default, where every later step can
+read it; set `persist-credentials: false` unless a later step runs authenticated
+Git, and give a token only to the step that uses it through `env`. Upload,
+TestFlight distribution, App Store submission, certificate changes, Project
+updates, and branch/ruleset changes are separate gated external mutations.
 
 Remember that pushes made with the repository `GITHUB_TOKEN` generally do not
 recursively trigger another workflow. Do not silently swap in a broader token.

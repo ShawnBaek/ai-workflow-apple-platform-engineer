@@ -14,7 +14,20 @@ public enum KnowledgeIndex {
     #"(?im)^\s*(?:api[_-]?key|access[_-]?token|auth[_-]?token|password|secret|token)\s*[:=]\s*[^\s#][^\r\n]*$"#,
     #"(?i)"(?:private_key|client_secret|refresh_token)"\s*:\s*"[^"\r\n]+""#,
     #"(?is)<key>(?:API_KEY|CLIENT_ID|GOOGLE_APP_ID|GCM_SENDER_ID)</key>\s*<string>[^<]+</string>"#,
-    #"\b(?:sk|ghp|github_pat)_[A-Za-z0-9_-]{16,}\b"#,
+    // A key-like literal (16+ characters including a digit) held by a secret-named Swift
+    // property, JSON or dictionary field, or property-list key. Names that end in another word,
+    // such as `accessTokenKey`, and empty or digit-free placeholder values stay indexable.
+    #"(?i)\b(?:let|var)\s+\w*(?:api[_-]?key|secret|token|password)s?\s*(?::\s*String\s*)?=\s*"(?=[A-Za-z0-9_+/=-]*[0-9])[A-Za-z0-9_+/=-]{16,}""#,
+    #"(?i)"[\w.-]*(?:api[_-]?key|secret|token|password)"\s*:\s*"(?=[^"\s]*[0-9])[^"\s]{16,}""#,
+    #"(?is)<key>[^<]*(?:api[_-]?key|secret|token|password)</key>\s*<string>(?=[^<\s]*[0-9])[^<\s]{16,}</string>"#,
+    // Provider credential formats and bearer values, wherever they appear.
+    #"\b(?:sk|gh[pousr]|github_pat)_[A-Za-z0-9_-]{16,}\b"#,
+    #"\bsk-[A-Za-z0-9_-]{20,}"#,
+    #"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"#,
+    #"\bxox[abposr]-[A-Za-z0-9-]{10,}"#,
+    #"\bAIza[0-9A-Za-z_-]{35}"#,
+    #"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"#,
+    #"(?i)\bBearer\s+(?=[A-Za-z0-9._~+/-]*[0-9])[A-Za-z0-9._~+/-]{20,}"#,
   ]
   public struct Policy: Codable, Sendable {
     public let includes: [String]
@@ -137,8 +150,12 @@ public enum KnowledgeIndex {
       throw VerificationError.invalid(
         "Choose an external database or explicitly allow the reviewed ignored location")
     }
+    // The database holds copies of source text, so the directories it creates and the database
+    // are owner-only. SQLite gives its WAL and shared-memory files the database's permissions.
     try FileManager.default.createDirectory(
-      at: database.deletingLastPathComponent(), withIntermediateDirectories: true)
+      at: database.deletingLastPathComponent(), withIntermediateDirectories: true,
+      attributes: [.posixPermissions: 0o700])
+    try restrictToOwner(database)
     let sql = try Database(database, readonly: false)
     try sql.execute("PRAGMA journal_mode=WAL")
     try sql.execute(
@@ -190,6 +207,21 @@ public enum KnowledgeIndex {
     } catch {
       try? sql.execute("ROLLBACK")
       throw error
+    }
+  }
+
+  /// Creates the database file as 0600, or tightens one an earlier version created as 0644.
+  private static func restrictToOwner(_ database: URL) throws {
+    let descriptor = open(database.path, O_RDONLY | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
+    guard descriptor >= 0 else {
+      if errno == ELOOP { throw VerificationError.invalid("Database cannot be a symlink") }
+      throw VerificationError.invalid(
+        "Cannot create the index database: \(String(cString: strerror(errno)))")
+    }
+    defer { close(descriptor) }
+    guard fchmod(descriptor, 0o600) == 0 else {
+      throw VerificationError.invalid(
+        "Cannot make the index database owner-only: \(String(cString: strerror(errno)))")
     }
   }
 

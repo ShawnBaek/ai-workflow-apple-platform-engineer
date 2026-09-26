@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Run Swift regression tests
         run: swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
       - name: Validate repository contracts and documentation
@@ -35,6 +37,8 @@ jobs:
       SWIFT_FORMAT_COMMIT: 15d7877c6b32926948f6520f0156657945955ea3
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Restore pinned swift-format
         id: swift-format-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

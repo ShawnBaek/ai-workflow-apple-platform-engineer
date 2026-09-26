@@ -35,6 +35,8 @@ jobs:
       TEST_RESULT_BUNDLE: TestResults.xcresult
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Record toolchain and package input
         run: |
