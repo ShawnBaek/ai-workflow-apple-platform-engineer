@@ -42,9 +42,12 @@ extension Authorization {
     else {
       throw VerificationError.invalid("authorized base SHA is not an ancestor of current HEAD")
     }
-    let stagedPaths = try nulList(canonical, ["diff", "--cached", "--name-only", "-z"])
+    // Rename detection would report only the destination, hiding the source path from the
+    // path checks; list both sides, as the patch manifest below already does.
+    let stagedPaths = try nulList(
+      canonical, ["diff", "--cached", "--name-only", "-z", "--no-renames"])
     let outgoingPaths = try nulList(
-      canonical, ["diff", "--name-only", "-z", "\(expectedBaseSHA)..HEAD"])
+      canonical, ["diff", "--name-only", "-z", "--no-renames", "\(expectedBaseSHA)..HEAD"])
     let stagedManifest = try gitPatchManifest(
       root: canonical, baseSHA: expectedBaseSHA, revision: "INDEX", staged: true)
     let headManifest = try gitPatchManifest(
