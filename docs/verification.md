@@ -21,6 +21,53 @@ The first command builds the executable and runs targeted regression tests. The 
 
 CI runs the same checks on macOS. Keep worker counts bounded; do not add a second build just to repeat a passing result. Generated `.build` content is ignored and excluded from installed-source identity.
 
+## Swift formatting and compilation
+
+Every Swift change in this repository follows
+[Swift format and compile acceptance](../skills/apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance).
+The repository owns the root [`.swift-format`](../.swift-format) and CI keeps
+every tracked Swift file conformant to it, so whole-file formatting is the right
+mode for `.swift` files here. Swift snippets in Markdown are not covered by that
+check, and most use 4-space indentation, so they follow the gate's
+[snippet recipe](../skills/apple-platform-testing/references/swift-format-gate.md#snippets-and-xcode-editor-tools).
+Format with Apple's [swift-format](https://github.com/swiftlang/swift-format),
+lint, then compile:
+
+```sh
+xcodebuild -version   # identifies Xcode's swift-format, whose --version prints "main"
+git ls-files -z '*.swift' | xargs -0 xcrun swift-format format --in-place
+git ls-files -z '*.swift' | xargs -0 xcrun swift-format lint   # add no findings beyond the base branch's
+git diff --check
+swift build --build-tests --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+for script in skills/*/scripts/*.swift docs/evidence/generate-comparison.swift; do xcrun swiftc -typecheck "$script"; done
+```
+
+This repository's CI gates formatting and compilation. It builds swift-format
+604.0.0, the release matching the Xcode 27 toolchain, from the tag's commit
+`15d7877c6b32926948f6520f0156657945955ea3`, and fails when formatting changes any
+tracked Swift file. It then type-checks the standalone scripts above; the package
+build and tests cover the verifier. The
+[framework probes](evidence/framework-probes/README.md) need the Xcode 27 SDK, so
+CI checks their formatting but not their compilation; compile them with the
+commands in their README when you change them. CI reports `swift-format lint`
+findings but does not gate on them here, because the tree has a few pre-existing
+rule findings (`ReplaceForEachWithForLoop`, `UseSynthesizedInitializer`,
+`AlwaysUseLowerCamelCase`); do not add new ones.
+
+With an Xcode whose bundled swift-format differs, build the pinned release
+instead of accepting unrelated reformatting: run
+`git clone --depth 1 --branch 604.0.0 https://github.com/swiftlang/swift-format`
+and `cd swift-format`, confirm `git rev-parse HEAD` prints that commit, then run
+`swift build -c release --product swift-format`. Still in that checkout, run
+`SF="$(swift build -c release --show-bin-path)/swift-format"`, then use `"$SF"`
+in place of `xcrun swift-format` in the commands above.
+
+Reformatting Swift under the verifier's `Sources` changes the source-bundle
+SHA-256 that private harnesses bind, even when behavior is unchanged. After
+updating, a private harness observes `runtime-identity` again and reviews its
+bindings as described in
+[Swift runtime and migration](../skills/agent-harness/references/swift-verification.md).
+
 The [local-runtime regression record](evidence/local-runtime-repair.json) covers
 the actual CLI, both harness templates and their before/after results.
 

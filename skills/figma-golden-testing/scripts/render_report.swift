@@ -1,7 +1,6 @@
 #!/usr/bin/env swift
-
-import Foundation
 import CoreFoundation
+import Foundation
 
 struct Arguments {
   let metrics: URL
@@ -16,8 +15,8 @@ enum ReportError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case let .usage(message), let .invalidEvidence(message): return message
-    case let .invalidJSON(url): return "Could not read JSON: \(url.path)"
+    case .usage(let message), .invalidEvidence(let message): return message
+    case .invalidJSON(let url): return "Could not read JSON: \(url.path)"
     }
   }
 }
@@ -32,7 +31,9 @@ func value(after flag: String, in arguments: [String]) throws -> String {
 func parseArguments() throws -> Arguments {
   let arguments = Array(CommandLine.arguments.dropFirst())
   if arguments.contains("--help") {
-    throw ReportError.usage("Usage: render_report.swift --metrics <metrics.json> --text <text-results.json> --out <directory>")
+    throw ReportError.usage(
+      "Usage: render_report.swift --metrics <metrics.json> --text <text-results.json> --out <directory>"
+    )
   }
   return Arguments(
     metrics: URL(fileURLWithPath: try value(after: "--metrics", in: arguments)),
@@ -58,7 +59,9 @@ func escape(_ value: String) -> String {
     .replacingOccurrences(of: "'", with: "&apos;")
 }
 
-func text(_ value: String, x: Int, y: Int, size: Int, weight: String = "400", color: String = "#162033") -> String {
+func text(
+  _ value: String, x: Int, y: Int, size: Int, weight: String = "400", color: String = "#162033"
+) -> String {
   "<text x=\"\(x)\" y=\"\(y)\" font-family=\"-apple-system, BlinkMacSystemFont, sans-serif\" font-size=\"\(size)px\" font-weight=\"\(weight)\" fill=\"\(color)\">\(escape(value))</text>"
 }
 
@@ -74,7 +77,9 @@ func document(title: String, width: Int, height: Int, body: [String]) -> String 
 func metricValue(_ metrics: [String: Any], _ key: String) -> String {
   if let value = metrics[key] as? String { return value }
   if let value = metrics[key] as? NSNumber { return value.stringValue }
-  if let value = metrics[key] as? [String: Any], let width = value["width"], let height = value["height"] {
+  if let value = metrics[key] as? [String: Any], let width = value["width"],
+    let height = value["height"]
+  {
     return "\(width) x \(height)"
   }
   return "-"
@@ -82,8 +87,9 @@ func metricValue(_ metrics: [String: Any], _ key: String) -> String {
 
 func number(_ metrics: [String: Any], _ key: String, range: ClosedRange<Double>) throws -> Double {
   guard let value = metrics[key] as? NSNumber,
-        CFGetTypeID(value) != CFBooleanGetTypeID(),
-        value.doubleValue.isFinite, range.contains(value.doubleValue) else {
+    CFGetTypeID(value) != CFBooleanGetTypeID(),
+    value.doubleValue.isFinite, range.contains(value.doubleValue)
+  else {
     throw ReportError.invalidEvidence("metrics.\(key) is missing or outside its valid range")
   }
   return value.doubleValue
@@ -104,21 +110,35 @@ func metricsSVG(_ metrics: [String: Any]) throws -> String {
   let status = required.map { percentage >= $0 ? "PASS" : "FAIL" } ?? "NOT EVALUATED"
   let expectedStatus = required.map { percentage >= $0 ? "passed" : "failed" } ?? "not_evaluated"
   if let supplied = metrics["status"], supplied as? String != expectedStatus {
-    throw ReportError.invalidEvidence("metrics.status conflicts with the explicit acceptance criterion")
+    throw ReportError.invalidEvidence(
+      "metrics.status conflicts with the explicit acceptance criterion")
   }
   var body: [String] = [
     text("STATUS", x: 42, y: 116, size: 13, weight: "700", color: "#59667d"),
-    text(status, x: 42, y: 158, size: 34, weight: "700", color: status == "PASS" ? "#087f5b" : "#c92a2a"),
-    text("CoreGraphics device-RGB decode; no scale/crop/mask", x: 42, y: 194, size: 14, color: "#59667d"),
+    text(
+      status, x: 42, y: 158, size: 34, weight: "700",
+      color: status == "PASS" ? "#087f5b" : "#c92a2a"),
+    text(
+      "CoreGraphics device-RGB decode; no scale/crop/mask", x: 42, y: 194, size: 14,
+      color: "#59667d"),
   ]
   let rows = [
     ("Required match percentage", required.map { String($0) + "%" } ?? "Not agreed"),
     ("Dimensions", metricValue(metrics, "dimensions")),
     ("Threshold (max RGB delta)", metricValue(metrics, "threshold")),
-    ("Matching pixels", "\(metricValue(metrics, "matchingPixels")) / \(metricValue(metrics, "pixelCount"))"),
+    (
+      "Matching pixels",
+      "\(metricValue(metrics, "matchingPixels")) / \(metricValue(metrics, "pixelCount"))"
+    ),
     ("Match percentage", "\(metricValue(metrics, "matchPercentage"))%"),
-    ("Exact pixels", "\(metricValue(metrics, "exactPixels")) (\(metricValue(metrics, "exactPercentage"))%)"),
-    ("Mean / max RGB delta", "\(metricValue(metrics, "meanMaxRGBDelta")) / \(metricValue(metrics, "maxRGBDelta"))"),
+    (
+      "Exact pixels",
+      "\(metricValue(metrics, "exactPixels")) (\(metricValue(metrics, "exactPercentage"))%)"
+    ),
+    (
+      "Mean / max RGB delta",
+      "\(metricValue(metrics, "meanMaxRGBDelta")) / \(metricValue(metrics, "maxRGBDelta"))"
+    ),
   ]
   for (index, row) in rows.enumerated() {
     let y = 250 + index * 46
@@ -135,8 +155,9 @@ func textResultsSVG(_ results: [String: Any]) throws -> String {
       throw ReportError.invalidEvidence("text results.\(key) must be an array")
     }
     for row in rows {
-      let required = ["field", "figmaNodeId"] + (key == "missing" ? ["expected"] :
-        key == "extra" ? ["actual"] : ["expected", "actual"])
+      let required =
+        ["field", "figmaNodeId"]
+        + (key == "missing" ? ["expected"] : key == "extra" ? ["actual"] : ["expected", "actual"])
       guard required.allSatisfy({ row[$0] is String }) else {
         throw ReportError.invalidEvidence("text results.\(key) entry has missing strings")
       }
@@ -160,10 +181,15 @@ func textResultsSVG(_ results: [String: Any]) throws -> String {
       let expected = value["expected"] as? String
       let actual = value["actual"] as? String
       let detail: String
-      if let expected, let actual { detail = "expected \"\(expected)\" -> actual \"\(actual)\"" }
-      else if let expected { detail = "expected \"\(expected)\"" }
-      else if let actual { detail = "actual \"\(actual)\"" }
-      else { detail = "" }
+      if let expected, let actual {
+        detail = "expected \"\(expected)\" -> actual \"\(actual)\""
+      } else if let expected {
+        detail = "expected \"\(expected)\""
+      } else if let actual {
+        detail = "actual \"\(actual)\""
+      } else {
+        detail = ""
+      }
       let line = "\(field): \(detail) [\(node)]"
       body.append(text(line, x: 56, y: y, size: 13, color: "#33415c"))
       y += 23
@@ -172,8 +198,12 @@ func textResultsSVG(_ results: [String: Any]) throws -> String {
     y += 18
 
   }
-  if body.isEmpty { body.append(text("No semantic observations supplied", x: 42, y: 124, size: 18, color: "#087f5b")) }
-  return document(title: "Figma visible-text results", width: 1400, height: max(220, y + 50), body: body)
+  if body.isEmpty {
+    body.append(
+      text("No semantic observations supplied", x: 42, y: 124, size: 18, color: "#087f5b"))
+  }
+  return document(
+    title: "Figma visible-text results", width: 1400, height: max(220, y + 50), body: body)
 }
 
 do {
@@ -183,8 +213,11 @@ do {
   let metricsImage = try metricsSVG(metrics)
   let textImage = try textResultsSVG(textResults)
   try FileManager.default.createDirectory(at: arguments.output, withIntermediateDirectories: true)
-  try metricsImage.write(to: arguments.output.appendingPathComponent("metrics.svg"), atomically: true, encoding: .utf8)
-  try textImage.write(to: arguments.output.appendingPathComponent("text-results.svg"), atomically: true, encoding: .utf8)
+  try metricsImage.write(
+    to: arguments.output.appendingPathComponent("metrics.svg"), atomically: true, encoding: .utf8)
+  try textImage.write(
+    to: arguments.output.appendingPathComponent("text-results.svg"), atomically: true,
+    encoding: .utf8)
   print(arguments.output.path)
 } catch {
   FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))

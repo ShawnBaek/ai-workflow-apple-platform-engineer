@@ -65,6 +65,7 @@ do not treat every scenario as mandatory for every PR.
 | Bug fix in runtime or contracts | A Swift regression that fails for the original defect, passes after the fix, and preserves the relevant denial or boundary case |
 | Shared authorization, resource or lifecycle change | Relevant expiry/replay/contention/terminal regressions plus the full package and repository checks |
 | Visual or interaction guidance | A small real example when necessary; aligned screenshots for geometry, a recording for motion; state what was not exercised |
+| Any Swift change, including scripts and Swift snippets in skills | swift-format: tracked `.swift` files whole with the root `.swift-format`; a snippet under the gate's [snippet mode rule](skills/apple-platform-testing/references/swift-format-gate.md#snippets-and-xcode-editor-tools), so a new one is formatted whole with the root configuration and an edited one that does not already conform has only its changed lines formatted, with a configuration matching its indentation. Then an error-free compile: the package build with its tests (`swift build --build-tests` or `swift test`), `swiftc -typecheck` for a standalone script, or a scratch-file type-check for a snippet |
 
 For a skill evaluation, give a fresh agent the changed skill, a realistic user request and only the raw fixtures needed. Keep the evaluator's expected outcome separate so it is not prompted to agree with the author. Use a bounded lightweight agent for simple routing; escalate only when the work requires it. Disable live writes or use mocked tooling during reporting tests. Record the selected route, proposed/performed actions, artifacts, result and limitations. A schema pass does not prove instruction quality, and one successful agent run does not guarantee every model will behave identically.
 
@@ -80,6 +81,10 @@ APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification --pr
 
 # For runtime/shared-contract changes; CI runs this suite too.
 swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+
+# After any Swift change: format (CI pins swift-format 604.0.0), then compile scripts.
+git ls-files -z '*.swift' | xargs -0 xcrun swift-format format --in-place
+for script in skills/*/scripts/*.swift docs/evidence/generate-comparison.swift; do xcrun swiftc -typecheck "$script"; done
 git diff --check
 ```
 

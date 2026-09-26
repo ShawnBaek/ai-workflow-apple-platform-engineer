@@ -33,7 +33,8 @@ final class ContractValidationTests: XCTestCase {
         tracking["project"] = ["number": 1]
         template["github_tracking"] = tracking
         // Satisfy the existing project-component rule to isolate the local scope restriction.
-        template["health_components"] = (template["health_components"] as! [String]) + ["github_project"]
+        template["health_components"] =
+          (template["health_components"] as! [String]) + ["github_project"]
         XCTAssertFalse(JSONSchemaValidator.errors(instance: template, schema: schema).isEmpty)
       }
     }
@@ -83,13 +84,15 @@ final class ContractValidationTests: XCTestCase {
     // Automatic naming must not let checkout mutation skip the bound run authorization.
     var bypass = workflow
     var nodes = try XCTUnwrap(workflow["nodes"] as? [[String: Any]])
-    let writer = try XCTUnwrap(nodes.firstIndex {
-      $0["id"] as? String == "claim_implementation_writer"
-    })
+    let writer = try XCTUnwrap(
+      nodes.firstIndex {
+        $0["id"] as? String == "claim_implementation_writer"
+      })
     nodes[writer]["requires"] = ["select_task_branch"]
     bypass["nodes"] = nodes
-    XCTAssertTrue(ContractValidation.validateWorkflowSemantics(bypass, resources: resources)
-      .contains("control-spine dependency drift at claim_implementation_writer"))
+    XCTAssertTrue(
+      ContractValidation.validateWorkflowSemantics(bypass, resources: resources)
+        .contains("control-spine dependency drift at claim_implementation_writer"))
 
     // A persisted old spine needs its pinned bundle, not silent rebinding to this one.
     var legacy = workflow
@@ -103,8 +106,9 @@ final class ContractValidationTests: XCTestCase {
       }
       return result
     }
-    XCTAssertTrue(ContractValidation.validateWorkflowSemantics(legacy, resources: resources)
-      .contains("workflow control-spine node order drifted"))
+    XCTAssertTrue(
+      ContractValidation.validateWorkflowSemantics(legacy, resources: resources)
+        .contains("workflow control-spine node order drifted"))
   }
 
   func testDAGRejectsCyclesMissingEdgesAndDuplicateDependencies() {
@@ -208,10 +212,12 @@ final class ContractValidationTests: XCTestCase {
       encoding: .utf8)
     try watcher.replacingOccurrences(
       of: "    if: github.repository == 'ShawnBaek/ai-workflow-apple-platform-engineer'\n",
-      with: "").write(to: temporary, atomically: true, encoding: .utf8)
-    XCTAssertTrue(ContractValidation.validateIconGenWorkflow(at: temporary).contains {
-      $0.contains("execution contract drifted")
-    })
+      with: ""
+    ).write(to: temporary, atomically: true, encoding: .utf8)
+    XCTAssertTrue(
+      ContractValidation.validateIconGenWorkflow(at: temporary).contains {
+        $0.contains("execution contract drifted")
+      })
   }
 
   func testCapabilityPoliciesRemainFullyBound() throws {

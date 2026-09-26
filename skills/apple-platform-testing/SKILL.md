@@ -45,6 +45,53 @@ Read [XCTest and UI automation practice](references/xctest-and-ui-automation.md)
 
 ## Run and report
 
+### Swift format and compile acceptance
+
+A Swift change — app, framework, package manifest, tests, standalone scripts, or
+snippets shipped in documentation — is complete only when the task's lines are
+formatted with Apple's [swift-format](https://github.com/swiftlang/swift-format)
+(`xcrun swift-format` from the selected Xcode), linted, and compiled with no
+errors, without reformatting code the task did not change. An explicit project
+policy that selects another formatter (for example a `.swiftformat` file, or a
+format script, build phase or plugin that runs another tool) outranks this
+default; record it. Choose and record one mode per file, treating each
+documentation snippet as a file:
+
+- **Whole file** (`format --in-place`) only when a `.swift-format` inside the
+  repository applies (swift-format also uses one in `$HOME` or above the
+  repository root; that does not count) and the file's base version was already
+  conformant under it.
+- **Changed ranges** otherwise: `format --in-place --lines <start>:<end>` per
+  changed hunk against the task's base, with that project configuration or an
+  inline `--configuration` JSON matching the file's indentation and line length.
+- **Stop** when changed ranges cannot match the file's style, and propose
+  adopting a project `.swift-format` or whole-file formatting as a separate change.
+
+Lint with the same configuration against each modified file's base revision
+(added files: empty baseline), comparing rule and message, not line numbers; any
+new finding blocks like a task-introduced warning, even when reported outside the
+task's lines.
+
+Then compile: an app or framework target through build and warning acceptance
+below; a package with `swift build`; a script with `xcrun swiftc -typecheck` for
+the SDK and target it declares; and a documentation snippet, formatted under the
+mode rule above, in a scratch file outside the project. `swift build` and an app
+scheme's build leave test targets out, so changed test sources need their own
+compile entry: `swift build --build-tests` or `swift test` for a package, and
+for an Xcode test target `xcodebuild build-for-testing` with a scheme whose Test
+action contains it, or an official Xcode test run that includes it. Any compile
+error blocks completion. Format, lint and compile are one gate over the final
+patch: any later source edit, including a fix for a compile error, lint finding
+or warning, reruns all three. With Xcode's editor tools,
+format after those edits are saved and confirm the build used the formatted file.
+Record `xcodebuild -version` (Xcode's swift-format prints `main` for `--version`),
+each file's resolved configuration and mode, new and baseline lint findings, and
+each compile command or tool call with its result. Report `Format Unverified` when
+swift-format could not run and `Build Failed` on a compile error, as separate
+`swift-format` and `compile` checks. Read
+[Swift format gate commands](references/swift-format-gate.md) for the verified
+commands, snippet and Xcode-editor recipes, and report fields.
+
 ### Build and warning acceptance
 
 For app source, resources, dependencies, or build-setting changes, completion
@@ -58,10 +105,11 @@ that the final app compiles. Reuse matching build evidence; rebuild after change
 that invalidate it. Documentation-only work needs its relevant validator.
 
 Inspect compiler, asset, linker, and build-script warnings in the build evidence,
-even when the command succeeds. Fix warnings introduced by the task and rerun
-the affected build. Classify other warnings using available baseline evidence;
-if their origin is unknown, report warning triage as pending and do not claim
-completion until classified. Report remaining warnings with location,
+even when the command succeeds. Fix warnings introduced by the task, then rerun
+the Swift format and compile gate above (format, lint, build) on the final patch.
+Classify other warnings using available baseline evidence; if their origin is
+unknown, report warning triage as pending and do not claim completion until
+classified. Report remaining warnings with location,
 reason and disposition. Do not suppress diagnostics, weaken concurrency checks,
 or remove warning-producing functionality merely to obtain a clean result.
 Unresolved task-introduced warnings block completion; pre-existing warnings may
