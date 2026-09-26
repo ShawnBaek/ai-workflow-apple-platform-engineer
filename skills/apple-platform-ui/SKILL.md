@@ -116,8 +116,8 @@ When you're reviewing an existing app — auditing it for launch, App Store subm
 
 - [ ] **Launch screen is wired.** `UILaunchScreen` dict in `Info.plist` exists, `UIColorName` is **non-empty** and points to a color asset that defines **both** Light and Dark appearances. Empty `UIColorName: ""` is the silent failure mode — the app launches into undefined background. If the app has a nav bar or tab bar, the dict includes empty `UINavigationBar: {}` / `UITabBar: {}` so the chrome paints during launch. Open [`./launch-screen.md`](./launch-screen.md) if anything is missing — fixing it is one color asset + one Info.plist edit.
 - [ ] **No unused capabilities** in `UIBackgroundModes`, entitlements, or required device capabilities. A `remote-notification` mode with no push-registration code is a privacy red flag and an App Review snag.
-- [ ] **`PrivacyInfo.xcprivacy` exists** for iOS 17+ submissions. Declares `NSPrivacyTracking` + any required-reason APIs (UserDefaults, FileTimestamp, DiskSpace, SystemBootTime are the common ones).
-- [ ] **App icon assets are complete** — `Assets.xcassets/AppIcon.appiconset/` has at least the 1024×1024 marketing icon for App Store Connect.
+- [ ] **`PrivacyInfo.xcprivacy` exists** in each bundle (app, and any app extension) whose code uses a required-reason API — App Store Connect doesn't accept an iOS, iPadOS, tvOS, visionOS, or watchOS upload that uses one without a declared reason, whatever the deployment target. Declares `NSPrivacyTracking` + each required-reason API category used under `NSPrivacyAccessedAPITypes` (UserDefaults, FileTimestamp, DiskSpace, SystemBootTime are the common ones); third-party SDKs declare their own use in their own manifests.
+- [ ] **App icon source resolves and builds.** The target's App Icon setting (`ASSETCATALOG_COMPILER_APPICON_NAME`) names either an Icon Composer `.icon` file — which replaces the asset-catalog app icon — or, where the project keeps the asset-catalog workflow, a complete `AppIcon.appiconset` with the 1024×1024 marketing icon. Don't add an appiconset beside a working `.icon`; route icon changes to `icon-composer`.
 - [ ] **Singletons are concurrency-safe** under Swift 6 strict concurrency. UIKit-touching singletons need `@MainActor` + `nonisolated` overrides for any protocol callback the framework delivers from a non-isolated context (MetricKit, WCSession, NSObject KVO, AVAudio completion handlers). Compile the actual affected target; a successful Catalyst build does not prove iOS compilation or runtime behavior.
 
 ---
@@ -266,66 +266,99 @@ window.rootViewController = split
 #### UITableView with diffable data source (preferred over delegate-based reloadData)
 
 ```swift
-typealias Snapshot = NSDiffableDataSourceSnapshot<Section, Item.ID>
-
 final class SidebarViewController: UITableViewController {
     enum Section { case notes }
+    private typealias Snapshot = NSDiffableDataSourceSnapshot<Section, Item.ID>
+    private static let cellID = "NoteCell"
     private var dataSource: UITableViewDiffableDataSource<Section, Item.ID>!
+    private var store: [Item.ID: Item] = [:]          // resolve id → item
 
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView = UITableView(frame: .zero, style: .insetGrouped)
+        // UITableView has no CellRegistration: register a class, dequeue by identifier
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellID)
 
-        let cell = UITableViewCell.Registration<UITableViewCell, Item> { cell, _, item in
-            var config = cell.defaultContentConfiguration()
-            config.text = item.title
-            config.secondaryText = item.preview
+        dataSource = UITableViewDiffableDataSource(tableView: tableView) { [unowned self] tv, ip, id in
+            let cell = tv.dequeueReusableCell(withIdentifier: Self.cellID, for: ip)
+            var config = cell.defaultContentConfiguration()   // UIListContentConfiguration
+            config.text = store[id]?.title
+            config.secondaryText = store[id]?.preview
             cell.contentConfiguration = config
-        }
-
-        dataSource = UITableViewDiffableDataSource(tableView: tableView) { tv, ip, id in
-            // resolve id → item from your store
-            tv.dequeueConfiguredReusableCell(using: cell, for: ip, item: store[id])
+            return cell
         }
     }
 
     func apply(_ items: [Item]) {
+        store = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
         var snap = Snapshot()
         snap.appendSections([.notes])
         snap.appendItems(items.map(\.id))
+        // IDs alone don't refresh an edited item: pass changed IDs to snap.reconfigureItems(_:) (iOS 15+)
         dataSource.apply(snap, animatingDifferences: true)
     }
 }
 ```
 
-#### TextKit 1 — custom NSTextStorage + hit-testing (for tap-a-sentence editors)
+`CellRegistration` and `dequeueConfiguredReusableCell(using:for:item:)` exist only on `UICollectionView`. For a new list screen, a collection view with a `.insetGrouped` list layout (`UICollectionLayoutListConfiguration`) is the registration-based alternative; keep an existing table view on the register/dequeue path above.
 
-Use TextKit 1 (not TextKit 2) when you need character-from-point hit testing — `TextKit 2` doesn't expose `NSLayoutManager.characterIndex(for:in:fractionOfDistanceBetweenInsertionPoints:)` yet.
+#### TextKit hit-testing — map a tap to a character (for tap-a-sentence editors)
+
+From iOS 16, `UITextView` lays text out with TextKit 2 (`textLayoutManager`) by default, and TextKit 2 hit-tests on its own: `NSTextLayoutManager.textLayoutFragment(for:)` finds the fragment under a point and `NSTextLineFragment.characterIndex(for:)` finds the character. Don't read `textView.layoutManager` or `textView.textContainer.layoutManager` in TextKit 2 code — either switches the view to TextKit 1 for good and invalidates any TextKit 2 objects you kept. Keep TextKit 1 only for an editor that already depends on `NSLayoutManager`, or a `UITextView` that must run below iOS 16. On iOS 16+, `UITextView(usingTextLayoutManager: false)` opts into TextKit 1 without the fallback; build the stack yourself (below) only when you need your own `NSTextStorage` subclass or a deployment target below iOS 16.
 
 ```swift
-// Wire the TextKit 1 stack manually so you control NSLayoutManager
-let storage   = NSTextStorage()
-let layout    = NSLayoutManager()
-let container = NSTextContainer(size: textView.bounds.size)
-container.widthTracksTextView = true
-
-storage.addLayoutManager(layout)
-layout.addTextContainer(container)
-
-let textView  = UITextView(frame: view.bounds, textContainer: container)
-
-// Hit-test a tap to the nearest character
+// TextKit 2: a method on the view controller that owns `textView`
 @objc func handleTap(_ gr: UITapGestureRecognizer) {
+    guard let layout = textView.textLayoutManager,
+          let content = layout.textContentManager else { return }
     let pt = gr.location(in: textView)
-    let adjusted = CGPoint(x: pt.x - textView.textContainerInset.left,
-                           y: pt.y - textView.textContainerInset.top)
-    var fraction: CGFloat = 0
-    let charIndex = layout.characterIndex(
-        for: adjusted,
-        in: container,
-        fractionOfDistanceBetweenInsertionPoints: &fraction
-    )
-    // charIndex is the tapped character — walk to sentence boundaries
+    let point = CGPoint(x: pt.x - textView.textContainerInset.left,   // text-container coordinates
+                        y: pt.y - textView.textContainerInset.top)
+    guard let fragment = layout.textLayoutFragment(for: point) else { return }
+    let frame = fragment.layoutFragmentFrame
+    guard let line = fragment.textLineFragments.first(where: { point.y - frame.minY < $0.typographicBounds.maxY })
+            ?? fragment.textLineFragments.last else { return }
+    let bounds = line.typographicBounds
+    // characterIndex(for:) takes line-fragment coordinates and returns an offset into the paragraph
+    let offset = line.characterIndex(for: CGPoint(x: point.x - frame.minX - bounds.minX,
+                                                  y: point.y - frame.minY - bounds.minY))
+    let location = content.location(fragment.rangeInElement.location, offsetBy: offset)
+    // location is the tapped character — walk to sentence boundaries
+}
+```
+
+```swift
+// TextKit 1: build the stack yourself so you own NSLayoutManager (and any NSTextStorage subclass)
+final class LegacyEditorViewController: UIViewController {
+    private let storage = NSTextStorage()
+    private let layout = NSLayoutManager()
+    private let container = NSTextContainer()
+    private var textView: UITextView!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        container.widthTracksTextView = true
+        storage.addLayoutManager(layout)
+        layout.addTextContainer(container)
+        textView = UITextView(frame: view.bounds, textContainer: container)   // after the stack exists
+        textView.autoresizingMask = [.flexibleWidth, .flexibleHeight]         // follow rotation, split view, Stage Manager
+        textView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTap(_:))))
+        view.addSubview(textView)
+    }
+
+    // Hit-test a tap to the nearest character
+    @objc func handleTap(_ gr: UITapGestureRecognizer) {
+        let pt = gr.location(in: textView)
+        let adjusted = CGPoint(x: pt.x - textView.textContainerInset.left,
+                               y: pt.y - textView.textContainerInset.top)
+        var fraction: CGFloat = 0
+        let charIndex = layout.characterIndex(
+            for: adjusted,
+            in: container,
+            fractionOfDistanceBetweenInsertionPoints: &fraction
+        )
+        // charIndex is the tapped character — walk to sentence boundaries
+    }
 }
 ```
 
@@ -344,7 +377,7 @@ final class StatsHostingController: UIHostingController<StatsView> {
 #### UIKit fallback patterns (when SwiftUI isn't enough yet)
 
 For mixed-framework projects, inspect the affected screen's construction and ownership before choosing a framework. Continue the existing storyboard/XIB, programmatic UIKit, SwiftUI, or hybrid path when appropriate. Read [storyboards and hybrid UI](references/storyboards-and-hybrid.md) before editing nib/scene wiring or a framework boundary. UIKit is appropriate when:
-- You need behavior SwiftUI doesn't expose (custom keyboard accessory, fine-grained scroll control, TextKit 1 hit-testing).
+- You need behavior SwiftUI doesn't expose (custom keyboard accessory, fine-grained scroll control, TextKit hit-testing).
 - You're maintaining an existing UIKit codebase where a full rewrite would be risky.
 
 Bridge with `UIViewControllerRepresentable` / `UIViewRepresentable`. Keep the bridge a single file, treat the view controller as a black box, never reach into its view hierarchy from SwiftUI.
