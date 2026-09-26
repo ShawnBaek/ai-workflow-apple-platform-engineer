@@ -430,21 +430,17 @@ public enum ContractValidation {
   {
     do {
       let schema = try HarnessRuntime.object(schemaPath)
-      let text = try String(contentsOf: path, encoding: .utf8)
       var records: [[String: Any]] = []
       var errors: [String] = []
-      for (index, line) in text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
-        .enumerated() where !line.trimmingCharacters(in: .whitespaces).isEmpty
-      {
-        guard let data = line.data(using: .utf8),
-          let record = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+      for line in try Authorization.ledgerLines(Data(contentsOf: path)) {
+        guard let record = try JSONSerialization.jsonObject(with: line.bytes) as? [String: Any]
         else {
-          errors.append("invalid example ledger JSON at line \(index+1)")
+          errors.append("invalid example ledger JSON at line \(line.number)")
           continue
         }
         records.append(record)
         errors += JSONSchemaValidator.errors(instance: record, schema: schema).map {
-          "example ledger schema line \(index+1): \($0)"
+          "example ledger schema line \(line.number): \($0)"
         }
       }
       errors += validateLedgerLifecycle(records, context: context)

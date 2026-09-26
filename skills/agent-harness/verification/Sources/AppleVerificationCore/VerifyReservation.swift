@@ -62,11 +62,32 @@ extension Authorization {
   public static func verifyReservedAction(
     ledgerPath: URL, reservationID: String, runRoot: URL, coordinatorState: URL,
     coordinatorBinding: [String: Any], healthReportPath: URL, harnessPath: URL,
-    requestPath: URL, context: RuntimeContext, now: Date = Date()
+    requestPath: URL, context: RuntimeContext, clock: () -> Date = { Date() }
   ) -> (errors: [String], dispatch: [String: Any]?) {
     let bindingErrors = validateCoordinatorBinding(
       statePath: coordinatorState, binding: coordinatorBinding, context: context)
     if !bindingErrors.isEmpty { return (bindingErrors, nil) }
+    return verifyReservedAction(
+      ledgerPath: ledgerPath, reservationID: reservationID, runRoot: runRoot,
+      coordinatorState: coordinatorState, harnessPath: harnessPath, requestPath: requestPath,
+      context: context, clock: clock
+    ) { authorization, overlay, now in
+      verifyHealthReport(
+        reportPath: healthReportPath, harnessPath: harnessPath, runRoot: runRoot, policy: overlay,
+        authorization: authorization, context: context, now: now)
+    }
+  }
+
+  /// Claims a reservation after the caller validated the trusted coordinator binding, which
+  /// identifies the executing binary. `evaluateHealth` re-runs the live health probes. Tests run
+  /// inside another executable, so they enter here and substitute both the clock and the probes.
+  static func verifyReservedAction(
+    ledgerPath: URL, reservationID: String, runRoot: URL, coordinatorState: URL,
+    harnessPath: URL, requestPath: URL, context: RuntimeContext, clock: () -> Date,
+    evaluateHealth: (_ authorization: [String: Any], _ overlay: [String: Any], _ now: Date) -> (
+      errors: [String], attestation: [String: Any]?
+    )
+  ) -> (errors: [String], dispatch: [String: Any]?) {
     guard !reservationID.isEmpty else {
       return (["reservation ID is required for protected dispatch"], nil)
     }
@@ -94,10 +115,13 @@ extension Authorization {
           harness["local_requirements"] ?? NSNull(), authorization["local_requirements"] ?? NSNull()
         )
       else { return (["trusted harness local requirements drifted from authorization"], nil) }
-      let health = verifyHealthReport(
-        reportPath: healthReportPath, harnessPath: harnessPath, runRoot: runRoot, policy: overlay,
-        authorization: authorization, context: context, now: now)
+      let health = evaluateHealth(authorization, overlay, clock())
       if !health.errors.isEmpty { return (health.errors, nil) }
+      guard
+        healthStatusSatisfies(
+          health.attestation?["overall_status"],
+          approved: (authorization["health_attestation"] as? [String: Any])?["overall_status"])
+      else { return (["dispatch live health status fell below the approved status"], nil) }
       return try HarnessRuntime.withFileLock(at: ledgerPath) {
         let records = try loadLedger(ledgerPath)
         let lifecycle = ledgerContractErrors(
@@ -170,7 +194,14 @@ extension Authorization {
           authorization: authorization, reservation: reservation, trustedHarness: harness)
         errors += dispatchAppleStateErrors(
           authorization: authorization, reservation: reservation, trustedHarness: harness,
-          reservedAt: reservedAt, verifiedAt: now)
+          reservedAt: reservedAt, verifiedAt: clock())
+        if ["git.commit", "git.push"].contains(string(reservation["action"])) {
+          errors += repositoryConfirmationErrors(
+            records, repository: authorization["repository"] as? [String: Any] ?? [:])
+        }
+        // Health, Git, Spec Kit and ASC probes and the wait for the ledger lock can take minutes.
+        // Authority, lease and deadline are judged at a clock read after all of them.
+        let now = ledgerClock(records, now: clock())
         guard let issued = try? HarnessRuntime.parseTimestamp(string(authorization["issued_at"])),
           let expires = try? HarnessRuntime.parseTimestamp(string(authorization["expires_at"])),
           issued <= now, now < expires

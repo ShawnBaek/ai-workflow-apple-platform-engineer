@@ -165,8 +165,11 @@ For an external write, reserve its exact single-use grant, then run
 `apple-verify verify-reservation` immediately before the tool call. Do not insert
 research, rendering, or another action between revalidation and dispatch. A
 dispatch claim must start invocation within 60 seconds and never beyond its
-authority or lease; long-running completion uses its approved async bound and
-lease heartbeat. Dispatch must match the reserved action request and re-read
+authority or lease, and its `external_write` must be recorded before that
+deadline. There is no asynchronous completion record yet, so a call that
+outlasts the deadline stops the run as `blocked`
+([ledger records](references/run-authorization.md#ledger-records-you-append)).
+Dispatch must match the reserved action request and re-read
 selected repository or Spec Kit state; Apple dispatch must execute the exact
 private, digest-pinned guarded ASC probe again. A crash after reservation is
 ambiguous and burns that reservation; use exact live readback and a fresh

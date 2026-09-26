@@ -150,11 +150,13 @@ requires its observation timestamp to follow reservation, and compares stable
 account/app/build/group state without treating the timestamp itself as state.
 Remote systems do not enforce the local fence. A reserved grant stays consumed
 after a crash; exact live readback and a fresh authorization replace blind retry.
-The 60-second dispatch deadline bounds invocation start, not completion. An
-authorized long-running wait completes within its action-specific async budget,
-authorization window, and renewed lease. A crash between coordinator-state
-persistence and ledger append burns the old run; exact coordinator/remote
-readback and a fresh authorization replace fabricated reconciliation.
+The 60-second dispatch deadline bounds invocation start, and the ledger also
+requires the call's external-write record before it. There is no asynchronous
+completion record yet, so a long-running wait or upload that outlasts the
+deadline cannot be recorded validly and stops the run as blocked. A crash
+between coordinator-state persistence and ledger append burns the old run; exact
+coordinator/remote readback and a fresh authorization replace fabricated
+reconciliation.
 Expiry never permits silent takeover. Recovery requires the previous
 receipt/fence plus a different observer run's fresh proof that the owner and its
 child/tool processes are dead, the protected state is clean, and the live resource was revalidated; the

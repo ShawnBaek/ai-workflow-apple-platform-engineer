@@ -162,7 +162,9 @@ Every protected coordinator CLI operation supplies the private harness:
 ```
 
 Store only the returned exact `result` receipt as a private JSON file and record
-it in the run ledger. Heartbeat before expiry,
+it in the run ledger as described in
+[ledger records you append](run-authorization.md#ledger-records-you-append).
+Heartbeat before expiry,
 never beyond the contract's bounded TTL, and replace the prior receipt with the
 new one. Reverify the private harness binding and live receipt when reserving an
 external action, then run `apple-verify verify-reservation` immediately adjacent
@@ -187,11 +189,15 @@ grants additionally provide private action/artifact and ASC observation files:
 Reserve that exact action into the ledger, then atomically claim it immediately
 before dispatch. The claim permits invocation to start no later than 60 seconds
 after revalidation and may be shorter when authority or lease expiry is nearer.
-Long-running completion uses its approved async bound and a live heartbeat; the
-60-second launch deadline is not a completion timeout. Both gates re-evaluate
-the same exact health-report bytes and action-request digest. Git
-commit/push/PR dispatch rechecks the reserved repository observation; Spec Kit
-and Apple actions also re-read their selected live state:
+Dispatch reads the clock after its live probes, so a slow probe shortens or
+blocks the window instead of extending it past the lease or authority. The
+ledger also needs the call's `external_write` before that deadline, and there
+is no asynchronous completion record yet, so a call that outlasts it cannot be
+recorded validly and stops the run as `blocked`; see
+[ledger records you append](run-authorization.md#ledger-records-you-append).
+Both gates re-evaluate the same exact health-report bytes and action-request
+digest. Git commit/push/PR dispatch rechecks the reserved repository
+observation; Spec Kit and Apple actions also re-read their selected live state:
 
 ```sh
 "$APE" authorize --authorization '<run-root>/authorization.json' \
