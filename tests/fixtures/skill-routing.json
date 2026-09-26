@@ -40,6 +40,14 @@
       "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
       "appliesTo": ["figma-bridge", "apple-platform-ui"],
       "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
+    },
+    {
+      "id": "swiftui-code-connect-parser-is-legacy",
+      "rule": "SwiftUI FigmaConnect parser files are legacy; new CLI mappings are template files.",
+      "statesRule": "FigmaConnect|\\.figma\\.swift|Figma\\.connect",
+      "requiresQualifier": "legacy|migrat",
+      "appliesTo": ["figma-bridge"],
+      "why": "code-connect.md taught a nonexistent @FigmaConnect(url, example:) attribute, .figma.swift files and swift run figma commands as the current workflow, and SKILL.md called the Figma.connect SwiftUI API current and sent detection to a nonexistent .codeconnect/ directory. Since CLI v2.0.0 a parser project can only migrate or unpublish. Fixed in the Code Connect rewrite; a skill doc that names the parser API must say it is legacy and needs migration."
     }
   ]
 }
