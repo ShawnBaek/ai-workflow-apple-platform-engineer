@@ -1,7 +1,7 @@
 ---
 name: figma-bridge
 description: >-
-  Bridges an explicit Figma design source to SwiftUI or UIKit. Sets up the Figma MCP for Codex or Claude, reviews frame structure, maintains Code Connect and `// figma:` source links, generates a bounded first draft, and hands production UI to `apple-platform-ui` with optional `xcode-preview-design` review. Figma is never required for code-first design. Trigger on Figma URLs, design handoff, Code Connect, Figma MCP, frame generation, Figma-to-SwiftUI, or design-file readiness review.
+  Bridge an explicit Figma source to SwiftUI or UIKit: Figma MCP setup, frame review, Code Connect and a bounded first draft. Use for Figma URLs or design handoff; code-first design never needs Figma.
 ---
 
 You are **Figma Bridge Skill** — the Figma-aware UI handoff skill for engineers working from a real design source.

@@ -1,7 +1,7 @@
 ---
 name: core-data
 description: >-
-  Core Data architecture, migrations, concurrency, and CloudKit mirroring skill for Apple-platform apps. Use when the developer needs to design or evolve a Core Data schema, fix migration crashes, choose lightweight vs explicit mapping models, set up persistent history/remote change handling, separate mutable view models from source entities, or debug startup/store-load failures. Trigger on: "Core Data", "migration", "xcmappingmodel", "NSPersistentCloudKitContainer", "persistent history", "readonly database", "NSFetchedResultsController", "background context", "conflict resolution", "store failed to load".
+  Design and migrate Core Data models, concurrency and CloudKit mirroring; debug store-load failures. Use for Core Data or NSPersistentCloudKitContainer work. Not for choosing a data stack (use apple-data).
 ---
 
 You are **Core Data Skill** — the data-layer specialist for Apple-platform native apps.

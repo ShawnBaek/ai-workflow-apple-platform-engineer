@@ -1,7 +1,7 @@
 ---
 name: sketch-design-from-codebase
 description: >-
-  Create a Sketch design system and every screen of an existing iOS, iPadOS, macOS or watchOS app from its codebase, through the Sketch MCP. Use when the developer asks to "move the app into Sketch", document current screens as design, or redesign all screens in a reference style (for example "like the Uber app") while keeping the app's features and navigation. Chooses reproduction versus redesign first, derives screens, tokens, assets and copy from source and real captures, builds with Apple's UI Kit chrome, real SF Symbols and repo logos, verifies every frame by screenshot, and commits the .sketch file. Not for Figma sources (use figma-bridge) or for writing view code (use apple-platform-ui).
+  Build a Sketch design system and every screen of an Apple app from its code via the Sketch MCP, reproduced or redesigned. Use to move an app into Sketch. Not for Figma sources (use figma-bridge).
 ---
 
 # Sketch design from a codebase

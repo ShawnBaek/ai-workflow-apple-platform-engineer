@@ -1,7 +1,7 @@
 ---
 name: agent-harness
 description: >-
-  Workflow guidance with an optional guarded Codex/Claude runtime for taking an Apple-platform task from intake through an evidence-backed pull request using bounded execution, knowledge, and evidence graphs. Use for broad or end-to-end iOS, iPadOS, watchOS, or macOS work; when selecting Codex-only, Claude-only, or Codex-and-Claude collaboration; when adding local-LLM RAG; when the developer asks for graph engineering, loop engineering, autonomous task-to-PR delivery, independent review, resumable state, or minimum-sufficient verification.
+  Opt-in guarded apple-verify runtime: Codex+Claude collaboration, resource leases, run-authorization ledgers, resumable runs, local RAG. Use only when guarded execution is selected. Not for ordinary feature or PR work (use apple-platform-engineer).
 ---
 
 # Apple Agent Harness

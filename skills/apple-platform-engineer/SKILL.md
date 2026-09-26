@@ -1,7 +1,7 @@
 ---
 name: apple-platform-engineer
 description: >-
-  Coordinates Apple-platform work from a clarified product outcome through design, implementation, focused verification, and reviewable delivery. Use for an app idea, cross-cutting feature, roadmap, architecture, or task-to-PR request. Selects only the specialists and orchestration needed by the task.
+  Default lead for Apple-platform work: clarifies the outcome, then routes design, build, verification and PR delivery to specialists. Use for an app idea, broad or cross-cutting feature, architecture or task-to-PR request.
 ---
 
 # Apple Platform Engineer

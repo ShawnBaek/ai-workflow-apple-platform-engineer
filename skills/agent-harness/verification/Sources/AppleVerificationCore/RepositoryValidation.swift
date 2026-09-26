@@ -154,6 +154,7 @@ public enum RepositoryValidation {
       errors.append("README version must match VERSION")
     }
     errors += SkillRoutingValidation.validate(texts: texts)
+    errors += SkillDescriptionBudget.validate(texts: texts)
     if includeContracts {
       errors += ContractValidation.validateRepository(
         context: RuntimeContext(

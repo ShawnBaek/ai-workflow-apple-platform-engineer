@@ -1,7 +1,7 @@
 ---
 name: xcode-project-workflow
 description: >-
-  Mandatory Xcode project-root, container, branch, Xcode-selection, host-execution, and XcodeGen preflight for iOS, iPadOS, watchOS, macOS, tvOS, and visionOS tasks. Use before any Xcode project edit, build, test, Simulator, debugging, signing, archive, or project-generation operation.
+  Mandatory Xcode preflight: project root and container, branch, which Xcode, host execution and XcodeGen. Use before any Xcode project edit, build, test, Simulator, signing, archive or generation step.
 ---
 
 # Xcode Project Workflow

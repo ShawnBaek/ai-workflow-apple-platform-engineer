@@ -1,6 +1,6 @@
 ---
 name: app-intents
-description: Expose Apple app actions and entities through App Intents, App Shortcuts, Siri, and relevant system surfaces. Use for intent parameters, entity queries, discoverability, and newer Apple Intelligence integrations while preserving the project's minimum supported OS and existing domain logic.
+description: Expose app actions and entities through App Intents, App Shortcuts, Siri and Apple Intelligence. Use for intent parameters, entity queries or discoverability without raising the minimum OS.
 ---
 
 # App Intents

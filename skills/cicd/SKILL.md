@@ -1,7 +1,7 @@
 ---
 name: cicd
 description: >-
-  Designs safe GitHub Actions CI/CD for Apple-platform projects on hosted or self-hosted macOS runners. Use for build/test workflows, runner setup, package caching, evidence artifacts, secrets/variables, TestFlight release gates, workflow security, failure triage, or runner disk pressure. Applies least privilege, minimum-sufficient checks, scoped cleanup, and pull-request delivery without auto-merge.
+  Design safe GitHub Actions CI/CD for Apple projects on macOS runners. Use for build/test workflows, caching, secrets, release gates, workflow security, CI failures or runner disk pressure.
 ---
 
 # Apple CI/CD

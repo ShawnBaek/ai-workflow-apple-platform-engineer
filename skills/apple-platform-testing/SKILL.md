@@ -1,6 +1,6 @@
 ---
 name: apple-platform-testing
-description: Plan and run minimum-sufficient iOS, iPadOS, watchOS, and macOS tests with deterministic UI evidence and actionable Xcode results.
+description: Plan and run minimum-sufficient Swift Testing, XCTest and XCUITest checks with deterministic UI evidence. Use to choose, write or run tests or read xcresult failures. Not for builds (use xcodebuild).
 ---
 
 # Apple Platform Testing

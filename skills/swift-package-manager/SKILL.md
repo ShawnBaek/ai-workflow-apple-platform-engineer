@@ -1,6 +1,6 @@
 ---
 name: swift-package-manager
-description: Manage Swift Package Manager dependencies, resolution, builds, and CI without unnecessary package churn or unsafe cache cleanup.
+description: Manage Swift packages, resolution, builds and CI without needless churn or unsafe cache cleanup. Use for Package.swift or Package.resolved changes or resolution and cache failures.
 ---
 
 # Swift Package Manager

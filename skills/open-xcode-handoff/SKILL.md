@@ -1,7 +1,7 @@
 ---
 name: open-xcode-handoff
 description: >-
-  Apply an agent's worktree, clone, sandbox or cloud changes to the checkout behind the user's open Xcode as a reversible patch and verify there. Use when the user asks to see agent changes in their open Xcode. Not for routine builds, PRs or project preflight.
+  Apply an agent's worktree, clone, sandbox or cloud changes to the checkout behind the user's open Xcode as a reversible patch. Use when asked to show them in the open Xcode. Not for routine builds or PRs.
 ---
 
 # Open Xcode Handoff

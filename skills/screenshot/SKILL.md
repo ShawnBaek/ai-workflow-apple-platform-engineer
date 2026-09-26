@@ -1,7 +1,7 @@
 ---
 name: screenshot
 description: >-
-  Captures and verifies deterministic Apple-platform screenshots and recordings. Use for PR evidence, visual acceptance, localized raw capture, interaction recordings and aligned comparisons. For a complete App Store listing media set, use app-store-screenshots; this skill supplies its capture and integrity mechanics. Uses Xcode official capture tools first.
+  Capture deterministic Apple-platform screenshots and recordings with Xcode's tools. Use for PR evidence, visual acceptance or aligned comparisons. Not for App Store media (use app-store-screenshots).
 ---
 
 # Screenshot and Video Evidence

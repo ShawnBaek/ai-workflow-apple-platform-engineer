@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review an Apple-platform pull request or frozen diff with evidence-backed findings, run relevant Simulator edge cases, verify responses to review comments, and return a head-bound approve or changes-requested verdict that gates PR publication. Use for an independent PR review, a review-fix-approve loop before opening a PR, runtime verification of changed UI behavior, review-feedback triage, or targeted re-review after fixes.
+description: Review an Apple-platform PR or frozen diff with evidence-backed findings and Simulator edge cases; its head-bound verdict gates the PR. Use for independent review, review-fix loops or comment triage.
 ---
 
 # Code Review

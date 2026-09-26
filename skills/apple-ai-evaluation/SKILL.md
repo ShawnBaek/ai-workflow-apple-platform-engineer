@@ -1,6 +1,6 @@
 ---
 name: apple-ai-evaluation
-description: Evaluate probabilistic Apple app features with small, representative datasets and Swift-based checks. Use when changing prompts, models, retrieval, guided output, or agent tool behavior; use Apple's Evaluations framework when the selected SDK and evaluation destination support it.
+description: Evaluate probabilistic Apple app features with small representative datasets and Swift checks. Use when changing prompts, models, retrieval, guided output or agent tool behavior.
 ---
 
 # Apple AI Evaluation

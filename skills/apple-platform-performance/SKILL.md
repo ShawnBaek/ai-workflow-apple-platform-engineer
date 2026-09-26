@@ -1,7 +1,7 @@
 ---
 name: apple-platform-performance
 description: >-
-  Diagnoses and fixes performance problems in iOS / iPadOS / watchOS / macOS apps — SwiftUI and UIKit alike. Slow scrolling, dropped frames (hitches), main-thread hangs, slow app launches, ballooning view re-evaluations, expensive image decoding, off-screen rendering, CoreML/ANE inference latency, AVAudioEngine buffer starvation. Use when the developer says "the list is janky", "scroll feels laggy", "app freezes on tap", "launch is slow", "the watch app is sluggish", "TTS takes too long to start", "audio cuts out", "CoreML is slow", "Instruments shows X". Grounded in Apple's five canonical performance docs plus ML inference and audio pipeline patterns. Use for an observed performance issue or a requested performance review.
+  Diagnose and fix Apple app performance by measurement: hitches, hangs, slow launch, view churn, image decoding, Core ML and audio latency. Use when an app is janky, freezes or starts slowly.
 ---
 
 Diagnose the reported symptom with measurements and focused source analysis. Match the explanation and evidence to the developer's needs; the numbered references below are an organization aid, not a required report style.
