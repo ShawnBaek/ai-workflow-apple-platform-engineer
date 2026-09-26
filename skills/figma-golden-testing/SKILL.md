@@ -39,9 +39,11 @@ future run compares the same state.
    skill collection. A missing required URL is a question for the user, not a
    reason to guess a frame.
 3. Render the screen at the Figma frame's point size and the step 1 scale on a
-   deterministic simulator/device fixture. Capture the full screen and hierarchy
-   from the same settled state. Set locale, appearance, time zone, data, and
-   status-bar state explicitly. Read
+   deterministic simulator/device fixture chosen under
+   [destination reuse](../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination),
+   which also governs creating a device when none matches the frame size.
+   Capture the full screen and hierarchy from the same settled state. Set
+   locale, appearance, time zone, data, and status-bar state explicitly. Read
    [references/swift-testing-snapshots.md](references/swift-testing-snapshots.md)
    before writing the test. That guide shows the Swift Testing test code, the
    Point-Free SnapshotTesting strategy, the exact `xcodebuild` invocation, and how

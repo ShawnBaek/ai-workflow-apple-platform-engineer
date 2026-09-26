@@ -77,8 +77,10 @@ Follow [the inventory method](references/codebase-inventory.md). In short:
 For reproduction, capture the running build with
 `xcrun simctl io <udid> screenshot` after driving it with the Xcode device
 interaction tools; this works even when an agent-side Simulator panel is
-broken. Place each capture as a locked reference layer under the rebuilt
-frame and match it before removing or keeping it, as agreed.
+broken. Choose that device under
+[destination reuse](../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination).
+Place each capture as a locked reference layer under the rebuilt frame and
+match it before removing or keeping it, as agreed.
 
 ## Build with real components
 

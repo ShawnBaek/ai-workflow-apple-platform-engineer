@@ -124,14 +124,18 @@ matches Figma.
 
 ## Run one test and inspect the result
 
-Use the repository's existing project or workspace and a named simulator. Keep
-the result bundle so the test attachments and failure diff remain reviewable:
+Use the repository's existing project or workspace and a simulator chosen under
+[destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination).
+Keep `-parallel-testing-enabled NO` unless the test plan requires parallel
+execution, so the run creates no clone devices. Keep the result bundle so the
+test attachments and failure diff remain reviewable:
 
 ```sh
 xcodebuild test \
   -workspace App.xcworkspace \
   -scheme App \
   -destination 'platform=iOS Simulator,id=<UDID>' \
+  -parallel-testing-enabled NO \
   -disableAutomaticPackageResolution \
   -only-testing:AppTests/AddItemFigmaSnapshotTests/rendersAddItem \
   CODE_SIGNING_ALLOWED=NO \

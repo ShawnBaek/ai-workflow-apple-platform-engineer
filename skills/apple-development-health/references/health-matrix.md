@@ -168,7 +168,10 @@ Runtime health layers are separate:
 1. `xcrun simctl list runtimes --json` bounded availability inventory; route
    duplicate-build, disk-image, unavailable, or `Deleting` diagnosis to
    `core-simulator-health` without mutation;
-2. fresh temporary-device monitored boot reaches terminal `Finished`;
+2. fresh temporary-device monitored boot reaches terminal `Finished`; name,
+   record and delete that device as in
+   [destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination)
+   step 3;
 3. complete shutdown and a strict second monitored boot when runtime stability
    is an acceptance criterion;
 4. system-app launch;

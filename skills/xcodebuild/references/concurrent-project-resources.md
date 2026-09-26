@@ -67,8 +67,11 @@ screenshot operation uses the leased UDID explicitly.
   Never redirect caches merely to avoid a lease.
 - **Simulator/device:** key by host ID and the exact UDID set. Any UDID
   intersection on the same host conflicts. Platform, bundle ID, and run ID stay
-  in evidence only. Separate projects receive separate Simulator devices even
-  when their runtime/model matches, especially when bundle identifiers collide.
+  in evidence only. Concurrent runs from separate projects use separate
+  existing compatible devices even when their runtime/model matches,
+  especially when bundle identifiers collide. If no second one is free, queue
+  for the leased device; create one only under
+  [destination reuse](../SKILL.md#choose-and-reuse-a-simulator-destination).
 - **CoreSimulator runtime registry:** one owner per host-wide
   `coresimulator_runtime_registry` key. This covers runtime discovery,
   component registration/removal, image and mount recovery, and service-wide

@@ -29,7 +29,9 @@ Use labels that state actual capabilities, for example architecture, Xcode build
 and whether signing is present. A job must not select a generic runner and then
 silently change Xcode or install tools. Limit each runner service to the
 concurrency it can safely support; separate build tuple, Simulator/device, and
-signing leases still apply across local agents and CI.
+signing leases still apply across local agents and CI. Devices and
+parallel-testing clones persist between jobs on this runner, so choose test
+destinations under [destination reuse](../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination).
 
 ## Service and verification
 

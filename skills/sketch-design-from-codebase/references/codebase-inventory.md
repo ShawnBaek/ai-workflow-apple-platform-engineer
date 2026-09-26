@@ -70,7 +70,10 @@ count once per platform frame that shows them.
 - Device points = capture pixels ÷ scale. Verify with `sips -g pixelWidth -g
   pixelHeight`. Typical current values: iPhone 402×874 @3×, iPad 11" landscape
   1210×834 @2×, macOS window 1312×912 @2×, Apple Watch 49 mm 205×251 @2×.
-- For reproduction, capture the running build:
+- For reproduction, capture the running build on a device chosen under
+  [destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination),
+  which skips devices another task owns or the user is using and checks for
+  the user's same-bundle app before installing a build from another checkout:
 
   ```sh
   xcrun simctl list devices booted

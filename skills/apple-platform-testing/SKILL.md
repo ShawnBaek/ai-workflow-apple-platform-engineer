@@ -131,6 +131,10 @@ Changing an `-only-testing` filter to a test already present in those products
 does not itself require another build. Rebuild when a required target was not
 built or a compatibility input changed.
 
+Run tests on a reused destination and disable parallel-testing clones unless
+the test plan requires them, as described in
+[destination reuse](../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination).
+
 Write repository-owned verification in Swift (Foundation, Swift Testing,
 XCTest, ImageIO, CoreGraphics, or AVFoundation as appropriate). Apple tools such
 as `xcodebuild`, `simctl`, `xcresulttool`, and Instruments remain the execution

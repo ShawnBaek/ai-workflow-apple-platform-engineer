@@ -3,6 +3,11 @@
 Use existing `xcode-project-workflow`, `xcodebuild` and `screenshot` procedures for
 container selection, destination ownership and capture state. Do not boot another
 device merely to make screenshots while a task already owns a suitable destination.
+When a required display slot has no existing device, create one only under
+[destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination); never one per
+locale. Offer to keep it for later refreshes instead of deleting it silently; a
+kept device is renamed without its `agent-` prefix as that section's step 3
+describes, so later refreshes reuse it.
 
 ## Discover the actual command surface
 

@@ -121,6 +121,18 @@
         "figma-bridge"
       ],
       "why": "code-connect.md taught a nonexistent @FigmaConnect(url, example:) attribute, .figma.swift files and swift run figma commands as the current workflow, and SKILL.md called the Figma.connect SwiftUI API current and sent detection to a nonexistent .codeconnect/ directory. Since CLI v2.0.0 a parser project can only migrate or unpublish. Fixed in the Code Connect rewrite; a skill doc that names the parser API must say it is legacy and needs migration."
+    },
+    {
+      "id": "simulator-reuse-before-create",
+      "rule": "Text that gives a task separate, temporary or newly created Simulator devices must say to reuse an existing compatible device first or to delete the task-created device.",
+      "statesRule": "separate Simulator devices|temporary (Simulator )?device|simctl (create|clone)",
+      "patternNote": "Bound to the reuse and ownership phrases. A bare 'existing' qualifier would pass on unrelated text elsewhere in the same file. statesRule matches the shipped single-line wording, so it catches a revert to that text, not a reworded or line-wrapped restatement.",
+      "requiresQualifier": "existing compatible devices?|task-created device",
+      "appliesTo": [
+        "xcodebuild",
+        "core-simulator-health"
+      ],
+      "why": "Maintainer report: agents left many Simulator devices behind. concurrent-project-resources.md told separate projects to receive separate devices and core-simulator-health preferred a temporary device, and neither said to reuse an existing device first or to delete the device the task created."
     }
   ]
 }
