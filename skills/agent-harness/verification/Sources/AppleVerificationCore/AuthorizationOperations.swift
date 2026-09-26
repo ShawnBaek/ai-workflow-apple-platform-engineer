@@ -201,12 +201,9 @@ extension Authorization {
       errors.append("requested path is outside authorization")
     }
     if action == "git.commit" {
-      if paths != operationInput["paths"] as? [String] {
-        errors.append("git.commit paths drifted from the structured operation descriptor")
-      }
-      if paths != liveRepository["staged_paths"] as? [String] {
-        errors.append("git.commit paths must exactly match the live staged paths")
-      }
+      errors += commitPathErrors(
+        paths: paths, scope: operationInput["paths"] as? [String] ?? [],
+        stagedPaths: liveRepository["staged_paths"] as? [String])
       let evidence = ledgerRecords.compactMap {
         $0["record_type"] as? String == "evidence" ? $0["payload"] as? [String: Any] : nil
       }.filter {
@@ -374,6 +371,21 @@ extension Authorization {
     errors += liveHealthErrors(
       envelope, request: request, verified: verifiedHealthAttestation, now: now)
     return Array(Set(errors)).sorted()
+  }
+
+  // The commit descriptor is fixed before implementation, so its paths are an approved scope with
+  // allowed_paths prefix semantics; the request names the live staged set within that scope.
+  static func commitPathErrors(paths: [String], scope: [String], stagedPaths: [String]?)
+    -> [String]
+  {
+    var errors: [String] = []
+    if paths.contains(where: { !pathAllowed($0, scope) }) {
+      errors.append("git.commit path is outside the structured operation descriptor path scope")
+    }
+    guard let stagedPaths, !paths.isEmpty, Set(paths).count == paths.count,
+      paths.count == stagedPaths.count, Set(paths) == Set(stagedPaths)
+    else { return errors + ["git.commit paths must exactly match the live staged paths"] }
+    return errors
   }
 
   public static func reserveAction(

@@ -208,6 +208,82 @@ final class AuthorizationTests: XCTestCase {
       })
   }
 
+  func testGitCommitBindsLiveStagedSetWithinApprovedDescriptorPathScope() throws {
+    var envelope = try currentApprovedEnvelope()
+    envelope["allowed_paths"] = ["Sources", "SourcesExtra", "Tests"]
+    let grant = (envelope["action_grants"] as! [[String: Any]]).first {
+      $0["action"] as? String == "git.commit"
+    }!
+    XCTAssertEqual((grant["operation_input"] as? [String: Any])?["paths"] as? [String], ["Sources"])
+    var request: [String: Any] = [:]
+    for field in Authorization.requestFields { request[field] = NSNull() }
+    for field in [
+      "system", "action", "operation", "operation_input", "constraint_sha256", "phase", "grant_id",
+      "idempotency_key", "target",
+    ] {
+      request[field] = grant[field]
+    }
+    let currentContext = context
+    func commitPathErrors(_ paths: [String], staged: [String]) -> [String] {
+      var candidate = request
+      candidate["paths"] = paths
+      return Authorization.authorizeAction(
+        envelope: envelope, request: candidate, ledgerRecords: [], policyOverlay: [:],
+        liveRepository: ["staged_paths": staged], selectedWriter: "codex",
+        verifiedHealthAttestation: nil, context: currentContext
+      ).filter { $0.hasPrefix("git.commit path") }
+    }
+    let staged = ["Sources/A.swift", "Sources/B.swift"]
+    XCTAssertEqual(commitPathErrors(["Sources/B.swift", "Sources/A.swift"], staged: staged), [])
+    XCTAssertEqual(commitPathErrors(staged, staged: Array(staged.reversed())), [])
+
+    let outsideScope = ["git.commit path is outside the structured operation descriptor path scope"]
+    let mixed = ["Sources/A.swift", "Tests/X.swift"]
+    XCTAssertEqual(commitPathErrors(mixed, staged: mixed), outsideScope)
+    XCTAssertEqual(
+      commitPathErrors(["SourcesExtra/x.swift"], staged: ["SourcesExtra/x.swift"]), outsideScope)
+    let stageDrift = ["git.commit paths must exactly match the live staged paths"]
+    XCTAssertEqual(commitPathErrors(["Sources/A.swift"], staged: staged), stageDrift)
+    XCTAssertEqual(commitPathErrors(staged + ["Sources/C.swift"], staged: staged), stageDrift)
+  }
+
+  func testCommitPathScopeMatchesStagedSetAndRejectsEscapes() {
+    let scope = ["Sources"]
+    let staged = ["Sources/A.swift", "Sources/B.swift"]
+    let outsideScope = "git.commit path is outside the structured operation descriptor path scope"
+    let stageDrift = "git.commit paths must exactly match the live staged paths"
+    XCTAssertEqual(
+      Authorization.commitPathErrors(
+        paths: ["Sources/B.swift", "Sources/A.swift"], scope: scope, stagedPaths: staged), [])
+    XCTAssertEqual(
+      Authorization.commitPathErrors(
+        paths: staged, scope: ["Sources/"], stagedPaths: Array(staged.reversed())), [])
+
+    let escapes = [
+      "Tests/X.swift", "SourcesExtra/x.swift", "Sources/../Tests/X.swift", "/Sources/x",
+    ]
+    for escape in escapes {
+      XCTAssertEqual(
+        Authorization.commitPathErrors(paths: [escape], scope: scope, stagedPaths: [escape]),
+        [outsideScope], escape)
+    }
+    XCTAssertEqual(
+      Authorization.commitPathErrors(paths: staged, scope: [], stagedPaths: staged), [outsideScope])
+
+    for (paths, live) in [
+      (["Sources/A.swift"], staged), (staged + ["Sources/C.swift"], staged),
+      (["Sources/A.swift", "Sources/A.swift"], ["Sources/A.swift"]),
+      (["Sources/A.swift", "Sources/A.swift"], ["Sources/A.swift", "Sources/A.swift"]),
+      (["Sources/A.swift"], ["Sources/A.swift", "Sources/A.swift"]), ([], []),
+    ] {
+      XCTAssertEqual(
+        Authorization.commitPathErrors(paths: paths, scope: scope, stagedPaths: live),
+        [stageDrift], "\(paths) vs \(live)")
+    }
+    XCTAssertEqual(
+      Authorization.commitPathErrors(paths: staged, scope: scope, stagedPaths: nil), [stageDrift])
+  }
+
   func testRuntimeUIRequiresPlansThatProtectRuntimeVerification() throws {
     var envelope = try currentApprovedEnvelope()
     envelope["health_profile"] = "runtime_ui"
