@@ -208,7 +208,8 @@ private final class CompanionFixture: CompanionGitHubClient {
   let result = try CompanionWatcher.reconcileIssue(
     manifest, targetRepository: fixture.consumerRepository, client: fixture)
   #expect(result["issue_action"] as? String == "created")
-  #expect(result["issue_url"] as? String == "https://github.com/\(fixture.consumerRepository)/issues/1")
+  #expect(
+    result["issue_url"] as? String == "https://github.com/\(fixture.consumerRepository)/issues/1")
   #expect(fixture.calls.contains { $0 == ("POST", "repos/\(fixture.consumerRepository)/issues") })
   #expect(fixture.writeCount == 1)
   fixture.calls.removeAll()

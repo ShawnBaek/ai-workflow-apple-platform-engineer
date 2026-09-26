@@ -60,6 +60,7 @@ extension Authorization {
     var usedKeys = Set<String>()
     var producedTargets: [String: String] = [:]
     var passedNodes = Set<String>()
+    var terminallyFailedNodes = Set<String>()
     var successfulOperations = Set<String>()
     var evidenceIDs = Set<String>()
     var resourcePlans: [String: [String: Any]] = [:]
@@ -584,6 +585,9 @@ extension Authorization {
         if passedNodes.contains(node) {
           errors.append("workflow node cannot pass more than once: \(node)")
         }
+        if terminallyFailedNodes.contains(node) {
+          errors.append("workflow node cannot pass after failed_terminal: \(node)")
+        }
         let dependencies = Set(definition["requires"] as? [String] ?? [])
         if !dependencies.isSubset(of: passedNodes) {
           errors.append(
@@ -824,6 +828,21 @@ extension Authorization {
         if node == "local_verified", !Set(workflow.main).isSubset(of: passedNodes) {
           errors.append("local_verified requires every installed local-workflow node")
         }
+      case "node":
+        // Non-passed states record progress only; every gate above reads passedNodes.
+        let node = text(payload["node_id"])
+        let status = text(payload["status"])
+        if workflow.nodes[node] == nil {
+          errors.append("node record is not present in the installed workflow contracts")
+        }
+        if ![
+          "pending", "ready", "leased", "acting", "verifying", "failed_retryable",
+          "failed_terminal", "awaiting_approval", "blocked", "skipped", "superseded",
+        ].contains(status) {
+          errors.append("workflow node status is unsupported at line \(line)")
+        } else if status == "failed_terminal" {
+          terminallyFailedNodes.insert(node)
+        }
       case "stop":
         if !active.isEmpty { errors.append("terminal stop cannot leave an active lease") }
       case "knowledge":
@@ -851,6 +870,25 @@ extension Authorization {
           !uniqueStringArrayAllowEmpty(invalidates)
         {
           errors.append("feedback invalidates must be unique strings")
+        }
+      case "improvement":
+        // A candidate is a reviewed proposal; recording it grants no run authority.
+        let required: Set<String> = [
+          "candidate_id", "derived_from_feedback_ids", "scope", "proposal_hash", "status",
+          "validation_evidence_ids",
+        ]
+        var strings = ["candidate_id", "proposal_hash"]
+        if payload["rollback_ref"] != nil { strings.append("rollback_ref") }
+        if !required.isSubset(of: Set(payload.keys))
+          || !Set(payload.keys).isSubset(of: required.union(["rollback_ref"]))
+          || strings.contains(where: { (payload[$0] as? String)?.isEmpty != false })
+          || !uniqueStrings(payload["derived_from_feedback_ids"])
+          || !uniqueStringArrayAllowEmpty(payload["validation_evidence_ids"])
+          || !["private_project_overlay", "ios_experts_repository"].contains(text(payload["scope"]))
+          || !["proposed", "approved", "rejected", "applied", "rolled_back"].contains(
+            text(payload["status"]))
+        {
+          errors.append("improvement record must bind one sourced candidate and valid status")
         }
       case "attempt", "approval": break
       default: errors.append("ledger record type is unsupported at line \(line)")

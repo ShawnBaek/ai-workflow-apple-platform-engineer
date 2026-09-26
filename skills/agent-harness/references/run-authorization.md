@@ -14,10 +14,13 @@ expiry. Static writes use literal descriptors. Outputs known only after
 implementation use a versioned deterministic policy bound to reviewed patch,
 commit, and evidence inputs; they are not represented as a pre-known body or
 artifact hash. The checker also validates each descriptor's semantics: a push
-must set `force: false`, Issue/Project transitions name the exact state,
-commit paths match the live reviewed stage, PR creation binds a safe base and
-the approved head with `draft: false`, waits equal the approved time/retry
-bounds, and distribution/read-back names only the authorized internal group.
+must set `force: false`, Issue/Project transitions name the exact state, PR
+creation binds a safe base and the approved head with `draft: false`, waits
+equal the approved time/retry bounds, and distribution/read-back names only the
+authorized internal group. A commit descriptor's `paths` is the approved path
+scope, not a file list: each entry lies within `allowed_paths` and uses the same
+prefix rule. The commit request must name exactly the live reviewed staged set,
+in any order, and every staged path must fall within that scope.
 
 ## Three delivery targets
 

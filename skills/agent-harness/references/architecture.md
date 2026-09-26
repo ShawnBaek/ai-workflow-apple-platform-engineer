@@ -32,7 +32,10 @@ authority or remote exactly-once semantics without that external boundary.
 
 Node states are `pending`, `ready`, `leased`, `acting`, `verifying`, `passed`,
 `failed_retryable`, `failed_terminal`, `awaiting_approval`, `blocked`, `skipped`,
-or `superseded`. Do not use an unqualified `done` state.
+or `superseded`. Do not use an unqualified `done` state. Only `passed` satisfies
+dependencies, lease bindings, and terminal checks; the other states record
+progress for an installed node. A node cannot pass after its `failed_terminal`
+record in the same run.
 
 ## Default task graph
 

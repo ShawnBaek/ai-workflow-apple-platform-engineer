@@ -22,7 +22,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [apple-platform-testing](../skills/apple-platform-testing/SKILL.md) | Minimum sufficient Swift, XCTest, and UI verification |
 | [apple-platform-ui](../skills/apple-platform-ui/SKILL.md) | SwiftUI, UIKit, storyboard, and hybrid UI implementation |
 | [cicd](../skills/cicd/SKILL.md) | Apple build/test CI and gated release workflows |
-| [code-review](../skills/code-review/SKILL.md) | Independent evidence-backed findings and verified responses |
+| [code-review](../skills/code-review/SKILL.md) | Independent evidence-backed findings, verified responses and the head-bound approval that gates PR publication |
 | [commit-message](../skills/commit-message/SKILL.md) | Concise commit messages based on the staged diff |
 | [core-data](../skills/core-data/SKILL.md) | Core Data schemas, migration, concurrency, and mirroring |
 | [core-simulator-health](../skills/core-simulator-health/SKILL.md) | Scoped CoreSimulator diagnosis and recovery |
@@ -33,6 +33,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [github-projects](../skills/github-projects/SKILL.md) | Issues and optional Projects tracking |
 | [icon-composer](../skills/icon-composer/SKILL.md) | Apple Icon Composer and app icon assets |
 | [onepassword-environments](../skills/onepassword-environments/SKILL.md) | Official 1Password development environment connection, secrets and local mounts |
+| [open-xcode-handoff](../skills/open-xcode-handoff/SKILL.md) | On request, apply an agent's worktree, clone or sandbox changes to the checkout your open Xcode uses, verify there, and undo |
 | [release-qa-handoff](../skills/release-qa-handoff/SKILL.md) | Hand a processed build to QA: stamp cards with version/build and what changed, move them, draft the tester note |
 | [screenshot](../skills/screenshot/SKILL.md) | Deterministic screenshots, recordings, and aligned comparisons |
 | [sketch-design-from-codebase](../skills/sketch-design-from-codebase/SKILL.md) | Sketch design system and every screen from the codebase, reproduced or redesigned |
