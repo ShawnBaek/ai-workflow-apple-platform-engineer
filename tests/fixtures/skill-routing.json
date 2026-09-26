@@ -48,20 +48,15 @@
       "why": "Issue #61: design-system icons had an explicit carve-out from SF Symbol substitution, but the color rule next to it did not, so the agent replaced fills the design had specified and judged colors by eye. Fixed in #62. A skill that states the substitution rule must also state where it stops."
     },
     {
-      "id": "design-source-icon-fidelity",
-      "rule": "SF Symbol substitution is limited to system glyphs; design-system icons keep their export.",
-      "statesRule": "SF Symbol substitution",
-      "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
-      "appliesTo": ["figma-bridge", "apple-platform-ui"],
-      "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
-    },
-    {
       "id": "cloudkit-mirrored-rename",
       "rule": "Renaming through a renaming identifier is a lightweight migration only for stores that are not mirrored to CloudKit.",
       "statesRule": "renamed with (proper )?renaming identifiers?",
       "patternNote": "Bound to the recommendation itself: the CloudKit section in the same file also mentions renaming identifiers, so a looser qualifier would pass after the caveat on the recommendation is removed.",
       "requiresQualifier": "renaming identifiers? \\(not for CloudKit-mirrored",
-      "appliesTo": ["core-data", "apple-data"],
+      "appliesTo": [
+        "core-data",
+        "apple-data"
+      ],
       "why": "Review finding: the core-data playbook recommended renaming identifiers with no CloudKit caveat while the skill owns NSPersistentCloudKitContainer mirroring. A production CloudKit schema can't rename record types or fields, so the rename migrates only the local store and older app versions keep using the old field."
     },
     {
@@ -69,8 +64,18 @@
       "rule": "Routing to SwiftData or enabling its CloudKit sync must state that SwiftData syncs only the private database.",
       "statesRule": "SwiftData; read|enabling CloudKit synchronization",
       "requiresQualifier": "SwiftData('s CloudKit sync mirrors| syncs) only the private database",
-      "appliesTo": ["apple-data"],
+      "appliesTo": [
+        "apple-data"
+      ],
       "why": "Review finding: apple-data routed new apps to SwiftData without saying its CloudKit sync can't use the shared or public database, so a later sharing or public-data requirement forced a framework rewrite."
+    },
+    {
+      "id": "design-source-icon-fidelity",
+      "rule": "SF Symbol substitution is limited to system glyphs; design-system icons keep their export.",
+      "statesRule": "SF Symbol substitution",
+      "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
+      "appliesTo": ["figma-bridge", "apple-platform-ui"],
+      "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
     },
     {
       "id": "swift-format-and-compile-gate",
