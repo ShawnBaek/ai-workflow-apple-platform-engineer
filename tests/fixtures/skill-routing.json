@@ -111,6 +111,16 @@
         "apple-platform-testing"
       ],
       "why": "Swift patches were accepted on a build alone: no skill required swift-format, so formatting drift reached PRs unnoticed. The format-and-compile gate now lives beside build acceptance in apple-platform-testing; this case keeps every completion gate that cites build acceptance from dropping it."
+    },
+    {
+      "id": "swiftui-code-connect-parser-is-legacy",
+      "rule": "SwiftUI FigmaConnect parser files are legacy; new CLI mappings are template files.",
+      "statesRule": "FigmaConnect|\\.figma\\.swift|Figma\\.connect",
+      "requiresQualifier": "legacy|migrat",
+      "appliesTo": [
+        "figma-bridge"
+      ],
+      "why": "code-connect.md taught a nonexistent @FigmaConnect(url, example:) attribute, .figma.swift files and swift run figma commands as the current workflow, and SKILL.md called the Figma.connect SwiftUI API current and sent detection to a nonexistent .codeconnect/ directory. Since CLI v2.0.0 a parser project can only migrate or unpublish. Fixed in the Code Connect rewrite; a skill doc that names the parser API must say it is legacy and needs migration."
     }
   ]
 }
