@@ -2,19 +2,34 @@ import Foundation
 
 extension Authorization {
   public static func loadLedger(_ path: URL) throws -> [[String: Any]] {
-    let text = try String(contentsOf: path, encoding: .utf8)
     var records: [[String: Any]] = []
-    for (offset, line) in text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
-      .enumerated() where !line.trimmingCharacters(in: .whitespaces).isEmpty
-    {
-      guard let data = line.data(using: .utf8),
-        let record = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-      else {
-        throw VerificationError.invalid("invalid ledger JSON object on line \(offset + 1)")
+    for line in try ledgerLines(Data(contentsOf: path)) {
+      guard let record = try JSONSerialization.jsonObject(with: line.bytes) as? [String: Any] else {
+        throw VerificationError.invalid("invalid ledger JSON object on line \(line.number)")
       }
       records.append(record)
     }
     return records
+  }
+
+  /// A JSONL record ends at a 0x0A byte and nowhere else. U+2028, U+2029 and U+0085 are legal
+  /// raw inside a JSON string, and every appender and the ledger binding delimit by 0x0A alone.
+  static func ledgerLines(_ data: Data) throws -> [(number: Int, bytes: Data)] {
+    guard String(data: data, encoding: .utf8) != nil else {
+      throw VerificationError.invalid("ledger is not UTF-8")
+    }
+    return data.split(separator: 0x0a, omittingEmptySubsequences: false).enumerated()
+      .compactMap { offset, line in
+        line.allSatisfy { [0x20, 0x09, 0x0d].contains($0) } ? nil : (offset + 1, Data(line))
+      }
+  }
+
+  /// The instant a runtime writer judges authority at and stamps its record with: the current
+  /// clock, but never earlier than the latest record, so the append-only ledger stays monotonic
+  /// even after a writer whose clock runs ahead.
+  static func ledgerClock(_ records: [[String: Any]], now: Date) -> Date {
+    records.compactMap { try? HarnessRuntime.parseTimestamp(text($0["recorded_at"])) }
+      .reduce(now, max)
   }
 
   public static func ledgerContractErrors(
@@ -73,6 +88,7 @@ extension Authorization {
     var protectedBy: [String: [String]] = [:]
     var feedbackIDs = Set<String>()
     var staticLeaseSignatures = Set<String>()
+    var stopped = false
     let ledgerDelivery = records.lazy.compactMap { record -> String? in
       guard record["record_type"] as? String == "approval",
         let payload = record["payload"] as? [String: Any],
@@ -140,7 +156,16 @@ extension Authorization {
       }
       if recorded == nil { errors.append("ledger recorded_at is invalid at line \(line)") }
       previousDate = recorded ?? previousDate
-      switch record["record_type"] as? String {
+      let recordType = record["record_type"] as? String
+      // A terminal stop ends the run's authority: nothing after it may take or extend a lease,
+      // reserve, claim, or perform an external write. Lease releases and audit records may follow.
+      if stopped,
+        ["grant_reservation", "grant_dispatch", "external_write"].contains(recordType)
+          || (recordType == "lease" && payload["action"] as? String != "release")
+      {
+        errors.append("ledger grants authority at line \(line) after its terminal stop")
+      }
+      switch recordType {
       case "approval" where payload["kind"] as? String == "run_authorization":
         let digest = text(payload["authorization_hash"])
         if payload["decision"] as? String != "approved" || digest.isEmpty
@@ -845,6 +870,7 @@ extension Authorization {
         }
       case "stop":
         if !active.isEmpty { errors.append("terminal stop cannot leave an active lease") }
+        stopped = true
       case "knowledge":
         if Set(payload.keys) != ["source_id", "authority", "content_hash", "provenance"]
           || payload.values.contains(where: { text($0).isEmpty })

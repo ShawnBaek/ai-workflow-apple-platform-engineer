@@ -309,17 +309,7 @@ extension Authorization {
       errors.append("ledger lacks one exact prior approved authorization record")
     }
     if ["git.commit", "git.push"].contains(action) {
-      let scope =
-        "\(text(expectedRepository["fingerprint"])):\(text(expectedRepository["branch"])):\(text(expectedRepository["remote"]))"
-      let repositoryApprovals = ledgerRecords.filter {
-        $0["record_type"] as? String == "approval"
-          && ($0["payload"] as? [String: Any])?["kind"] as? String == "repository"
-          && ($0["payload"] as? [String: Any])?["decision"] as? String == "approved"
-          && ($0["payload"] as? [String: Any])?["scope"] as? String == scope
-      }
-      if repositoryApprovals.count != 1 {
-        errors.append("git commit or push requires one exact prior repository confirmation")
-      }
+      errors += repositoryConfirmationErrors(ledgerRecords, repository: expectedRepository)
     }
     let grants = (envelope["action_grants"] as? [[String: Any]] ?? []).filter { grant in
       [
@@ -376,6 +366,37 @@ extension Authorization {
     return Array(Set(errors)).sorted()
   }
 
+  /// Commit and push need the repository confirmation for the exact
+  /// `<fingerprint>:<branch>:<remote>` scope. Exactly one approval may exist for that scope. A
+  /// rejection recorded after it revokes the confirmation for the rest of the run, and a second
+  /// approval does not restore it.
+  static func repositoryConfirmationErrors(_ records: [[String: Any]], repository: [String: Any])
+    -> [String]
+  {
+    let scope =
+      "\(text(repository["fingerprint"])):\(text(repository["branch"])):\(text(repository["remote"]))"
+    let decisions = records.compactMap { record -> String? in
+      guard record["record_type"] as? String == "approval",
+        let payload = record["payload"] as? [String: Any],
+        payload["kind"] as? String == "repository", payload["scope"] as? String == scope
+      else { return nil }
+      return text(payload["decision"])
+    }
+    if decisions.filter({ $0 == "approved" }).count != 1 {
+      return ["git commit or push requires one exact prior repository confirmation"]
+    }
+    return decisions.last == "approved"
+      ? [] : ["repository confirmation was revoked by a later rejection"]
+  }
+
+  /// A run approved while degraded may continue once health recovers, but never below the
+  /// approved status.
+  static func healthStatusSatisfies(_ live: Any?, approved: Any?) -> Bool {
+    let rank = ["degraded": 1, "healthy": 2]
+    guard let live = rank[text(live)], let approved = rank[text(approved)] else { return false }
+    return live >= approved
+  }
+
   // The commit descriptor is fixed before implementation, so its paths are an approved scope with
   // allowed_paths prefix semantics; the request names the live staged set within that scope.
   static func commitPathErrors(paths: [String], scope: [String], stagedPaths: [String]?)
@@ -403,6 +424,24 @@ extension Authorization {
     let bindingErrors = validateCoordinatorBinding(
       statePath: coordinatorState, binding: coordinatorBinding, context: context)
     if !bindingErrors.isEmpty { return (bindingErrors, nil) }
+    return reserveBoundAction(
+      ledgerPath: ledgerPath, envelope: envelope, request: request, runRoot: runRoot,
+      policyOverlay: policyOverlay, liveRepository: liveRepository,
+      liveSpecSnapshot: liveSpecSnapshot, liveAppleObservation: liveAppleObservation,
+      coordinatorState: coordinatorState, selectedWriter: selectedWriter,
+      trustedHarnessSHA256: trustedHarnessSHA256,
+      verifiedHealthAttestation: verifiedHealthAttestation, context: context)
+  }
+
+  /// Reserves after the caller validated the trusted coordinator binding, which identifies the
+  /// executing binary; tests run inside another executable and enter here.
+  static func reserveBoundAction(
+    ledgerPath: URL, envelope: [String: Any], request: [String: Any], runRoot: URL,
+    policyOverlay: [String: Any], liveRepository: [String: Any],
+    liveSpecSnapshot: [String: Any]?, liveAppleObservation: [String: Any]?,
+    coordinatorState: URL, selectedWriter: String?, trustedHarnessSHA256: String,
+    verifiedHealthAttestation: [String: Any]?, context: RuntimeContext
+  ) -> (errors: [String], reservation: [String: Any]?) {
     do {
       let status = try ResourceCoordinator.fullStatus(statePath: coordinatorState)
       let authority =
@@ -426,7 +465,7 @@ extension Authorization {
           return (["coordination_required: canonical ledger binding drifted"], nil)
         }
         let records = try loadLedger(ledgerPath)
-        let now = Date()
+        let now = ledgerClock(records, now: Date())
         let verified = ResourceCoordinator.verifyReceipt(
           statePath: coordinatorState,
           receipt: request["coordinator_receipt"] as? [String: Any] ?? [:], now: now)
@@ -643,11 +682,14 @@ extension Authorization {
     }
     let authorized = envelope["health_attestation"] as? [String: Any] ?? [:]
     for field in [
-      "profile", "overall_status", "authoritative_targets_sha256", "agent_skill_bundle_sha256",
+      "profile", "authoritative_targets_sha256", "agent_skill_bundle_sha256",
       "coordinator_instance_id", "coordinator_contract_bundle_sha256",
     ] where !same(verified[field], authorized[field]) {
-      errors.append("live health identity or status drifted from authorization")
+      errors.append("live health identity drifted from authorization")
       break
+    }
+    if !healthStatusSatisfies(verified["overall_status"], approved: authorized["overall_status"]) {
+      errors.append("live health status fell below the approved status")
     }
     if let observed = try? HarnessRuntime.parseTimestamp(text(verified["observed_at"])),
       (-60...600).contains(now.timeIntervalSince(observed))

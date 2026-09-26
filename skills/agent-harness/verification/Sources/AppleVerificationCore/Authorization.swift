@@ -1038,7 +1038,9 @@ public enum Authorization {
         errors.append("derived GitHub target has the wrong object kind: \(action)")
       } else if let kind = consumers[action], grant["target_from_grant_id"] == nil {
         if kind == "github_issue" {
-          if let issue = int(github["issue_number"]), target != "\(slug):issue:\(issue)" {
+          // The bound Issue is the only direct target. A new feature Issue has no number until
+          // its create grant succeeds, so its consumers must derive their target from that grant.
+          if int(github["issue_number"]).map({ target != "\(slug):issue:\($0)" }) ?? true {
             errors.append(
               "Issue grant must bind a known exact Issue or a derived target: \(action)")
           }
