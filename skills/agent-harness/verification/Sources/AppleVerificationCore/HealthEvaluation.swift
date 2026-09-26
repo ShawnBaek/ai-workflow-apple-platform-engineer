@@ -97,6 +97,11 @@ public struct HealthEvaluationResult {
 }
 
 public enum HealthEvaluation {
+  /// Bound for each of the two registry inventory commands the runtime probe runs under its lease.
+  public static let runtimeProbeCommandTimeout: TimeInterval = 30
+  /// The lease must outlive both commands plus the coordinator's own lock wait and process
+  /// teardown; nothing heartbeats it, and an expired lease blocks the host until recovery.
+  public static let minimumRuntimeProbeTTLSeconds = Int(2 * runtimeProbeCommandTimeout) + 30
   public static let profiles: Set<String> = [
     "local_verified", "pr_ready", "runtime_ui", "testflight_uploaded", "testflight_distributed",
     "icon_upstream",
@@ -312,12 +317,19 @@ public enum HealthEvaluation {
           ? "Evaluator confirmed \(id)." : "Required live \(id) observation failed closed.")
     }
     if required.contains("simulator.runtime") {
-      if let coordinator = runtimeCoordinator, let scope = runtimeScope, scope.isWellFormed {
+      if let scope = runtimeScope, scope.isWellFormed,
+        scope.ttlSeconds < minimumRuntimeProbeTTLSeconds
+      {
+        record(
+          "simulator.runtime", false, "runtime_probe_lease_too_short",
+          ["ttl_seconds": scope.ttlSeconds, "minimum_ttl_seconds": minimumRuntimeProbeTTLSeconds])
+      } else if let coordinator = runtimeCoordinator, let scope = runtimeScope, scope.isWellFormed {
         do {
           try coordinator.withRuntimeRegistryAdmission(scope: scope) { receipt in
             let result = runner.run(
               executable: "/usr/bin/xcrun", arguments: ["simctl", "list", "runtimes", "--json"],
-              directory: nil, environment: nil, timeout: 30, maxOutputBytes: 1_048_576)
+              directory: nil, environment: nil, timeout: runtimeProbeCommandTimeout,
+              maxOutputBytes: 1_048_576)
             guard result.exitCode == 0, !result.timedOut, !result.truncated,
               let json = try? JSONSerialization.jsonObject(with: Data(result.stdout.utf8)),
               let body = json as? [String: Any], let runtimes = body["runtimes"] as? [[String: Any]]
@@ -345,7 +357,8 @@ public enum HealthEvaluation {
             }
             let devicesResult = runner.run(
               executable: "/usr/bin/xcrun", arguments: ["simctl", "list", "devices", "--json"],
-              directory: nil, environment: nil, timeout: 30, maxOutputBytes: 1_048_576)
+              directory: nil, environment: nil, timeout: runtimeProbeCommandTimeout,
+              maxOutputBytes: 1_048_576)
             guard devicesResult.exitCode == 0, !devicesResult.timedOut, !devicesResult.truncated,
               let devicesJSON = try? JSONSerialization.jsonObject(
                 with: Data(devicesResult.stdout.utf8)) as? [String: Any],
@@ -367,6 +380,10 @@ public enum HealthEvaluation {
                 "destination_sha256": sha(destination),
               ])
           }
+        } catch let error as ResourceCoordinatorError
+          where error.code == "runtime_registry_release_failed"
+        {
+          record("simulator.runtime", false, "runtime_registry_release", ["error": error.detail])
         } catch {
           record(
             "simulator.runtime", false, "runtime_registry_ownership",

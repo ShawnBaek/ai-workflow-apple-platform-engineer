@@ -88,16 +88,18 @@ extension ContractValidation {
     {
       errors.append("TestFlight processing wait must use authorization bounds and lease heartbeat")
     }
+    // Group rather than key uniquely: a duplicate terminal_for is drift to report, not a trap.
     let terminals = Dictionary(
-      uniqueKeysWithValues: nodes.compactMap { node -> (String, String)? in
+      grouping: nodes.compactMap { node -> (String, String)? in
         guard let terminal = node["terminal_for"] as? String, let id = node["id"] as? String else {
           return nil
         }
         return (terminal, id)
-      })
+      }, by: \.0
+    ).mapValues { $0.map(\.1) }
     if terminals != [
-      "testflight_uploaded": "testflight_uploaded",
-      "testflight_distributed": "testflight_distributed",
+      "testflight_uploaded": ["testflight_uploaded"],
+      "testflight_distributed": ["testflight_distributed"],
     ] {
       errors.append("TestFlight continuation terminals drifted")
     }

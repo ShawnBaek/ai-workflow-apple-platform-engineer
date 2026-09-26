@@ -37,7 +37,7 @@ extension ResourceCoordinator {
     authorizationPath: URL, harnessPath: URL, harness: [String: Any], runID: String,
     context: RuntimeContext
   ) throws -> (authorization: [String: Any], authority: [String: Any]) {
-    guard authorizationPath.path.hasPrefix("/"), !isSymlink(authorizationPath),
+    guard spelledAbsolute(authorizationPath), !isSymlink(authorizationPath),
       isRegular(authorizationPath), let harnessAuth = harness["run_authorization"] as? String,
       harnessAuth.hasPrefix("/"),
       authorizationPath.resolvingSymlinksInPath()
@@ -69,7 +69,7 @@ extension ResourceCoordinator {
     guard expires > issued,
       authorization["contract_schema_id"] as? String == schema["$id"] as? String,
       authorization["contract_schema_sha256"] as? String == "sha256:"
-        + (try HarnessRuntime.sha256File(schemaPath))
+        + (try sha256File(schemaPath, failure: "untrusted_authority"))
     else { throw ResourceCoordinatorError("untrusted_authority") }
     let harnessDocument = try loadTrustedHarness(harnessPath: harnessPath, context: context)
     guard let ledger = harnessDocument["run_ledger"] as? String else {

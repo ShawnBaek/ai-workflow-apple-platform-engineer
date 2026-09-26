@@ -247,16 +247,23 @@ fresh parallel coordinator to keep working.
 
 ## Recovery boundary
 
-Expiry is not release. The default `recover` mode requires a different run's bounded read-only
-observer to show that the owner and every outstanding child/tool process are
-dead, the protected state is clean, and the live resource is revalidated. The
-observer supplies its own trusted harness and active authorization through
-`--observer-harness` and `--observer-authorization`; replacement ownership, if
-requested, has another exact plan/authority tuple. The coordinator verifies
-evidence shape, freshness, authority, digest binding, and fencing. Preserve the
-underlying diagnostics and never infer death from lease expiry alone. Simulator
-recovery follows bounded non-reboot diagnosis; reboot is neither an automatic
-step nor a lease-recovery substitute.
+Expiry is not release. The default `recover` mode requires a different run's
+bounded read-only observer to show that the owner and every outstanding
+child/tool process are dead, the protected state is clean, and the live resource
+is revalidated. The observer supplies its own trusted harness and active
+authorization through `--observer-harness` and `--observer-authorization`;
+replacement ownership, if requested, has another exact plan/authority tuple.
+Because this mode can hand ownership to a replacement, `--harness` must be the
+dead owner's own intact harness: the coordinator recomputes the owner's
+authority from it, its authorization and its ledger, and requires the registered
+authority. Another run's harness is refused as `writer_mismatch`. When the
+owner's files are missing or changed (`untrusted_binding`, `untrusted_authority`
+or `untrusted_ledger`), keep the lease and treat it as a reconciliation
+boundary; do not edit those files or the coordinator state to make recovery
+pass. The coordinator verifies evidence shape, freshness, authority, digest
+binding, and fencing. Preserve the underlying diagnostics and never infer death
+from lease expiry alone. Simulator recovery follows bounded non-reboot
+diagnosis; reboot is neither an automatic step nor a lease-recovery substitute.
 
 ### Expired work that has finished
 
