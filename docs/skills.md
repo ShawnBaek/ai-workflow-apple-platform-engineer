@@ -22,7 +22,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [apple-platform-testing](../skills/apple-platform-testing/SKILL.md) | Minimum sufficient Swift, XCTest, and UI verification |
 | [apple-platform-ui](../skills/apple-platform-ui/SKILL.md) | SwiftUI, UIKit, storyboard, and hybrid UI implementation |
 | [cicd](../skills/cicd/SKILL.md) | Apple build/test CI and gated release workflows |
-| [code-review](../skills/code-review/SKILL.md) | Independent evidence-backed findings and verified responses |
+| [code-review](../skills/code-review/SKILL.md) | Independent evidence-backed findings, verified responses and the head-bound approval that gates PR publication |
 | [commit-message](../skills/commit-message/SKILL.md) | Concise commit messages based on the staged diff |
 | [core-data](../skills/core-data/SKILL.md) | Core Data schemas, migration, concurrency, and mirroring |
 | [core-simulator-health](../skills/core-simulator-health/SKILL.md) | Scoped CoreSimulator diagnosis and recovery |

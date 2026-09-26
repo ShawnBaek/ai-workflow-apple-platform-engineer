@@ -80,6 +80,19 @@ When the developer asks for a screen or component:
 
 If the developer is already in a build-tweak-build spiral, compare observed behavior with the requested result, form one hypothesis, and run one targeted verification.
 
+### Fit the existing app
+
+Apply these while writing, then confirm them in self-review:
+
+- **Reuse first.** Search the project for an existing component, design-system view, style, cell or modifier that does the job, and extend it rather than creating a near-duplicate.
+- **Keep the construction path.** A storyboard/XIB screen gets its new views, constraints and connections in Interface Builder, not a programmatic layer bolted on; see [storyboards and hybrid UI](references/storyboards-and-hybrid.md).
+- **Adapt to every supported device.** Use Auto Layout or SwiftUI layout with safe areas, size classes and Dynamic Type; no hard-coded device frames or screen-size checks.
+- **Preview screens with fixtures.** Give each screen-level view a `#Preview` (or the project's preview mechanism) fed by deterministic fixtures or mock data ([xcode-preview-design](../xcode-preview-design/SKILL.md)). Storyboard scenes, and screens where a faithful `#Preview` is impractical with the selected toolchain or deployment target, follow the [preview fallback](references/storyboards-and-hybrid.md#preview-and-verify-the-real-construction-path) rather than converting the screen or raising deployment requirements. When it fails to render, read the preview diagnostics and fix the cause.
+- **Separate view from logic.** The view renders state and forwards intents; logic lives in the ViewModel or the project's equivalent, bound through its input/output protocols or established convention.
+- **Keep files reviewable.** Split a file approaching ~1,000 lines by responsibility (subviews, child components, extensions) instead of growing it.
+
+Reviewers check the same points with the [code-review checklist](../code-review/references/review-checklist.md).
+
 ---
 
 ## Pre-flight self-review checklist (run before suggesting ⌘R)
