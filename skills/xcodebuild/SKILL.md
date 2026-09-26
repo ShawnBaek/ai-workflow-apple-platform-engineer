@@ -11,6 +11,10 @@ does not choose project roots, package policy, or test scope; load
 `xcode-project-workflow`, `swift-package-manager`, and `apple-platform-testing`
 for those decisions.
 
+When the user asks to see an agent's worktree, clone, sandbox or cloud changes
+in the Xcode they already have open, use `open-xcode-handoff` first; do not
+build the agent's workspace in place of the user's open checkout.
+
 ## Required preflight
 
 Resolve standalone versus coordinated ownership through
@@ -166,7 +170,9 @@ owned by `app-store-connect`. Neither route creates a GitHub PR: use
 
 ## Smallest useful operations
 
-- Compile question: build the affected scheme/configuration/destination only.
+- Compile question: build the affected scheme/configuration/destination only,
+  after changed Swift passes the format and lint steps of
+  [Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance).
 - Unit test question: run the affected target/case chosen by
   `apple-platform-testing`.
 - Repeated test tuple: build-for-testing once and reuse only when every tuple
@@ -207,7 +213,9 @@ Classify before retrying:
 
 Environment or authority failures stop. A compiler/test failure is not blindly
 rerun: diagnose, change input or implementation, then create a new attempt. The
-same normalized failure twice stops the loop.
+same normalized failure twice stops the loop. When the fix edits Swift source, the
+new attempt first reruns the format and lint steps of
+[Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance).
 
 If install/launch hangs on two compatible destinations, or read-only Simulator
 and Xcode task queries also hang, classify the remaining runtime work as a

@@ -143,6 +143,9 @@ Each added test must name a unique observable contract and prevented failure.
 Route test mechanics to `apple-platform-testing` and dependency resolution to
 `swift-package-manager`.
 
+Any Swift change first requires
+[Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance):
+swift-format on the task's changed lines, lint, then a compile with no errors.
 App-change completion also requires
 [build and warning acceptance](../apple-platform-testing/SKILL.md#build-and-warning-acceptance)
 for the final integrated patch, in standalone and guarded workflows. A specialist
@@ -190,6 +193,7 @@ only from provider/client records; unavailable totals remain explicit unknowns.
 |---|---|
 | Xcode root, container, and XcodeGen gate | `xcode-project-workflow` |
 | Git branch, worktree, index, and PR state | `git-workflow` |
+| Agent-workspace changes shown in the user's open Xcode, on request | `open-xcode-handoff` |
 | Swift package resolution and cache | `swift-package-manager` |
 | Minimal Swift/XCTest/XCUITest evidence | `apple-platform-testing` |
 | Independent review and evidence-backed comment triage | `code-review` |
