@@ -40,6 +40,15 @@
       "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
       "appliesTo": ["figma-bridge", "apple-platform-ui"],
       "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
+    },
+    {
+      "id": "website-links-are-anchors",
+      "rule": "A click handler is not a link: external CTAs and share targets are real <a href> anchors, and actions are native buttons.",
+      "statesRule": "onTapGesture|window\\.open\\(",
+      "patternNote": "Matches any app-website recipe text that uses or describes a click handler; that file must also say it is not how links are built.",
+      "requiresQualifier": "is not a link|Don.t use it for links",
+      "appliesTo": ["app-website"],
+      "why": "The SwiftUI-For-Web recipe built the App Store badge and share links as Image/Text views with onTapGesture plus role=link. The framework registers only a delegated click listener, so Enter never activated them: keyboard users could focus the download badge but not activate it, and could not reach the Threads and Mastodon links at all. Fixed by building real anchors and a Button; this case keeps a click-handler link from returning without the warning."
     }
   ]
 }

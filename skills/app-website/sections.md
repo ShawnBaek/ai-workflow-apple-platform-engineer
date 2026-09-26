@@ -45,41 +45,41 @@ You can regenerate the scale at https://www.gridlover.net/try if you want a diff
 - **Hero visual** — either:
   - a single iPhone-framed screenshot of the app's signature screen, **or**
   - a short autoplay-muted video loop (≤ 10s, ≤ 2MB), **or**
-  - a 3D model via `<model-viewer>` (see `3d-devices.md`)
+  - a 3D model via `<model-viewer>`, only after the device-imagery check in `3d-devices.md`
 
 Layout: HStack with copy on the left, hero visual on the right (desktop); the `.row-wrap` class collapses both into a column on mobile. Section padding: `SPACING.s4` top and bottom.
 
-**Do not** put nav links across the top. This is a one-pager — anchor links are optional, hamburger nav is not.
+**Default:** no top nav bar on a one-pager; in-page anchor links are optional. Add navigation when the brief has more pages or asks for it.
 
 ```javascript
 import { HStack, VStack, Image, Spacer } from 'swiftui-for-web';
 import { display, lead } from './typography.js';
-import { SPACING, cssColor } from './theme.js';
-import { attrs, cls } from './helpers.js';
+import { SPACING } from './theme.js';
+import { attrs, cls, externalLink } from './helpers.js';
 
 export function HeroSection() {
   return HStack({ alignment: 'center', spacing: SPACING.s3 },
     VStack({ alignment: 'leading', spacing: SPACING.s2 },
-      display('A journal that disappears the moment you stop writing.'),
-      lead('A quiet journaling app for iPhone, iPad, Mac, and Apple Watch.'),
-      AppStoreBadge()
+      VStack({ alignment: 'leading', spacing: SPACING.s2 },
+        display('A journal that disappears the moment you stop writing.'),
+        lead('A quiet journaling app for iPhone, iPad, Mac, and Apple Watch.')
+      ).modifier(cls('reveal')), // optional motion: the copy only
+      AppStoreBadge()             // badge and bezel stay static (see Animation rules)
     ).modifier(cls('hero-copy')),
 
     Spacer(),
 
     Image('/assets/hero-iphone.png')
       .frame({ width: 320 })
-      .shadow({ y: 40, radius: 80, color: cssColor('--color-shadow') })
       .modifier(attrs({ alt: 'Hero screenshot of the app.' }))
   ).padding({ vertical: SPACING.s4, horizontal: SPACING.containerPx })
-    .modifier(cls('row-wrap', 'reveal'));
+    .modifier(cls('row-wrap'));
 }
 
+// A real <a href>: Tab + Enter, middle-click and "open in new tab" all work.
 function AppStoreBadge() {
-  return Image('/assets/app-store-badge.svg')
-    .frame({ height: 54 })
-    .onTapGesture(() => window.open('https://apps.apple.com/app/id...', '_blank', 'noopener,noreferrer'))
-    .modifier(attrs({ alt: 'Download on the App Store', role: 'link', tabindex: '0' }));
+  return HStack().modifier(externalLink('https://apps.apple.com/app/id...',
+    { src: '/assets/app-store-badge.svg', alt: 'Download on the App Store', height: 54 }));
 }
 ```
 
@@ -89,7 +89,7 @@ function AppStoreBadge() {
 
 **Goal:** show, don't tell. Each feature is a screenshot + a one-sentence caption.
 
-- **Exactly 3 features.** More = more scroll = lower conversion. No 4th.
+- **Start with about 3 features**, then fit the count to the brief. Each extra feature adds scroll, so keep only the ones the pitch needs.
 - Each feature: iPhone-framed screenshot on one side, **short** title (one line, h2) + **short** description (one sentence, body) on the other.
 - Alternate sides feature-to-feature: left / right / left.
 - Vertical gap between features: `SPACING.s4`.
@@ -99,21 +99,20 @@ function AppStoreBadge() {
 | Approach | Effort | When to use |
 |----------|--------|-------------|
 | **PNG bezel composite** | Low (~15 min) | First-version sites, fast iteration |
-| **`<model-viewer>` 3D** | Medium (~30 min) | Hero feature only — see `3d-devices.md` |
+| **`<model-viewer>` 3D** | Medium (~30 min) | One place per page (the hero or the Section 3 showcase), after the device-imagery check in `3d-devices.md` |
 
-For PNG bezels: download Apple's official device frames from https://developer.apple.com/design/resources/ ("Product Marketing" section). Composite the screenshot inside the bezel in GIMP or Photopea; export PNG with transparent background.
+For PNG bezels: download Apple's product bezels from [Apple Design Resources](https://developer.apple.com/design/resources/#product-bezels). Composite the screenshot inside the bezel in GIMP or Photopea; export PNG with transparent background. Use the bezel as is: Apple's [App Store marketing guidelines](https://developer.apple.com/app-store/marketing/guidelines/) rule out added shadows or reflections, tilting, cropping and animating product images.
 
 ```javascript
 function FeatureRow({ title, body: bodyText, screenshot, alt, side }) {
   const screenView = Image(screenshot)
     .frame({ width: 320 })
-    .shadow({ y: 40, radius: 80, color: cssColor('--color-shadow') })
     .modifier(attrs({ alt, loading: 'lazy' }));
 
   const textView = VStack({ alignment: 'leading', spacing: SPACING.s1 },
     h2(title),
     body(bodyText)
-  );
+  ).modifier(cls('reveal')); // optional motion on the text; the bezel screenshot stays static
 
   const children = side === 'left'
     ? [screenView, Spacer(), textView]
@@ -121,7 +120,7 @@ function FeatureRow({ title, body: bodyText, screenshot, alt, side }) {
 
   return HStack({ alignment: 'center', spacing: SPACING.s3 }, ...children)
     .padding({ vertical: SPACING.s4, horizontal: SPACING.containerPx })
-    .modifier(cls('row-wrap', 'reveal'));
+    .modifier(cls('row-wrap'));
 }
 ```
 
@@ -156,7 +155,7 @@ In SwiftUI-For-Web, attach the class via the `cls` helper:
 function ParallaxShowcase() {
   return VStack({ alignment: 'center', spacing: SPACING.s3 },
     h1('See your week, your month, your year.'),
-    Image('/assets/timeline.png')
+    Image('/assets/timeline.png') // a screen or feature graphic, not a device bezel
       .modifier(cls('parallax-figure'))
       .modifier(attrs({ alt: '…', loading: 'lazy' }))
   ).padding({ vertical: SPACING.s5, horizontal: SPACING.containerPx });
@@ -165,7 +164,7 @@ function ParallaxShowcase() {
 
 ### Path B — 3D `<model-viewer>` showcase
 
-Replace the Image with a spinnable iPhone/iPad/Mac/Watch model. See `3d-devices.md` for the full guide.
+Replace the Image with an interactive 3D model. Start with the device-imagery check in `3d-devices.md`: Apple's marketing guidelines don't permit 3D renderings of Apple products.
 
 Use at most one parallax section when selected. A no-motion direction uses a static showcase.
 
@@ -176,7 +175,6 @@ Use at most one parallax section when selected. A no-motion direction uses a sta
 - **App Store badge** — Apple's official SVG from https://tools.applemediaservices.com/app-store/
 - **System requirements** in one line, using the app's actual supported platforms and minimum OS versions from its project and store listing. Do not advertise unsupported platforms or replace the minimum with the current SDK version.
 - Optional: **TestFlight beta link** if you have one ("Try the beta on TestFlight →")
-- Future: Google Play badge when the planned `android-ui` skill ships
 
 Centered. Generous vertical padding (`SPACING.s4` top and bottom). **No form, no email capture** — those belong on a separate page.
 
@@ -184,13 +182,10 @@ Centered. Generous vertical padding (`SPACING.s4` top and bottom). **No form, no
 function DownloadSection() {
   return VStack({ alignment: 'center', spacing: SPACING.s2 },
     h2('Available now.'),
-    Image('/assets/app-store-badge.svg')
-      .frame({ height: 54 })
-      .onTapGesture(() => window.open(APP_STORE_URL, '_blank', 'noopener,noreferrer'))
-      .modifier(attrs({ alt: 'Download on the App Store', role: 'link', tabindex: '0' })),
+    HStack().modifier(externalLink(APP_STORE_URL,
+      { src: '/assets/app-store-badge.svg', alt: 'Download on the App Store', height: 54 })),
     caption(SYSTEM_REQUIREMENTS) // Verified app-specific platforms and minimum OS versions.
-  ).padding({ vertical: SPACING.s4, horizontal: SPACING.containerPx })
-    .modifier(cls('reveal'));
+  ).padding({ vertical: SPACING.s4, horizontal: SPACING.containerPx }); // no reveal: it holds the badge
 }
 ```
 
@@ -198,42 +193,35 @@ function DownloadSection() {
 
 ## Section 5 — Share + footer
 
-- **Share buttons:** X, Threads, Mastodon — use share-intent URLs, no SDK, no AddThis
-- **Copy-link button** — `navigator.clipboard.writeText(window.location.href)`
+- **Share links:** X, Threads, Mastodon — share-intent URLs as real `<a href>` links via `externalLink`, no SDK, no AddThis
+- **Copy-link button** — a framework `Button` (a native `<button>`) running `navigator.clipboard.writeText(...)`
 - **Footer line:** `© 2026 [Developer Name] · [Email] · [Privacy]`
 - **Optional credit line:** include framework promotion only if the user selects it. Required license notices follow the dependency's actual license, independently of visible branding.
 
 ```javascript
+// sections/ShareSection.js also imports Button from 'swiftui-for-web' (unlike the hero).
 export function ShareSection() {
   const url = encodeURIComponent(SITE_URL);
   const text = encodeURIComponent('Just found this — a quiet journaling app.');
+  const share = (href, label) => HStack().modifier(externalLink(href, label, 'share-link'));
 
   return VStack({ alignment: 'center', spacing: SPACING.s2 },
     h3('Tell a friend.'),
 
     HStack({ alignment: 'center', spacing: SPACING.s2 },
-      body('Share on X')
-        .onTapGesture(() => window.open(`https://x.com/intent/post?text=${text}&url=${url}`, '_blank'))
-        .modifier(cls('share-link'))
-        .modifier(attrs({ role: 'link', tabindex: '0' })),
-      body('Share on Threads')
-        .onTapGesture(() => window.open(`https://www.threads.net/intent/post?text=${text}%20${url}`, '_blank'))
-        .modifier(cls('share-link')),
-      body('Share on Mastodon')
-        .onTapGesture(() => window.open(`https://mastodon.social/share?text=${text}%20${url}`, '_blank'))
-        .modifier(cls('share-link')),
-      body('Copy link')
-        .onTapGesture(() => navigator.clipboard.writeText(SITE_URL))
+      share(`https://x.com/intent/post?text=${text}&url=${url}`, 'Share on X'),
+      share(`https://www.threads.net/intent/post?text=${text}%20${url}`, 'Share on Threads'),
+      share(`https://mastodon.social/share?text=${text}%20${url}`, 'Share on Mastodon'),
+      Button('Copy link', () => navigator.clipboard.writeText(SITE_URL))
+        .buttonStyle('plain') // drops the default inline blue so .share-link styles it
         .modifier(cls('share-link'))
     ).modifier(cls('row-wrap')),
 
     caption('© 2026 — Developer Name · hi@developer.com · Privacy'),
 
     // Optional example credit: remove unless requested by the user.
-    caption('Made with SwiftUI-For-Web ↗')
-      .onTapGesture(() => window.open('https://github.com/ShawnBaek/SwiftUI-For-Web', '_blank'))
-      .modifier(cls('made-with'))
-      .modifier(attrs({ role: 'link', tabindex: '0' }))
+    HStack().modifier(externalLink('https://github.com/ShawnBaek/SwiftUI-For-Web',
+      'Made with SwiftUI-For-Web ↗', 'made-with'))
   ).padding({ top: SPACING.s3, bottom: SPACING.s4, left: SPACING.containerPx, right: SPACING.containerPx });
 }
 ```
@@ -246,7 +234,6 @@ export function ShareSection() {
 my-app-website/
 ├── index.html                     # tiny shell, importmap, mounts #root
 ├── main.js                        # SwiftUI-For-Web entry; imports sections
-├── package.json                   # SwiftUI-For-Web dependency
 ├── sections/
 │   ├── HeroSection.js
 │   ├── FeaturesSection.js
@@ -255,7 +242,7 @@ my-app-website/
 │   ├── ShareSection.js
 │   ├── theme.js                   # cssColor, responsive, SPACING, TYPE
 │   ├── typography.js              # display, h1, h2, h3, lead, body, caption
-│   └── helpers.js                 # attrs, cls (+ modelViewer if using 3D)
+│   └── helpers.js                 # attrs, cls, externalLink (+ modelViewer if using 3D)
 ├── styles/
 │   ├── reset.css                  # ~25 lines
 │   └── tokens.css                 # ~100 lines — color vars, hover, scroll animations
@@ -279,8 +266,12 @@ my-app-website/
   <meta property="og:image" content="https://myapp.com/assets/og.png">
   <link rel="stylesheet" href="./styles/reset.css">
   <link rel="stylesheet" href="./styles/tokens.css">
+  <!-- Pinned SwiftUI-For-Web commit (2.0.0-alpha.1); @main changes on every upstream push.
+       To update: review the upstream changes, take the new SHA from
+       `gh api repos/ShawnBaek/SwiftUI-For-Web/commits/main --jq .sha`, swap it in,
+       then rerun the browser verification. -->
   <script type="importmap">
-  { "imports": { "swiftui-for-web": "https://cdn.jsdelivr.net/gh/ShawnBaek/SwiftUI-For-Web@main/src/index.js" } }
+  { "imports": { "swiftui-for-web": "https://cdn.jsdelivr.net/gh/ShawnBaek/SwiftUI-For-Web@19621bbe6be374c5060590c2cb5bdf5c7ee357e3/src/index.js" } }
   </script>
   <!-- Only include if you're using 3D models: -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
@@ -311,8 +302,8 @@ my-app-website/
 
 Motion is optional. A no-motion preference keeps content visible and static without reveal, parallax or scaling effects. When motion is selected:
 
-- **Reveal on scroll** may support a section (`.reveal` class); keep content visible if animation is unavailable
-- **Parallax** belongs in Section 3 only, at most once
-- **Hover** may use a subtle badge scale (1 → 1.03) over 200ms
+- **Reveal on scroll** (`.reveal` class) may support section copy. Put it on the text stack, never on a container that holds the App Store badge or a bezel image; keep content visible if animation is unavailable
+- **Parallax** belongs in Section 3 only, at most once, on a screen or feature graphic without a device bezel
+- **Hover** may change a link's color or underline. Don't scale, angle or animate the App Store badge or device bezels; Apple's marketing guidelines ask for both as is
 - **No looping decorative animations** — they distract and burn mobile battery
 - **`prefers-reduced-motion: reduce`** removes reveals, parallax and scaling while keeping all content visible and usable
