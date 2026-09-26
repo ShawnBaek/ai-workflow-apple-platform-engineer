@@ -40,6 +40,14 @@
       "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
       "appliesTo": ["figma-bridge", "apple-platform-ui"],
       "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
+    },
+    {
+      "id": "catalyst-build-not-ios-proof",
+      "rule": "A Mac Catalyst build is evidence only for the Catalyst target; compile each affected target.",
+      "statesRule": "catalyst build",
+      "requiresQualifier": "does not prove|actual affected target|each affected target",
+      "appliesTo": ["apple-platform-performance", "apple-platform-ui"],
+      "why": "apple-platform-performance Part V said a clean macCatalyst build meant iOS would build too, while apple-platform-ui said the opposite, so an agent could skip the iOS build that completion requires. A skill that mentions a Catalyst build as evidence must also say it does not stand in for the affected target."
     }
   ]
 }
