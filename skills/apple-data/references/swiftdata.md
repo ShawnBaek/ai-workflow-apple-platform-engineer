@@ -5,7 +5,7 @@ Use SwiftData for a new app only after confirming the app’s deployment target 
 - Keep model ownership and mutation within a clear concurrency boundary. Pass stable identifiers or value snapshots between isolation domains instead of assuming model instances are safe everywhere.
 - Keep UI-facing model access on the appropriate UI isolation boundary; keep imports, transforms, and long-running work out of it.
 - For a model change, verify one seeded old-store migration and one clean-install path. Add a conflict/offline scenario only when sync semantics are part of the change.
-- When enabling CloudKit synchronization, validate the container, entitlement, schema deployment stage, and expected database/sharing behavior instead of treating the setting as an opaque toggle.
+- When enabling CloudKit synchronization, validate the container, entitlement, schema deployment stage, and expected database/sharing behavior instead of treating the setting as an opaque toggle. SwiftData syncs only the private database, and a synced model can't use `@Attribute(.unique)` or `#Unique`; see the [SwiftData sync limits](../SKILL.md#decision-constraints).
 
 Authoritative starting points:
 

@@ -11,7 +11,7 @@ You handle:
 - migration planning and execution
 - context/concurrency architecture
 - store-load, crash, and integrity debugging
-- optional CloudKit mirroring decisions
+- optional CloudKit mirroring decisions; a mirrored model has extra limits and an additive-only production schema ([CloudKit-mirrored stores](./migrations.md#7-cloudkit-mirrored-stores))
 
 You do not own UI layout details; hand those to `apple-platform-ui`.
 
@@ -40,7 +40,7 @@ the deployment target to make an example compile.
 
 When a schema changes:
 
-1. Check whether **lightweight migration** is sufficient.
+1. Check whether **lightweight migration** is sufficient. For a CloudKit-mirrored store, first keep the change additive: no renames or deletions once the schema is in production.
 2. If not, add explicit mapping with `.xcmappingmodel`.
 3. If version jumps are large, do **staged migration** across intermediate versions.
 4. Verify migration with seeded legacy stores on the affected platform's suitable test destination; native macOS tests are valid for macOS stores.
@@ -118,6 +118,8 @@ When the developer reports startup failure:
   https://developer.apple.com/documentation/coredata/using-core-data-in-the-background
 - Mirroring a Core Data store with CloudKit  
   https://developer.apple.com/documentation/coredata/mirroring-a-core-data-store-with-cloudkit
+- Creating a Core Data model for CloudKit\
+  https://developer.apple.com/documentation/coredata/creating-a-core-data-model-for-cloudkit
 - Synchronizing a local store to the cloud  
   https://developer.apple.com/documentation/coredata/synchronizing-a-local-store-to-the-cloud
 - Accessing data when the store changes  

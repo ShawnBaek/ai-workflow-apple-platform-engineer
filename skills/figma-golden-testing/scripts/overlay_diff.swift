@@ -140,14 +140,41 @@ func blend(_ lhs: RGBAImage, _ rhs: RGBAImage) -> RGBAImage {
   return RGBAImage(width: lhs.width, height: lhs.height, pixels: pixels)
 }
 
-func heatmap(_ lhs: RGBAImage, _ rhs: RGBAImage) -> RGBAImage {
+/// The per-pixel difference used by both `diff.png` and `metrics.json`: the largest RGB channel delta.
+func maxRGBDelta(_ lhs: RGBAImage, _ rhs: RGBAImage, at index: Int) -> Int {
+  max(
+    abs(Int(lhs.pixels[index]) - Int(rhs.pixels[index])),
+    abs(Int(lhs.pixels[index + 1]) - Int(rhs.pixels[index + 1])),
+    abs(Int(lhs.pixels[index + 2]) - Int(rhs.pixels[index + 2])))
+}
+
+/// Draws the Figma reference dimmed to grayscale, then marks every pixel that differs:
+/// solid red (255, 0, 0) above the threshold, and a faint yellow tint that strengthens with
+/// the delta from 1 up to the threshold. An identical pixel keeps only the dimmed reference.
+func heatmap(_ lhs: RGBAImage, _ rhs: RGBAImage, threshold: Int) -> RGBAImage {
+  func mix(_ base: Int, _ tint: Int, _ alpha: Int) -> UInt8 {
+    UInt8((base * (255 - alpha) + tint * alpha) / 255)
+  }
   var pixels = lhs.pixels
   for index in stride(from: 0, to: pixels.count, by: 4) {
-    for channel in 0..<3 {
-      let delta = abs(Int(lhs.pixels[index + channel]) - Int(rhs.pixels[index + channel]))
-      let contrasted = max(0, min(255, (delta - 128) * 3 + 128))
-      pixels[index + channel] = UInt8(contrasted)
+    let delta = maxRGBDelta(lhs, rhs, at: index)
+    let luma =
+      (299 * Int(lhs.pixels[index]) + 587 * Int(lhs.pixels[index + 1])
+        + 114 * Int(lhs.pixels[index + 2])) / 1000
+    let dimmed = luma / 3
+    let color: (UInt8, UInt8, UInt8)
+    if delta > threshold {
+      color = (255, 0, 0)
+    } else if delta > 0 {
+      // Reachable only when threshold >= 1 (delta > 0 exceeds a zero threshold).
+      let alpha = 64 + 96 * delta / threshold
+      color = (mix(dimmed, 255, alpha), mix(dimmed, 214, alpha), mix(dimmed, 0, alpha))
+    } else {
+      color = (UInt8(dimmed), UInt8(dimmed), UInt8(dimmed))
     }
+    pixels[index] = color.0
+    pixels[index + 1] = color.1
+    pixels[index + 2] = color.2
     pixels[index + 3] = 255
   }
   return RGBAImage(width: lhs.width, height: lhs.height, pixels: pixels)
@@ -175,8 +202,7 @@ func writeMetrics(
   var sumDelta = 0
   var maxDelta = 0
   for index in stride(from: 0, to: figma.pixels.count, by: 4) {
-    let delta =
-      (0..<3).map { abs(Int(figma.pixels[index + $0]) - Int(actual.pixels[index + $0])) }.max() ?? 0
+    let delta = maxRGBDelta(figma, actual, at: index)
     exact += delta == 0 ? 1 : 0
     matching += delta <= threshold ? 1 : 0
     sumDelta += delta
@@ -218,7 +244,9 @@ do {
   }
   try FileManager.default.createDirectory(at: arguments.output, withIntermediateDirectories: true)
   try writePNG(blend(figma, actual), to: arguments.output.appendingPathComponent("overlay.png"))
-  try writePNG(heatmap(figma, actual), to: arguments.output.appendingPathComponent("diff.png"))
+  try writePNG(
+    heatmap(figma, actual, threshold: arguments.threshold),
+    to: arguments.output.appendingPathComponent("diff.png"))
   try writePNG(
     sideBySide(figma, actual), to: arguments.output.appendingPathComponent("side-by-side.png"))
   let accepted = try writeMetrics(

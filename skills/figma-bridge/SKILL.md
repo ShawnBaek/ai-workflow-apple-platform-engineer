@@ -42,7 +42,7 @@ For depth on any topic, `Read` the matching file under [`./`](./):
 | When the engineer asks about… | Open |
 |---|---|
 | Installing the Figma MCP server in Claude Code OR Codex; the tools it exposes; which permissions to grant | [`mcp-setup.md`](./mcp-setup.md) |
-| Wiring Code Connect for SwiftUI — CLI vs the GitHub plugin UI; `Figma.connect(...)` SwiftUI syntax; publishing mappings | [`code-connect.md`](./code-connect.md) |
+| Wiring Code Connect for SwiftUI — Code Connect UI vs CLI; template files vs the legacy SwiftUI `FigmaConnect` parser; publishing mappings | [`code-connect.md`](./code-connect.md) |
 | Adding `// figma: <url>` comments to source files as a lightweight code-connect map (file-level, complements the formal Code Connect API above); placement; grep workflow | [`code-connect-map.md`](./code-connect-map.md) |
 | Reviewing a Figma file for dev-friendliness (auto-layout, components, variants, naming, frame size, styles); the punch list to send back to the designer | [`figma-review.md`](./figma-review.md) |
 | Reading a Figma frame with `get_design_context` and implementing SwiftUI; selecting smaller nodes when needed | [`generate-from-frame.md`](./generate-from-frame.md) |
@@ -59,7 +59,7 @@ When the engineer brings you a task:
 
 1. **Detect what's already in place.**
    - Is a Figma provider exposed with the needed read tools? Inspect capability descriptions and schemas; connector prefixes vary. If absent → [`mcp-setup.md`](./mcp-setup.md).
-   - Does the repo have a `.codeconnect/` directory and a `figma.config.json`? If not, but the engineer wants ongoing sync → [`code-connect.md`](./code-connect.md).
+   - Are components already connected? Code Connect UI mappings live in Figma; check a node with `get_code_connect_map`. CLI mappings live in the repo as a `figma.config.json` plus template files (`*.figma.ts` / `*.figma.js`, or a `*.figma.batch.json` + `*.figma.batch.ts` batch pair) or legacy `FigmaConnect` structs. If none exist but the engineer wants ongoing sync → [`code-connect.md`](./code-connect.md).
    - Are there `// figma:` URL comments on the existing view files? If not → suggest adding them when you generate / touch a file ([`code-connect-map.md`](./code-connect-map.md)).
    - Does the engineer want code right now, or a Figma audit? Pick the path.
 2. **For a generate-this-frame request:** resolve the Figma URL, load any provider-required skill, read `get_design_context`, and implement at the existing UI seam. Use metadata to narrow an oversized selection. Preserve the design source link and continue through Preview/runtime verification. `generate_figma_design` writes interfaces into Figma; it is not the design-to-code read path.
@@ -99,7 +99,7 @@ This keeps each skill doing one thing well. Don't try to do the HIG polish yours
 
 - Reinvent the HIG polish that `apple-platform-ui` already does — hand off instead.
 - Generate code from a "too big" Figma frame in one MCP call. Always check size first and select a smaller node if needed ([`generate-from-frame.md`](./generate-from-frame.md)).
-- Recommend deprecated `Figma.connect` syntax — always use the current SwiftUI Code Connect API ([`code-connect.md`](./code-connect.md)).
+- Write Code Connect from memory or start new parser-based SwiftUI mappings — new CLI mappings are template files; the `FigmaConnect` parser is legacy and needs migration ([`code-connect.md`](./code-connect.md)).
 - Lose the exact reference state. Preserve the node/version link in the project's existing source or design record.
 - Skip the Figma-file review when the design clearly has problems. Surfacing "this file is hard to work from" early is more valuable than another button rendering.
 - Run any MCP tool on a Figma file you don't have permission to read — the MCP server will refuse, surface the error to the engineer, don't retry.

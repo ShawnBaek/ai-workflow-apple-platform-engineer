@@ -13,11 +13,23 @@ private func goldenRoot() -> URL {
 }
 
 private func goldenPNG(_ url: URL, color: (UInt8, UInt8, UInt8)) throws {
-  let pixels: [UInt8] = [color.0, color.1, color.2, 255]
+  try goldenPNG(url, width: 1, height: 1) { _, _ in color }
+}
+
+private func goldenPNG(
+  _ url: URL, width: Int, height: Int, color: (Int, Int) -> (UInt8, UInt8, UInt8)
+) throws {
+  var pixels: [UInt8] = []
+  for y in 0..<height {
+    for x in 0..<width {
+      let value = color(x, y)
+      pixels += [value.0, value.1, value.2, 255]
+    }
+  }
   let provider = try #require(CGDataProvider(data: Data(pixels) as CFData))
   let image = try #require(
     CGImage(
-      width: 1, height: 1, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: 4,
+      width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
       space: CGColorSpaceCreateDeviceRGB(),
       bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
       provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
@@ -25,6 +37,26 @@ private func goldenPNG(_ url: URL, color: (UInt8, UInt8, UInt8)) throws {
     CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil))
   CGImageDestinationAddImage(destination, image, nil)
   #expect(CGImageDestinationFinalize(destination))
+}
+
+/// Decodes a PNG the way the comparator does and returns each pixel's RGB, row-major.
+private func goldenRGB(_ url: URL) throws -> (width: Int, pixels: [[UInt8]]) {
+  let source = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+  let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+  var bytes = [UInt8](repeating: 0, count: image.width * image.height * 4)
+  let drawn = bytes.withUnsafeMutableBytes { buffer -> Bool in
+    guard
+      let context = CGContext(
+        data: buffer.baseAddress, width: image.width, height: image.height, bitsPerComponent: 8,
+        bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+    else { return false }
+    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    return true
+  }
+  try #require(drawn)
+  let pixels = stride(from: 0, to: bytes.count, by: 4).map { Array(bytes[$0..<($0 + 3)]) }
+  return (image.width, pixels)
 }
 
 private func goldenRun(_ script: String, _ arguments: [String], root: URL) throws -> ProcessResult {
@@ -98,6 +130,51 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
     ).exitCode == 1)
 }
 
+@Test func goldenDiffShowsSmallDeltasThatTheThresholdCounts() throws {
+  let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: root) }
+  let reference = root.appendingPathComponent("reference.png")
+  let actual = root.appendingPathComponent("actual.png")
+  let output = root.appendingPathComponent("report")
+  // An 8x8 gray frame: a 3x3 patch 20 per channel lighter (over threshold 16) and a
+  // 2x2 patch 8 lighter (under it). Both deltas used to render black in diff.png.
+  let failing = { (x: Int, y: Int) in (1...3).contains(x) && (1...3).contains(y) }
+  let tolerated = { (x: Int, y: Int) in (5...6).contains(x) && (5...6).contains(y) }
+  try goldenPNG(reference, width: 8, height: 8) { _, _ in (100, 100, 100) }
+  try goldenPNG(actual, width: 8, height: 8) { x, y in
+    failing(x, y) ? (120, 120, 120) : tolerated(x, y) ? (108, 108, 108) : (100, 100, 100)
+  }
+  let result = try goldenRun(
+    "overlay_diff.swift",
+    [
+      "--figma", reference.path, "--actual", actual.path, "--out", output.path,
+      "--threshold", "16",
+    ], root: root)
+  #expect(result.exitCode == 0)
+  let metrics = try HarnessRuntime.object(output.appendingPathComponent("metrics.json"))
+  #expect(metrics["matchingPixels"] as? Int == 64 - 9)
+  let diff = try goldenRGB(output.appendingPathComponent("diff.png"))
+  #expect(diff.pixels.count == 64)
+  let red: [UInt8] = [255, 0, 0]
+  let unchanged = diff.pixels[7 * diff.width + 7]
+  #expect(unchanged[0] == unchanged[1] && unchanged[1] == unchanged[2])
+  for y in 0..<8 {
+    for x in 0..<8 {
+      let pixel = diff.pixels[y * diff.width + x]
+      if failing(x, y) {
+        #expect(pixel == red, "over-threshold pixel (\(x), \(y)) must be solid red")
+      } else if tolerated(x, y) {
+        #expect(
+          pixel != red && pixel != unchanged, "sub-threshold pixel (\(x), \(y)) must stay visible")
+        #expect(pixel[0] > unchanged[0])
+      } else {
+        #expect(pixel == unchanged, "unchanged pixel (\(x), \(y)) must show the dimmed reference")
+      }
+    }
+  }
+}
+
 @Test func goldenRendererRequiresValidEvidenceAndEscapesText() throws {
   let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
   try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -123,6 +200,19 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
   #expect(
     try String(contentsOf: output.appendingPathComponent("text-results.svg"), encoding: .utf8)
       .contains("&lt;field&gt;"))
+  // The schema example shipped inside the skill must stay valid renderer input.
+  let example = goldenRoot().appendingPathComponent(
+    "skills/figma-golden-testing/references/text-results.example.json")
+  let exampleOutput = root.appendingPathComponent("example")
+  let exampleRun = try goldenRun(
+    "render_report.swift",
+    ["--metrics", metrics.path, "--text", example.path, "--out", exampleOutput.path], root: root)
+  #expect(exampleRun.exitCode == 0)
+  let exampleSVG = try String(
+    contentsOf: exampleOutput.appendingPathComponent("text-results.svg"), encoding: .utf8)
+  for section in ["Missing", "Extra", "Changed", "Matches"] {
+    #expect(exampleSVG.contains(">\(section)</text>"))
+  }
   try Data("{}".utf8).write(to: text)
   #expect(
     try goldenRun(

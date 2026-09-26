@@ -8,6 +8,8 @@ Decide the database scope before modeling records:
 
 Treat the CloudKit container and the development/production schemas as release-controlled resources. Verify the selected container, entitlements, schema status, record types, indexes needed for supported queries, and sharing permissions before claiming synchronization works.
 
+A Core Data or SwiftData store mirrored by `NSPersistentCloudKitContainer` also has model limits and an additive-only production schema; follow [CloudKit-mirrored stores](../../core-data/migrations.md#7-cloudkit-mirrored-stores) before changing its model or releasing it.
+
 ## Cross-app public database verification
 
 When one Apple-platform app produces records and another consumes them, verify the
@@ -47,3 +49,4 @@ Authoritative starting points:
 - https://developer.apple.com/documentation/cloudkit/ckcontainer
 - https://developer.apple.com/documentation/cloudkit/shared_records
 - https://developer.apple.com/documentation/coredata/mirroring-a-core-data-store-with-cloudkit
+- https://developer.apple.com/documentation/coredata/creating-a-core-data-model-for-cloudkit

@@ -10,7 +10,7 @@ Every time you change web code:
 2. **Load the page** in a browser via Playwright MCP / Chrome MCP (or whichever browser-automation MCP your host exposes), in a **fresh tab**.
 3. **Read the console** for errors and exceptions. Module resolution errors (`Failed to resolve module specifier`), SyntaxErrors (`does not provide an export named ...`), and 404s on assets all fail silently if you only look at the screenshot.
 4. **Scroll through every section** and screenshot each. Every section. Don't stop at the hero — the failure mode you're trying to catch is "section 4 doesn't render".
-5. **Verify functionally, not just structurally.** For each `<img>` confirm `naturalWidth > 0` (not just that the element exists). For each interactive element (tap badges, share links), exercise the handler via the browser MCP's `computer.left_click` or `javascript_tool` and confirm it does the thing.
+5. **Verify functionally, not just structurally.** For each `<img>` confirm `naturalWidth > 0` (not just that the element exists). Exercise each interactive element (store badge, share links, copy button) with a click and with the keyboard (Tab to it, press Enter) and confirm it does the thing.
 6. **Screenshot at mobile** (≤ 480 wide). Confirm `.row-wrap` collapsed rows to columns, headlines don't overflow, no element clipped.
 7. **Only then** report the change as complete.
 
@@ -26,7 +26,9 @@ A page can return 200, have a clean console, and still be broken in ways a singl
 |-------|-----|
 | Every `<img>` actually loaded | `Array.from(document.querySelectorAll('img')).map(i => ({src: i.src, ok: i.naturalWidth > 0}))` — every `ok` must be `true` |
 | `<model-viewer>` rendered | `document.querySelectorAll('model-viewer').length > 0` and visually confirm the 3D content (not just the poster) |
-| Tap-to-open buttons work | Click the App Store badge → confirm a new tab opens to the App Store URL |
+| Store and share links work | Click the App Store badge → confirm a new tab opens to the App Store URL |
+| Keyboard activation | Tab to the App Store badge: focus lands on an `<a href>` with a visible focus ring. Press Enter → the App Store URL opens. Repeat for each share link, then Tab to Copy link and press Enter |
+| No click-only fake links | `document.querySelectorAll('[role="link"]:not(a[href])').length === 0` |
 | Copy-link works | Click → check `navigator.clipboard.readText()` returned the right URL |
 | Dark mode follows OS | Switch the OS theme (or use `Emulation.setEmulatedMedia`) — confirm colors invert |
 | Responsive collapse | Resize to 375px width — confirm features stack vertically |
@@ -65,41 +67,41 @@ Hand them this:
 
 If they still see old, walk through it together — open DevTools → Network tab → check "Disable cache" → reload. That's the nuclear option.
 
-## Install Playwright MCP (one-time, per host)
+## Optional: add Playwright MCP when the user authorizes it
 
-If the host doesn't already have a browser-automation MCP, install **Playwright MCP** (https://github.com/microsoft/playwright-mcp). Prerequisite: **Node.js 18+**.
+Use the browser tooling the host already has. A browser MCP is one option, not a requirement. If no browser tooling is available, propose **Playwright MCP** (https://github.com/microsoft/playwright-mcp) as a setup step: name the client, scope, pinned version and how to remove it. Change the MCP client configuration only after the user approves; `apple-platform-setup` coordinates authorized setup. Without approval, report the missing runtime proof instead. Prerequisite: **Node.js 18+**.
+
+The commands pin `0.0.82`, npm `latest` as of 2026-09-26. Check `npm view @playwright/mcp version` and review the release notes before changing the pin.
 
 ### Claude Code
 ```bash
-claude mcp add playwright npx @playwright/mcp@latest
-# Optional: --scope user (global) or --scope project (versioned in repo)
+claude mcp add playwright -- npx @playwright/mcp@0.0.82
 ```
-Persists to `~/.claude.json` (user scope) or `.mcp.json` (project scope).
+The default local scope keeps it private to you in this project (`~/.claude.json`); `--scope user` (before the name) adds it for all your projects. `--scope project` writes `.mcp.json` into the repository for every collaborator, so use it only when the repository owner approves.
 
 ### VS Code
 With the MCP-capable Copilot/Continue extension:
 ```bash
-code --add-mcp '{"name":"playwright","command":"npx","args":["@playwright/mcp@latest"]}'
+code --add-mcp '{"name":"playwright","command":"npx","args":["@playwright/mcp@0.0.82"]}'
 ```
 Or interactively: **Command Palette → "MCP: Add Server"**.
 
-### Codex CLI (or any other MCP-compatible client)
-Drop this into the host's MCP config file (often `~/.codex/config.json` or `~/.config/<host>/mcp.json` — check the host's docs):
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
+### Codex
+```bash
+codex mcp add playwright -- npx @playwright/mcp@0.0.82
 ```
+The equivalent entry in `~/.codex/config.toml`:
+```toml
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@0.0.82"]
+```
+For another client, use its documented stdio registration with the same command and arguments; don't guess a config path.
 
 ### Common flags
-Append to the `args` array:
+Append after the package name in the commands above, or to `args`:
 - `--headless` — no UI window (faster in CI, less useful for visual debugging)
-- `--browser=firefox` or `--browser=webkit` — default is Chromium
+- `--browser=firefox`, `--browser=webkit` or `--browser=msedge` — default is the installed Google Chrome (`chrome` channel)
 - `--isolated` — fresh profile per session
 
 ### Verify the install
@@ -123,3 +125,5 @@ Generates project-local agent loops that explore the app, write Playwright tests
 - [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp)
 - [@playwright/mcp on npm](https://www.npmjs.com/package/@playwright/mcp)
 - [VS Code MCP docs](https://code.visualstudio.com/docs/copilot/customization/mcp-servers)
+- [Claude Code MCP docs](https://code.claude.com/docs/en/mcp)
+- [Codex MCP docs](https://developers.openai.com/codex/mcp/)

@@ -65,6 +65,17 @@
       "why": "The newest-installed default includes betas, and App Store Connect accepts beta-built uploads only for TestFlight. A skill that states the default without its distribution exception can send a beta-built archive toward App Review."
     },
     {
+      "id": "catalyst-build-not-ios-proof",
+      "rule": "A Mac Catalyst build is evidence only for the Catalyst target; compile each affected target.",
+      "statesRule": "catalyst build",
+      "requiresQualifier": "does not prove|actual affected target|each affected target",
+      "appliesTo": [
+        "apple-platform-performance",
+        "apple-platform-ui"
+      ],
+      "why": "apple-platform-performance Part V said a clean macCatalyst build meant iOS would build too, while apple-platform-ui said the opposite, so an agent could skip the iOS build that completion requires. A skill that mentions a Catalyst build as evidence must also say it does not stand in for the affected target."
+    },
+    {
       "id": "design-source-color-fidelity",
       "rule": "Substituting a semantic color is correct only where the design leaves the color open.",
       "statesRule": "semantic colors? substitution|no hardcoded colors|Semantic `?Color\\.primary",
@@ -74,12 +85,45 @@
       "why": "Issue #61: design-system icons had an explicit carve-out from SF Symbol substitution, but the color rule next to it did not, so the agent replaced fills the design had specified and judged colors by eye. Fixed in #62. A skill that states the substitution rule must also state where it stops."
     },
     {
+      "id": "cloudkit-mirrored-rename",
+      "rule": "Renaming through a renaming identifier is a lightweight migration only for stores that are not mirrored to CloudKit.",
+      "statesRule": "renamed with (proper )?renaming identifiers?",
+      "patternNote": "Bound to the recommendation itself: the CloudKit section in the same file also mentions renaming identifiers, so a looser qualifier would pass after the caveat on the recommendation is removed.",
+      "requiresQualifier": "renaming identifiers? \\(not for CloudKit-mirrored",
+      "appliesTo": [
+        "core-data",
+        "apple-data"
+      ],
+      "why": "Review finding: the core-data playbook recommended renaming identifiers with no CloudKit caveat while the skill owns NSPersistentCloudKitContainer mirroring. A production CloudKit schema can't rename record types or fields, so the rename migrates only the local store and older app versions keep using the old field."
+    },
+    {
+      "id": "swiftdata-cloudkit-scope",
+      "rule": "Routing to SwiftData or enabling its CloudKit sync must state that SwiftData syncs only the private database.",
+      "statesRule": "SwiftData; read|enabling CloudKit synchronization",
+      "requiresQualifier": "SwiftData('s CloudKit sync mirrors| syncs) only the private database",
+      "appliesTo": [
+        "apple-data"
+      ],
+      "why": "Review finding: apple-data routed new apps to SwiftData without saying its CloudKit sync can't use the shared or public database, so a later sharing or public-data requirement forced a framework rewrite."
+    },
+    {
       "id": "design-source-icon-fidelity",
       "rule": "SF Symbol substitution is limited to system glyphs; design-system icons keep their export.",
       "statesRule": "SF Symbol substitution",
       "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
       "appliesTo": ["figma-bridge", "apple-platform-ui"],
       "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
+    },
+    {
+      "id": "website-links-are-anchors",
+      "rule": "A click handler is not a link: external CTAs and share targets are real <a href> anchors, and actions are native buttons.",
+      "statesRule": "onTapGesture|window\\.open\\(",
+      "patternNote": "Matches any app-website recipe text that uses or describes a click handler; that file must also say it is not how links are built.",
+      "requiresQualifier": "is not a link|Don.t use it for links",
+      "appliesTo": [
+        "app-website"
+      ],
+      "why": "The SwiftUI-For-Web recipe built the App Store badge and share links as Image/Text views with onTapGesture plus role=link. The framework registers only a delegated click listener, so Enter never activated them: keyboard users could focus the download badge but not activate it, and could not reach the Threads and Mastodon links at all. Fixed by building real anchors and a Button; this case keeps a click-handler link from returning without the warning."
     },
     {
       "id": "swift-format-and-compile-gate",
@@ -93,6 +137,16 @@
         "apple-platform-testing"
       ],
       "why": "Swift patches were accepted on a build alone: no skill required swift-format, so formatting drift reached PRs unnoticed. The format-and-compile gate now lives beside build acceptance in apple-platform-testing; this case keeps every completion gate that cites build acceptance from dropping it."
+    },
+    {
+      "id": "swiftui-code-connect-parser-is-legacy",
+      "rule": "SwiftUI FigmaConnect parser files are legacy; new CLI mappings are template files.",
+      "statesRule": "FigmaConnect|\\.figma\\.swift|Figma\\.connect",
+      "requiresQualifier": "legacy|migrat",
+      "appliesTo": [
+        "figma-bridge"
+      ],
+      "why": "code-connect.md taught a nonexistent @FigmaConnect(url, example:) attribute, .figma.swift files and swift run figma commands as the current workflow, and SKILL.md called the Figma.connect SwiftUI API current and sent detection to a nonexistent .codeconnect/ directory. Since CLI v2.0.0 a parser project can only migrate or unpublish. Fixed in the Code Connect rewrite; a skill doc that names the parser API must say it is legacy and needs migration."
     }
   ]
 }

@@ -131,11 +131,11 @@ When the designer updates the frame, the engineer comes back wanting to refresh 
 
 The safe loop:
 
-1. Generate the new draft into a *temp file* — `Views/__tmp/ProfileView.swift`.
-2. Diff against the live `ProfileView.swift`.
-3. Apply only the visual changes (layout, colors, fonts, spacing). Leave the wiring alone.
+1. Generate the new draft *outside the project's build inputs* — the session scratchpad or `$TMPDIR`. Never write it under a synchronized (buildable) folder, an XcodeGen source glob, or a package's `Sources/` directory. Those compile every Swift file they contain, so a second `ProfileView` fails the build with an invalid redeclaration and can be committed by accident.
+2. Diff the draft against the live `ProfileView.swift`.
+3. Apply only the visual changes (layout, colors, fonts, spacing) to the live file. Leave the wiring alone.
 4. Update the `// figma:` comment if the node-id changed.
-5. Delete the temp file.
+5. Delete the scratch draft.
 
 This is the kind of careful merge work that's worth doing by hand or with `apple-platform-ui`'s help, not a one-shot regenerate.
 
