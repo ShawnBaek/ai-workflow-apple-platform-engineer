@@ -57,8 +57,10 @@ final class CLIInvocationTests: XCTestCase {
     let cases: [([String], String)] = [
       (["--app-root", "relative", "runtime-identity"], "absolute"),
       (["--app-root", "/a", "--app-root", "/b", "runtime-identity"], "duplicate --app-root"),
-      (["--repository-root", root.path, "--repository-root", root.path, "runtime-identity"],
-        "duplicate --repository-root"),
+      (
+        ["--repository-root", root.path, "--repository-root", root.path, "runtime-identity"],
+        "duplicate --repository-root"
+      ),
       (["--app-root", "/a"], "path and command"),
       (["--repository-root"], "path and command"),
       (["--app-root", "--repository-root", root.path, "runtime-identity"], "path and command"),

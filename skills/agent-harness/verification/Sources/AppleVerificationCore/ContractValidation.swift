@@ -183,8 +183,10 @@ public enum ContractValidation {
     {
       errors += validateHarnessTemplate(template, workflow: workflow)
     }
-    if let template = object(root, "skills/agent-harness/templates/harness-local.json", errors: &errors),
-      let workflow = object(root, "skills/agent-harness/contracts/local-workflow.json", errors: &errors)
+    if let template = object(
+      root, "skills/agent-harness/templates/harness-local.json", errors: &errors),
+      let workflow = object(
+        root, "skills/agent-harness/contracts/local-workflow.json", errors: &errors)
     {
       errors += validateHarnessTemplate(template, workflow: workflow)
     }

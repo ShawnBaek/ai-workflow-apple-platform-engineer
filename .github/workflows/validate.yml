@@ -24,3 +24,57 @@ jobs:
         run: |
           APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1 --show-bin-path)"
           "$APE_BIN_DIR/apple-verify" repository --root .
+
+  swift-format-and-compile:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      # The release matching the Xcode 27 toolchain, pinned by its tag commit; bump both
+      # with the formatting the new release brings.
+      SWIFT_FORMAT_VERSION: 604.0.0
+      SWIFT_FORMAT_COMMIT: 15d7877c6b32926948f6520f0156657945955ea3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore pinned swift-format
+        id: swift-format-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/swift-format-bin
+          key: swift-format-${{ env.SWIFT_FORMAT_VERSION }}-${{ env.SWIFT_FORMAT_COMMIT }}-${{ runner.os }}-${{ runner.arch }}
+      - name: Build pinned swift-format
+        if: steps.swift-format-cache.outputs.cache-hit != 'true'
+        run: |
+          source="$RUNNER_TEMP/swift-format"
+          git init --quiet "$source"
+          git -C "$source" fetch --quiet --depth 1 https://github.com/swiftlang/swift-format.git "$SWIFT_FORMAT_COMMIT"
+          git -C "$source" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$source" rev-parse HEAD)" = "$SWIFT_FORMAT_COMMIT"
+          swift build -c release --package-path "$source" --product swift-format -j 2
+          mkdir -p "$RUNNER_TEMP/swift-format-bin"
+          cp "$(swift build -c release --package-path "$source" --show-bin-path)/swift-format" \
+            "$RUNNER_TEMP/swift-format-bin/swift-format"
+      # Saved right after the build, so a later formatting failure still caches the binary.
+      - name: Save pinned swift-format
+        if: steps.swift-format-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/swift-format-bin
+          key: ${{ steps.swift-format-cache.outputs.cache-primary-key }}
+      - name: Report swift-format lint findings (not gated)
+        run: git ls-files -z '*.swift' | xargs -0 "$RUNNER_TEMP/swift-format-bin/swift-format" lint
+      - name: Check Swift formatting
+        run: |
+          swift_format="$RUNNER_TEMP/swift-format-bin/swift-format"
+          "$swift_format" --version
+          git ls-files -z '*.swift' | xargs -0 "$swift_format" format --in-place
+          if ! git diff --exit-code --stat -- '*.swift'; then
+            git diff -- '*.swift'
+            echo "::error::Format the files above with swift-format $SWIFT_FORMAT_VERSION (see docs/verification.md)."
+            exit 1
+          fi
+      - name: Type-check standalone Swift scripts
+        run: |
+          for script in skills/*/scripts/*.swift docs/evidence/generate-comparison.swift; do
+            echo "swiftc -typecheck $script"
+            xcrun swiftc -typecheck "$script"
+          done

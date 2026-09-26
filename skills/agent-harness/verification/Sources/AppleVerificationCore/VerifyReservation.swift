@@ -187,17 +187,9 @@ extension Authorization {
         if approvals.count != 1 {
           errors.append("dispatch requires one exact approval for the reservation")
         }
-        let harnessDigest = try ResourceCoordinator.portableDocumentSHA256(harness)
-        var expectedAuthority: [String: Any] = [
-          "authorization_hash": reservation["authorization_hash"]!,
-          "selected_writer": harness["selected_writer"]!, "harness_sha256": harnessDigest,
-          "authorization_issued_at": authorization["issued_at"]!,
-          "authorization_expires_at": authorization["expires_at"]!,
-        ]
-        for (key, value) in bindings { expectedAuthority[key] = value }
-        if !jsonSame(authority, expectedAuthority) {
-          errors.append("coordination_required: dispatch run authority drifted")
-        }
+        errors += try dispatchAuthorityErrors(
+          authority: authority, authorization: authorization, reservation: reservation,
+          trustedHarness: harness, ledgerBindings: bindings)
         if !errors.isEmpty { return (Array(Set(errors)).sorted(), nil) }
         guard
           health.attestation?["report_sha256"] as? String == reservation["health_report_sha256"]
@@ -261,6 +253,24 @@ extension Authorization {
         )
       }
     } catch { return (["dispatch verification failed closed: \(String(describing: error))"], nil) }
+  }
+
+  static func dispatchAuthorityErrors(
+    authority: [String: Any], authorization: [String: Any], reservation: [String: Any],
+    trustedHarness: [String: Any], ledgerBindings: [String: Any]
+  ) throws -> [String] {
+    guard let window = ResourceCoordinator.canonicalAuthorizationWindow(authorization) else {
+      return ["coordination_required: dispatch run authority drifted"]
+    }
+    var expectedAuthority: [String: Any] = [
+      "authorization_hash": reservation["authorization_hash"] ?? NSNull(),
+      "selected_writer": trustedHarness["selected_writer"] ?? NSNull(),
+      "harness_sha256": try ResourceCoordinator.portableDocumentSHA256(trustedHarness),
+      "authorization_issued_at": window.issued, "authorization_expires_at": window.expires,
+    ]
+    for (key, value) in ledgerBindings { expectedAuthority[key] = value }
+    return jsonSame(authority, expectedAuthority)
+      ? [] : ["coordination_required: dispatch run authority drifted"]
   }
 
   private static func fileIdentity(_ path: URL) throws -> (dev_t, ino_t) {

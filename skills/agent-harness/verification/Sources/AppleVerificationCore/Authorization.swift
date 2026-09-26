@@ -67,7 +67,6 @@ public enum Authorization {
     "apple.testflight.readback": ["verify_uploaded_build", "verify_internal_distribution"],
   ]
 
-
   public static func schemaErrors(
     instance: Any, schema: [String: Any], path: String = "$", root: [String: Any]? = nil
   ) -> [String] {
