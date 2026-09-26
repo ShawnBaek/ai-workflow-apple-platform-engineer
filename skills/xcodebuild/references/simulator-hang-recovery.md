@@ -83,8 +83,9 @@ missing or stale.
 
 ## Distinguish device-local from service-wide failure
 
-One bounded control attempt on a second Simulator with the same runtime and a
-compatible architecture is allowed after releasing the first device lease. It
+One bounded control attempt on a second, existing Simulator with the same
+runtime and a compatible architecture is allowed after releasing the first
+device lease; do not create a device for it. It
 tests the runtime service, not product compatibility, and does not expand the
 platform claim.
 

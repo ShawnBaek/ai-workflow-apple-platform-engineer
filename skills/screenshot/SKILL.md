@@ -36,8 +36,9 @@ by `app-store-screenshots`; do not choose a second, conflicting listing matrix.
 
 ## Deterministic capture
 
-1. Complete the Xcode project/host preflight and acquire the exact destination
-   lease.
+1. Complete the Xcode project/host preflight, choose the destination under
+   [destination reuse](../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination), and acquire
+   its exact lease.
 2. Use launch arguments/environment, a fixture, dependency injection, or an
    approved debug seam to create repeatable state. Do not copy private files
    directly into Simulator containers as a default shortcut.

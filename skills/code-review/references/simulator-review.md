@@ -8,7 +8,7 @@ Use `xcode-project-workflow`, `xcodebuild`, `apple-platform-testing`, and `scree
 
 The reviewer remains unable to change the reviewed source, project, index, or baseline. Grant only the test operations the current workflow supports, acquire the required build/device/GUI resources, and ensure builds cannot race with source changes. If a source change or new fixture implementation is needed, return it to the writer before reviewing the new revision. Do not bypass a denied capability by issuing equivalent shell commands. If a separate authorized runner must execute the scenario, distinguish that execution from the reviewer's assessment.
 
-Use one destination and focused execution initially. Count internal test workers against the shared host limit. Preserve other tasks' Simulator state and release owned resources through the existing cleanup path. Do not erase devices, clear global caches, or add another coordinator for review.
+Use one destination, reused under [destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination), and focused execution initially; do not create a review-only device. When no compatible device exists, report that gap as unverified runtime coverage or ask the user. Count internal test workers against the shared host limit. Preserve other tasks' Simulator state and release owned resources through the existing cleanup path. Do not erase devices, clear global caches, or add another coordinator for review.
 
 ## Choose edge cases from the logic
 

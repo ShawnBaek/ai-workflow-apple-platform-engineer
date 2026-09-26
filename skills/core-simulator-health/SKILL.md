@@ -39,7 +39,10 @@ and do not bypass an active coordinator or repair a resource owned by another ta
    alter CoreSimulator databases, mounts, Cryptex assets, or images.plist
    without a separate exact authorization.
 7. Preserve user-owned devices and data. Prefer an exact temporary device for an
-   explicitly authorized destructive diagnostic.
+   explicitly authorized destructive diagnostic; name it and record its UDID as
+   in [destination reuse](../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination)
+   step 3, and delete that task-created device when the diagnostic ends.
+   Ordinary validation reuses a destination under that section.
 8. Never infer a permanent hang from one process-state snapshot.
 
 ## Preflight
@@ -86,8 +89,8 @@ Separate build, install, launch, and interaction states:
 4. Retry once through separate install then launch steps on the same exact
    destination.
 5. Before switching destinations, prove the original device service is the
-   failing layer. A second device is a controlled comparison, not an automatic
-   retry loop.
+   failing layer. A second, existing device is a controlled comparison, not an
+   automatic retry loop; do not create a device for it.
 6. If direct Apple tooling works while a workspace-bound MCP action fails,
    classify only that MCP capability as degraded.
 

@@ -40,6 +40,15 @@
       "requiresQualifier": "system glyph|design-system icons|exported artwork|ships no asset",
       "appliesTo": ["figma-bridge", "apple-platform-ui"],
       "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
+    },
+    {
+      "id": "simulator-reuse-before-create",
+      "rule": "Text that gives a task separate, temporary or newly created Simulator devices must say to reuse an existing compatible device first or to delete the task-created device.",
+      "statesRule": "separate Simulator devices|temporary (Simulator )?device|simctl (create|clone)",
+      "patternNote": "Bound to the reuse and ownership phrases. A bare 'existing' qualifier would pass on unrelated text elsewhere in the same file. statesRule matches the shipped single-line wording, so it catches a revert to that text, not a reworded or line-wrapped restatement.",
+      "requiresQualifier": "existing compatible devices?|task-created device",
+      "appliesTo": ["xcodebuild", "core-simulator-health"],
+      "why": "Maintainer report: agents left many Simulator devices behind. concurrent-project-resources.md told separate projects to receive separate devices and core-simulator-health preferred a temporary device, and neither said to reuse an existing device first or to delete the device the task created."
     }
   ]
 }
