@@ -76,6 +76,28 @@
       "why": "apple-platform-performance Part V said a clean macCatalyst build meant iOS would build too, while apple-platform-ui said the opposite, so an agent could skip the iOS build that completion requires. A skill that mentions a Catalyst build as evidence must also say it does not stand in for the affected target."
     },
     {
+      "id": "qa-handoff-tracker-write-gate",
+      "rule": "A skill that moves cards to a QA list writes to the tracker only on an explicit request or after one batch confirmation of the cards, target list and text.",
+      "statesRule": "mov(e|es|ing) (the |them )?(cards? )?to (the )?(configured )?QA list",
+      "patternNote": "Matches the shipped QA-move wording in release-qa-handoff and the matching hand-off line in trello-pm-card-sync. The qualifier is the batch-confirmation phrase itself; a looser 'explicit request' would also match unrelated sync text.",
+      "requiresQualifier": "one batch confirmation",
+      "appliesTo": [
+        "release-qa-handoff",
+        "trello-pm-card-sync"
+      ],
+      "why": "Review finding: release-qa-handoff headed its card section 'no confirmation needed' and moved cards to the QA list after any merge, matching cards partly by the number in a branch name, while trello-pm-card-sync makes tracker writes opt-in. A wrong match sent testers to the wrong card. A skill that states the QA move must also state the confirmation gate."
+    },
+    {
+      "id": "tester-note-publisher",
+      "rule": "An approved What to Test note is published through app-store-connect, under its account guard.",
+      "statesRule": "What to Test note",
+      "requiresQualifier": "`app-store-connect`\\s+publishes",
+      "appliesTo": [
+        "release-qa-handoff"
+      ],
+      "why": "Review finding: release-qa-handoff handed the approved note to asc-testflight-orchestration, a skill from a separate pack that this collection does not ship and that setup says not to install. With the pack absent the route was broken; with it present, the write skipped the account guard in app-store-connect, which already says it publishes notes drafted by release-qa-handoff."
+    },
+    {
       "id": "design-source-color-fidelity",
       "rule": "Substituting a semantic color is correct only where the design leaves the color open.",
       "statesRule": "semantic colors? substitution|no hardcoded colors|Semantic `?Color\\.primary",
