@@ -131,8 +131,10 @@ or unusable status response is blocked when selected. If not selected, report
 
 ## GitHub, Spec Kit, and delivery
 
-- Verify approved GitHub account, exact remote repository,
-  permission level, Issues availability, and PR capability.
+- Verify the exact remote repository under the approved GitHub user or
+  organization, the viewer's write-level permission on it, Issues availability,
+  and PR capability. An organization owner never equals the signed-in login;
+  repository permission is the authority.
 - Inspect Project v2 only when selected. Missing `read:project`/`project` scope is
   a scoped Project limitation; do not refresh OAuth during health collection.
 - When Spec Kit is selected, require the pinned release `v1.0.1`,
@@ -146,7 +148,10 @@ or unusable status response is blocked when selected. If not selected, report
 - For TestFlight profiles, verify the private Apple account/team guard before
   account discovery, then exact app, bundle, platform, version/build policy,
   `asc` capability, agreements/compliance, signing/archive prerequisites, and
-  named internal group IDs. Do not upload during health collection.
+  named internal group IDs. Each authorized group must be listed by
+  `asc testflight groups list --app <id>` (asc 0.38.0 or later; the
+  `beta-groups` alias was removed in 1.0.0) with `isInternalGroup` true.
+  Do not upload during health collection.
 
 ## CoreSimulator and runtime layers
 

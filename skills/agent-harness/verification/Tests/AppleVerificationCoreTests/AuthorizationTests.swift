@@ -53,6 +53,43 @@ final class AuthorizationTests: XCTestCase {
       ]))
   }
 
+  func testObservedPathsListBothSidesOfARenameSoTheSourceIsPathChecked() throws {
+    let root = try temporaryDirectory()
+    func git(_ arguments: [String]) throws {
+      let result = try HarnessRuntime.run(
+        executable: "/usr/bin/git",
+        arguments: ["-C", root.path, "-c", "user.name=Test", "-c", "user.email=test@example.com"]
+          + arguments, timeout: 15)
+      XCTAssertEqual(result.exitCode, 0, "\(arguments): \(result.stderr)")
+    }
+    try git(["init", "-q", "-b", "main"])
+    // Force rename detection on so a user or system default cannot hide the defect.
+    try git(["config", "diff.renames", "true"])
+    try git(["remote", "add", "origin", "https://github.com/ExampleOrg/Sample.git"])
+    for directory in ["Sources", "Tests"] {
+      try FileManager.default.createDirectory(
+        at: root.appendingPathComponent(directory), withIntermediateDirectories: true)
+    }
+    try Data("final class Old {}\n".utf8).write(to: root.appendingPathComponent("Tests/Old.swift"))
+    try git(["add", "Tests/Old.swift"])
+    try git(["commit", "-q", "-m", "base"])
+    let base = try HarnessRuntime.run(
+      executable: "/usr/bin/git", arguments: ["-C", root.path, "rev-parse", "HEAD"], timeout: 15
+    ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    try git(["mv", "Tests/Old.swift", "Sources/New.swift"])
+
+    // A rename moves content out of Tests/, so Tests/Old.swift must stay visible to the
+    // commit path scope and allowed_paths checks, as it already is in the patch manifest.
+    let staged = try Authorization.observeRepository(root, expectedBaseSHA: base)
+    XCTAssertEqual(staged["staged_paths"] as? [String], ["Sources/New.swift", "Tests/Old.swift"])
+
+    try git(["commit", "-q", "-m", "move"])
+    let committed = try Authorization.observeRepository(root, expectedBaseSHA: base)
+    XCTAssertEqual(
+      committed["outgoing_paths"] as? [String], ["Sources/New.swift", "Tests/Old.swift"])
+    XCTAssertEqual(committed["staged_paths"] as? [String], [])
+  }
+
   func testGitHubIdentityNormalizesTransportAndStripsCredentials() throws {
     let forms = [
       "https://github.com/Example/Repo.git", "git@github.com:example/repo.git",
@@ -206,6 +243,82 @@ final class AuthorizationTests: XCTestCase {
       Authorization.validateAuthorization(configuredProject, context: currentContext).contains {
         $0.contains("Project tracking grants")
       })
+  }
+
+  func testGitCommitBindsLiveStagedSetWithinApprovedDescriptorPathScope() throws {
+    var envelope = try currentApprovedEnvelope()
+    envelope["allowed_paths"] = ["Sources", "SourcesExtra", "Tests"]
+    let grant = (envelope["action_grants"] as! [[String: Any]]).first {
+      $0["action"] as? String == "git.commit"
+    }!
+    XCTAssertEqual((grant["operation_input"] as? [String: Any])?["paths"] as? [String], ["Sources"])
+    var request: [String: Any] = [:]
+    for field in Authorization.requestFields { request[field] = NSNull() }
+    for field in [
+      "system", "action", "operation", "operation_input", "constraint_sha256", "phase", "grant_id",
+      "idempotency_key", "target",
+    ] {
+      request[field] = grant[field]
+    }
+    let currentContext = context
+    func commitPathErrors(_ paths: [String], staged: [String]) -> [String] {
+      var candidate = request
+      candidate["paths"] = paths
+      return Authorization.authorizeAction(
+        envelope: envelope, request: candidate, ledgerRecords: [], policyOverlay: [:],
+        liveRepository: ["staged_paths": staged], selectedWriter: "codex",
+        verifiedHealthAttestation: nil, context: currentContext
+      ).filter { $0.hasPrefix("git.commit path") }
+    }
+    let staged = ["Sources/A.swift", "Sources/B.swift"]
+    XCTAssertEqual(commitPathErrors(["Sources/B.swift", "Sources/A.swift"], staged: staged), [])
+    XCTAssertEqual(commitPathErrors(staged, staged: Array(staged.reversed())), [])
+
+    let outsideScope = ["git.commit path is outside the structured operation descriptor path scope"]
+    let mixed = ["Sources/A.swift", "Tests/X.swift"]
+    XCTAssertEqual(commitPathErrors(mixed, staged: mixed), outsideScope)
+    XCTAssertEqual(
+      commitPathErrors(["SourcesExtra/x.swift"], staged: ["SourcesExtra/x.swift"]), outsideScope)
+    let stageDrift = ["git.commit paths must exactly match the live staged paths"]
+    XCTAssertEqual(commitPathErrors(["Sources/A.swift"], staged: staged), stageDrift)
+    XCTAssertEqual(commitPathErrors(staged + ["Sources/C.swift"], staged: staged), stageDrift)
+  }
+
+  func testCommitPathScopeMatchesStagedSetAndRejectsEscapes() {
+    let scope = ["Sources"]
+    let staged = ["Sources/A.swift", "Sources/B.swift"]
+    let outsideScope = "git.commit path is outside the structured operation descriptor path scope"
+    let stageDrift = "git.commit paths must exactly match the live staged paths"
+    XCTAssertEqual(
+      Authorization.commitPathErrors(
+        paths: ["Sources/B.swift", "Sources/A.swift"], scope: scope, stagedPaths: staged), [])
+    XCTAssertEqual(
+      Authorization.commitPathErrors(
+        paths: staged, scope: ["Sources/"], stagedPaths: Array(staged.reversed())), [])
+
+    let escapes = [
+      "Tests/X.swift", "SourcesExtra/x.swift", "Sources/../Tests/X.swift", "/Sources/x",
+    ]
+    for escape in escapes {
+      XCTAssertEqual(
+        Authorization.commitPathErrors(paths: [escape], scope: scope, stagedPaths: [escape]),
+        [outsideScope], escape)
+    }
+    XCTAssertEqual(
+      Authorization.commitPathErrors(paths: staged, scope: [], stagedPaths: staged), [outsideScope])
+
+    for (paths, live) in [
+      (["Sources/A.swift"], staged), (staged + ["Sources/C.swift"], staged),
+      (["Sources/A.swift", "Sources/A.swift"], ["Sources/A.swift"]),
+      (["Sources/A.swift", "Sources/A.swift"], ["Sources/A.swift", "Sources/A.swift"]),
+      (["Sources/A.swift"], ["Sources/A.swift", "Sources/A.swift"]), ([], []),
+    ] {
+      XCTAssertEqual(
+        Authorization.commitPathErrors(paths: paths, scope: scope, stagedPaths: live),
+        [stageDrift], "\(paths) vs \(live)")
+    }
+    XCTAssertEqual(
+      Authorization.commitPathErrors(paths: staged, scope: scope, stagedPaths: nil), [stageDrift])
   }
 
   func testRuntimeUIRequiresPlansThatProtectRuntimeVerification() throws {
@@ -709,6 +822,91 @@ final class AuthorizationTests: XCTestCase {
       })
   }
 
+  func testEverySchemaNodeStatusAndImprovementRecordPassesTheRuntimeLedgerCheck() throws {
+    let nodeStatuses = try ledgerPayloadEnum("node", field: "status")
+    let improvementStatuses = try ledgerPayloadEnum("improvement", field: "status")
+    XCTAssertEqual(nodeStatuses.count, 12)
+    XCTAssertTrue(nodeStatuses.contains("passed"))
+    XCTAssertEqual(improvementStatuses.count, 5)
+    let intake = record(1, "node", ["node_id": "intake", "status": "passed"], second: 1)
+    for status in nodeStatuses where status != "passed" {
+      var records = [
+        intake,
+        record(2, "node", ["node_id": "guard", "status": status, "reason": "fixture"], second: 2),
+        record(3, "node", ["node_id": "verify", "status": status], second: 3),
+        record(4, "node", ["node_id": "claim_implementation_writer", "status": status], second: 4),
+      ]
+      // An append-only non-passed record must not block the node's later pass.
+      if status != "failed_terminal" {
+        records.append(record(5, "node", ["node_id": "guard", "status": "passed"], second: 5))
+      }
+      XCTAssertEqual(Authorization.ledgerContractErrors(records, context: context), [], status)
+    }
+    var candidate = [intake]
+    for (offset, status) in improvementStatuses.enumerated() {
+      var payload = improvementPayload()
+      payload["status"] = status
+      if status == "rolled_back" { payload["rollback_ref"] = "revert" }
+      candidate.append(record(offset + 2, "improvement", payload, second: offset + 2))
+    }
+    XCTAssertEqual(Authorization.ledgerContractErrors(candidate, context: context), [])
+  }
+
+  func testNonPassedNodeAndImprovementRecordsFailClosedWithoutGrantingProgress() {
+    let intake = record(1, "node", ["node_id": "intake", "status": "passed"], second: 1)
+    func contract(_ records: [[String: Any]]) -> [String] {
+      Authorization.ledgerContractErrors(records, context: context)
+    }
+    func lifecycle(_ records: [[String: Any]]) -> [String] {
+      Authorization.standaloneLedgerLifecycleErrors(records, context: context)
+    }
+    let unknownType = [intake, record(2, "checkpoint", ["node_id": "guard"], second: 2)]
+    XCTAssertFalse(contract(unknownType).isEmpty)
+    XCTAssertTrue(lifecycle(unknownType).contains { $0.contains("record type is unsupported") })
+    let unknownStatus = [
+      intake, record(2, "node", ["node_id": "guard", "status": "done"], second: 2),
+    ]
+    XCTAssertFalse(contract(unknownStatus).isEmpty)
+    XCTAssertTrue(lifecycle(unknownStatus).contains { $0.contains("node status is unsupported") })
+    let unknownNode = [
+      intake, record(2, "node", ["node_id": "invented", "status": "blocked"], second: 2),
+    ]
+    XCTAssertTrue(
+      contract(unknownNode).contains { $0.contains("not present in the installed workflow") })
+
+    // Non-passed and improvement records never satisfy a dependency or the pr_ready binding.
+    var approved = improvementPayload()
+    approved["status"] = "applied"
+    let unmet = [
+      intake, record(2, "node", ["node_id": "guard", "status": "awaiting_approval"], second: 2),
+      record(3, "improvement", approved, second: 3),
+      record(4, "node", ["node_id": "health", "status": "passed"], second: 4),
+    ]
+    XCTAssertTrue(contract(unmet).contains { $0.contains("passed before dependencies: guard") })
+    let unbound = [
+      record(1, "node", ["node_id": "pr_ready", "status": "verifying"], second: 1),
+      record(2, "node", ["node_id": "bind_pr_ready", "status": "passed"], second: 2),
+    ]
+    XCTAssertTrue(contract(unbound).contains { $0.contains("cannot bind before pr_ready") })
+    let resurrected = [
+      intake, record(2, "node", ["node_id": "guard", "status": "failed_terminal"], second: 2),
+      record(3, "node", ["node_id": "guard", "status": "passed"], second: 3),
+    ]
+    XCTAssertTrue(contract(resurrected).contains { $0.contains("after failed_terminal: guard") })
+
+    var unsourced = improvementPayload()
+    unsourced["derived_from_feedback_ids"] = []
+    var authority = improvementPayload()
+    authority["action_grants"] = []
+    var unknownOutcome = improvementPayload()
+    unknownOutcome["status"] = "merged"
+    for payload in [unsourced, authority, unknownOutcome] {
+      let records = [intake, record(2, "improvement", payload, second: 2)]
+      XCTAssertFalse(contract(records).isEmpty)
+      XCTAssertTrue(lifecycle(records).contains { $0.contains("improvement record") })
+    }
+  }
+
   func testLedgerRejectsFractionalSequence() {
     let fractional: [String: Any] = [
       "schema_version": "1.0.0", "run_id": "run", "sequence": 1.5,
@@ -720,6 +918,123 @@ final class AuthorizationTests: XCTestCase {
       })
   }
 
+  func testRegisteredRunAuthorityMatchesEquivalentApprovalInstantsAtReserveAndDispatch() throws {
+    // Registration stores canonical UTC millisecond stamps; an approver may write any RFC 3339 form.
+    for (issuedAt, expiresAt) in [
+      ("2026-01-01T00:00:00Z", "2098-01-02T00:00:00Z"),
+      ("2026-01-01T09:00:00+09:00", "2098-01-02T09:00:00+09:00"),
+    ] {
+      let run = try registeredRun(issuedAt: issuedAt, expiresAt: expiresAt)
+      XCTAssertEqual(
+        run.authority["authorization_issued_at"] as? String, "2026-01-01T00:00:00.000Z")
+      XCTAssertEqual(try reservationAuthorityErrors(run), [], issuedAt)
+      XCTAssertEqual(try dispatchAuthorityErrors(run), [], issuedAt)
+    }
+  }
+
+  func testRegisteredRunAuthorityRejectsADifferentApprovalInstantAtReserveAndDispatch() throws {
+    let reserveDrift = "coordination_required: run authority drifted or is unregistered"
+    let dispatchDrift = "coordination_required: dispatch run authority drifted"
+    for field in ["authorization_issued_at", "authorization_expires_at"] {
+      let run = try registeredRun(
+        issuedAt: "2026-01-01T09:00:00+09:00", expiresAt: "2098-01-02T00:00:00Z"
+      ) { authority in
+        let instant = try HarnessRuntime.parseTimestamp(authority[field] as! String)
+        authority[field] = HarnessRuntime.timestamp(instant.addingTimeInterval(1))
+      }
+      XCTAssertEqual(try reservationAuthorityErrors(run), [reserveDrift], field)
+      XCTAssertEqual(try dispatchAuthorityErrors(run), [dispatchDrift], field)
+    }
+    // The same wall-clock time in another offset is another instant; no timezone fails closed.
+    let run = try registeredRun(
+      issuedAt: "2026-01-01T09:00:00+09:00", expiresAt: "2098-01-02T00:00:00Z")
+    for issuedAt in ["2026-01-01T00:00:00+09:00", "2026-01-01T00:00:00"] {
+      var authorization = run.envelope
+      authorization["issued_at"] = issuedAt
+      XCTAssertEqual(
+        try dispatchAuthorityErrors(run, authorization: authorization), [dispatchDrift], issuedAt)
+    }
+    var undated = run.envelope
+    undated["issued_at"] = "2026-01-01T00:00:00"
+    var partial = run.authority
+    partial["authorization_hash"] = Authorization.authorizationHash(undated)
+    partial.removeValue(forKey: "authorization_issued_at")
+    XCTAssertEqual(
+      Authorization.reservationAuthorityErrors(
+        partial, envelope: undated, selectedWriter: run.harness["selected_writer"] as? String,
+        trustedHarnessSHA256: try ResourceCoordinator.portableDocumentSHA256(run.harness)),
+      [reserveDrift])
+  }
+
+  private struct RegisteredRun {
+    let envelope: [String: Any]
+    let harness: [String: Any]
+    let ledger: URL
+    let authority: [String: Any]
+  }
+
+  /// Registers the run authority the way initialize-run does, then reads back the authorization,
+  /// harness and stored authority the way reservation and dispatch do.
+  private func registeredRun(
+    issuedAt: String, expiresAt: String,
+    adjustAuthority: (inout [String: Any]) throws -> Void = { _ in }
+  ) throws -> RegisteredRun {
+    let root = try temporaryDirectory().resolvingSymlinksInPath()
+    var envelope = try currentApprovedEnvelope()
+    envelope["issued_at"] = issuedAt
+    envelope["expires_at"] = expiresAt
+    let runID = envelope["run_id"] as! String
+    let authorizationURL = root.appendingPathComponent("authorization.json")
+    let harnessURL = root.appendingPathComponent("harness.json")
+    let ledger = root.appendingPathComponent("ledger.jsonl")
+    let state = root.appendingPathComponent("coordinator.json")
+    try HarnessRuntime.atomicWriteJSON(envelope, to: authorizationURL)
+    let approval = try InitializeRun.approvalRecord(
+      authorization: envelope, recordedAt: Date(), context: context)
+    try (HarnessRuntime.canonicalJSON(approval) + Data([0x0a])).write(to: ledger)
+    var harness = try HarnessRuntime.object(
+      context.harnessRoot.appendingPathComponent("templates/harness-local.json"))
+    harness["authoritative_root"] = root.path
+    harness["private_policy_overlay"] = root.appendingPathComponent("policy.json").path
+    harness["run_authorization"] = authorizationURL.path
+    harness["run_ledger"] = ledger.path
+    try HarnessRuntime.atomicWriteJSON(harness, to: harnessURL)
+    var (_, authority) = try ResourceCoordinator.loadExistingRunAuthority(
+      authorizationPath: authorizationURL, harnessPath: harnessURL, harness: harness,
+      runID: runID, context: context)
+    try adjustAuthority(&authority)
+    _ = try ResourceCoordinator.bootstrap(statePath: state, legacyLeasesQuiesced: true)
+    _ = try ResourceCoordinator.registerRunAuthority(
+      statePath: state, runID: runID, runAuthority: authority)
+    let authorities =
+      try ResourceCoordinator.fullStatus(statePath: state)["run_authorities"] as? [String: Any]
+    return RegisteredRun(
+      envelope: try XCTUnwrap(
+        try Authorization.loadStablePrivateJSON(authorizationURL, root: root) as? [String: Any]),
+      harness: try ResourceCoordinator.loadTrustedHarness(
+        harnessPath: harnessURL, context: context),
+      ledger: ledger, authority: try XCTUnwrap(authorities?[runID] as? [String: Any]))
+  }
+
+  private func reservationAuthorityErrors(_ run: RegisteredRun) throws -> [String] {
+    Authorization.reservationAuthorityErrors(
+      run.authority, envelope: run.envelope,
+      selectedWriter: run.harness["selected_writer"] as? String,
+      trustedHarnessSHA256: try ResourceCoordinator.portableDocumentSHA256(run.harness))
+  }
+
+  private func dispatchAuthorityErrors(
+    _ run: RegisteredRun, authorization: [String: Any]? = nil
+  ) throws -> [String] {
+    let digest = Authorization.authorizationHash(run.envelope)
+    return try Authorization.dispatchAuthorityErrors(
+      authority: run.authority, authorization: authorization ?? run.envelope,
+      reservation: ["authorization_hash": digest], trustedHarness: run.harness,
+      ledgerBindings: try ResourceCoordinator.ledgerBinding(
+        run.ledger, expectedRunID: run.envelope["run_id"] as? String,
+        expectedAuthorizationHash: digest))
+  }
+
   private func record(_ sequence: Int, _ type: String, _ payload: [String: Any], second: Int)
     -> [String: Any]
   {
@@ -728,6 +1043,26 @@ final class AuthorizationTests: XCTestCase {
       "recorded_at": String(format: "2026-01-01T00:00:%02dZ", second), "record_type": type,
       "payload": payload,
     ]
+  }
+  private func improvementPayload() -> [String: Any] {
+    [
+      "candidate_id": "candidate", "derived_from_feedback_ids": ["feedback"],
+      "scope": "private_project_overlay",
+      "proposal_hash": "sha256:" + String(repeating: "a", count: 64), "status": "proposed",
+      "validation_evidence_ids": [],
+    ]
+  }
+  private func ledgerPayloadEnum(_ type: String, field: String) throws -> [String] {
+    let schema = try HarnessRuntime.object(
+      repositoryRoot.appendingPathComponent(
+        "skills/agent-harness/contracts/schemas/ledger-record.schema.json"))
+    let branch = (schema["oneOf"] as? [[String: Any]] ?? []).first {
+      (($0["properties"] as? [String: Any])?["record_type"] as? [String: Any])?["const"]
+        as? String == type
+    }
+    let payload = (branch?["properties"] as? [String: Any])?["payload"] as? [String: Any]
+    let property = (payload?["properties"] as? [String: Any])?[field] as? [String: Any]
+    return try XCTUnwrap(property?["enum"] as? [String])
   }
   private func currentApprovedEnvelope() throws -> [String: Any] {
     var envelope = try HarnessRuntime.object(

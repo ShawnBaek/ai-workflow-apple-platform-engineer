@@ -23,6 +23,20 @@
       "why": "The testing skill selects evidence but does not own capture mechanics; without the reference, capture gets improvised inside a test."
     },
     {
+      "id": "open-xcode-handoff",
+      "capability": "On request, apply an agent's worktree, clone, sandbox or cloud changes to the checkout behind the user's open Xcode as a reversible patch, and verify there without switching the user's scheme or destination.",
+      "request": "Xcode is open on my main checkout. Put the changes from your worktree there so I can check them with the Xcode MCP tools.",
+      "owner": "open-xcode-handoff",
+      "referencedFrom": [
+        "xcodebuild",
+        "xcode-project-workflow",
+        "git-workflow",
+        "apple-platform-engineer",
+        "agent-harness"
+      ],
+      "why": "Maintainer report: agents worked in worktrees, clones or sandboxes that the open Xcode could not see, and the only guidance told a worktree to open its own Xcode session. With no owner, the request fell to xcodebuild, which builds the agent's checkout, or to git-workflow, which would switch the user's branch. This case keeps the handoff reachable from each starting skill."
+    },
+    {
       "id": "selected-xcode-owner",
       "capability": "Choosing which installed Xcode is the selected Xcode (user choice, then project pin, then newest; per-command DEVELOPER_DIR), including the Xcode that an MCP bridge answers from and the one an App Store archive uses.",
       "request": "Xcode 27.1 and a newer 27.2 beta are installed and I work in the beta. Build this with the right Xcode and make the Xcode MCP answer from the window I have open.",
@@ -39,6 +53,17 @@
     }
   ],
   "ruleConsistency": [
+    {
+      "id": "newest-xcode-distribution",
+      "rule": "The newest installed Xcode, betas included, is the default; an archive or upload that may reach the App Store uses an Xcode that App Store Connect accepts for it.",
+      "statesRule": "newest installed",
+      "requiresQualifier": "distribution exception|distribution is the exception",
+      "appliesTo": [
+        "xcode-project-workflow",
+        "apple-platform-setup"
+      ],
+      "why": "The newest-installed default includes betas, and App Store Connect accepts beta-built uploads only for TestFlight. A skill that states the default without its distribution exception can send a beta-built archive toward App Review."
+    },
     {
       "id": "design-source-color-fidelity",
       "rule": "Substituting a semantic color is correct only where the design leaves the color open.",
@@ -57,12 +82,17 @@
       "why": "Issue #58: the same defect class for assets. The substitution rule without its boundary produced a screen full of system glyphs where the designer had shipped artwork."
     },
     {
-      "id": "newest-xcode-distribution",
-      "rule": "The newest installed Xcode, betas included, is the default; an archive or upload that may reach the App Store uses an Xcode that App Store Connect accepts for it.",
-      "statesRule": "newest installed",
-      "requiresQualifier": "distribution exception|distribution is the exception",
-      "appliesTo": ["xcode-project-workflow", "apple-platform-setup"],
-      "why": "The newest-installed default includes betas, and App Store Connect accepts beta-built uploads only for TestFlight. A skill that states the default without its distribution exception can send a beta-built archive toward App Review."
+      "id": "swift-format-and-compile-gate",
+      "rule": "A completion gate that cites build and warning acceptance also requires swift-format and an error-free compile for Swift changes.",
+      "statesRule": "build and warning acceptance",
+      "requiresQualifier": "swift format and compile acceptance",
+      "appliesTo": [
+        "apple-platform-engineer",
+        "agent-harness",
+        "delivery-report",
+        "apple-platform-testing"
+      ],
+      "why": "Swift patches were accepted on a build alone: no skill required swift-format, so formatting drift reached PRs unnoticed. The format-and-compile gate now lives beside build acceptance in apple-platform-testing; this case keeps every completion gate that cites build acceptance from dropping it."
     }
   ]
 }

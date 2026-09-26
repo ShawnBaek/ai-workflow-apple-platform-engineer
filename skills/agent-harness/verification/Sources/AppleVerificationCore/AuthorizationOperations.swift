@@ -42,9 +42,12 @@ extension Authorization {
     else {
       throw VerificationError.invalid("authorized base SHA is not an ancestor of current HEAD")
     }
-    let stagedPaths = try nulList(canonical, ["diff", "--cached", "--name-only", "-z"])
+    // Rename detection would report only the destination, hiding the source path from the
+    // path checks; list both sides, as the patch manifest below already does.
+    let stagedPaths = try nulList(
+      canonical, ["diff", "--cached", "--name-only", "-z", "--no-renames"])
     let outgoingPaths = try nulList(
-      canonical, ["diff", "--name-only", "-z", "\(expectedBaseSHA)..HEAD"])
+      canonical, ["diff", "--name-only", "-z", "--no-renames", "\(expectedBaseSHA)..HEAD"])
     let stagedManifest = try gitPatchManifest(
       root: canonical, baseSHA: expectedBaseSHA, revision: "INDEX", staged: true)
     let headManifest = try gitPatchManifest(
@@ -201,12 +204,9 @@ extension Authorization {
       errors.append("requested path is outside authorization")
     }
     if action == "git.commit" {
-      if paths != operationInput["paths"] as? [String] {
-        errors.append("git.commit paths drifted from the structured operation descriptor")
-      }
-      if paths != liveRepository["staged_paths"] as? [String] {
-        errors.append("git.commit paths must exactly match the live staged paths")
-      }
+      errors += commitPathErrors(
+        paths: paths, scope: operationInput["paths"] as? [String] ?? [],
+        stagedPaths: liveRepository["staged_paths"] as? [String])
       let evidence = ledgerRecords.compactMap {
         $0["record_type"] as? String == "evidence" ? $0["payload"] as? [String: Any] : nil
       }.filter {
@@ -376,6 +376,21 @@ extension Authorization {
     return Array(Set(errors)).sorted()
   }
 
+  // The commit descriptor is fixed before implementation, so its paths are an approved scope with
+  // allowed_paths prefix semantics; the request names the live staged set within that scope.
+  static func commitPathErrors(paths: [String], scope: [String], stagedPaths: [String]?)
+    -> [String]
+  {
+    var errors: [String] = []
+    if paths.contains(where: { !pathAllowed($0, scope) }) {
+      errors.append("git.commit path is outside the structured operation descriptor path scope")
+    }
+    guard let stagedPaths, !paths.isEmpty, Set(paths).count == paths.count,
+      paths.count == stagedPaths.count, Set(paths) == Set(stagedPaths)
+    else { return errors + ["git.commit paths must exactly match the live staged paths"] }
+    return errors
+  }
+
   public static func reserveAction(
     ledgerPath: URL, envelope: [String: Any], request: [String: Any], runRoot: URL,
     policyOverlay: [String: Any],
@@ -392,12 +407,10 @@ extension Authorization {
       let status = try ResourceCoordinator.fullStatus(statePath: coordinatorState)
       let authority =
         (status["run_authorities"] as? [String: Any])?[text(envelope["run_id"])] as? [String: Any]
-      guard authority?["authorization_hash"] as? String == authorizationHash(envelope),
-        authority?["selected_writer"] as? String == selectedWriter,
-        authority?["harness_sha256"] as? String == trustedHarnessSHA256,
-        authority?["authorization_issued_at"] as? String == envelope["issued_at"] as? String,
-        authority?["authorization_expires_at"] as? String == envelope["expires_at"] as? String
-      else { return (["coordination_required: run authority drifted or is unregistered"], nil) }
+      let authorityErrors = reservationAuthorityErrors(
+        authority, envelope: envelope, selectedWriter: selectedWriter,
+        trustedHarnessSHA256: trustedHarnessSHA256)
+      if !authorityErrors.isEmpty { return (authorityErrors, nil) }
       guard safeDirectFile(ledgerPath, root: runRoot) else {
         return (
           ["authorization ledger must be a non-symlink file directly under the private run root"],
@@ -477,6 +490,20 @@ extension Authorization {
         return ([], record)
       }
     } catch { return (["coordination_required: \(errorCode(error))"], nil) }
+  }
+
+  static func reservationAuthorityErrors(
+    _ authority: [String: Any]?, envelope: [String: Any], selectedWriter: String?,
+    trustedHarnessSHA256: String
+  ) -> [String] {
+    guard let window = ResourceCoordinator.canonicalAuthorizationWindow(envelope),
+      authority?["authorization_hash"] as? String == authorizationHash(envelope),
+      authority?["selected_writer"] as? String == selectedWriter,
+      authority?["harness_sha256"] as? String == trustedHarnessSHA256,
+      authority?["authorization_issued_at"] as? String == window.issued,
+      authority?["authorization_expires_at"] as? String == window.expires
+    else { return ["coordination_required: run authority drifted or is unregistered"] }
+    return []
   }
 
   public static func dispatchSpecStateErrors(

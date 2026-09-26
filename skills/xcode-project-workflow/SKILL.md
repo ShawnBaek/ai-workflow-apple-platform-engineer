@@ -42,6 +42,10 @@ Use `git-workflow` for remote-default discovery, task-derived branch selection,
 Git metadata preflight, and PR state. A worktree requires authority from the current
 task or project policy; if approved, it must become a separate
 authoritative Xcode session rather than borrowing the original open window.
+When the developer asks to see an agent's worktree, clone, sandbox or cloud
+changes in the Xcode they already have open, use `open-xcode-handoff`: applying
+that frozen patch to this authoritative checkout at their request is neither
+borrowing the window for the worktree nor copying the project.
 
 ## Host execution gate
 
