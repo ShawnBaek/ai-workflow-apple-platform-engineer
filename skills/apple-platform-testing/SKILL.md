@@ -16,7 +16,7 @@ Use this skill when selecting, implementing, or running tests for iOS, iPadOS, w
 - Migration: cover a representative old-to-new store and a clean install; do not fabricate a full historical-migration matrix.
 - Network/integration: cover success plus a material handled failure when it changed.
 
-Avoid proving the same contract at unit, integration, and UI layers. Record omitted checks and residual risk in the handoff or PR. Read [test selection and evidence](references/test-selection-and-evidence.md) for the decision table and platform-specific proof.
+Write no pointless tests: each added test names a unique observable contract and the failure it prevents, and exercises that logic's real edge cases or reported regression. Omit construction-only and tautological tests, such as asserting a mock's or fixture's own values. Avoid proving the same contract at unit, integration, and UI layers. Record omitted checks and residual risk in the handoff or PR. Read [test selection and evidence](references/test-selection-and-evidence.md) for the decision table and platform-specific proof.
 
 When a node-specific Figma frame is the visual contract — the request names a Figma URL and asks for snapshot, golden, or design-parity tests — load `figma-golden-testing`; it owns the SwiftUI/UIKit capture recipe and the overlay/diff comparator. This skill keeps test selection, execution, and result reporting.
 

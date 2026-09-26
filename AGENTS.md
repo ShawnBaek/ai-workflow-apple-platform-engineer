@@ -47,8 +47,12 @@ and issue triage through a verified, reviewable fix.
    and denial coverage when changing the runtime.
 6. Before the first commit or push, honor the active project's repository
    confirmation policy. Never infer approval from the task itself.
-7. A pull request is ready only when its required evidence is present and all
-   omitted checks and their remaining risk are stated. Do not auto-merge.
+7. Open the pull request only after the independent reviewer approves its
+   current head through the `skills/code-review/SKILL.md` verdict loop, or the
+   user decides otherwise when that loop escalates; a later change to the
+   approved content needs re-review first. That approval is an internal gate, not a GitHub
+   approval. A pull request is ready only when its required evidence is present
+   and all omitted checks and their remaining risk are stated. Do not auto-merge.
 
 ## Collaboration
 

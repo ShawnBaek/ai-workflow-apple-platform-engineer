@@ -112,10 +112,14 @@ before architecture and task breakdown. Routine work does not need a new ADR.
    manual testing does not waive this gate. Report a blocked or skipped build as
    `Build Unverified`, and a failed build as `Build Failed`.
 6. Use `code-review` for an independent view of the frozen patch, assess findings
-   against sources and behavior, and verify accepted fixes within bounded attempts.
+   against sources and behavior, and verify accepted fixes. Repeat its verdict
+   loop until the reviewer approves the exact head; when the bounded rounds run
+   out first, escalate the open findings to the user instead of publishing.
 7. Carry an authorized PR task through publication: prepare the template and
-   proof, satisfy only missing gates, commit/push/create, publish the independent
-   review comment when authorized, and verify the PR's evidence and checks.
+   proof, satisfy only missing gates, commit/push/create only the approved head
+   (a later change needs re-review of the affected scope first), publish the
+   independent review comment when authorized, and verify the PR's evidence
+   and checks.
    The lead owns this handoff; local implementation is not PR completion.
    Route the completion summary to `delivery-report`.
 8. Stop at the selected authorized target: `local_verified` for local work, `pr_ready` for a PR request, or the
