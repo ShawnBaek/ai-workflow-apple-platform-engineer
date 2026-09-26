@@ -4,15 +4,21 @@ Apple Platform Engineer is a skill collection, not an app framework. Use an indi
 
 ## Install
 
-Use the [Skills CLI](https://skills.sh/docs/cli) to select the skills and client you need:
+Use the [Skills CLI](https://skills.sh/docs/cli). This installs the starter set for your user (`-g`) and for Claude Code; use `-a codex` for Codex, or `-a claude-code codex` for both:
 
 ```sh
-npx skills add ShawnBaek/ai-workflow-apple-platform-engineer
+npx skills add ShawnBaek/ai-workflow-apple-platform-engineer -g -a claude-code \
+  --skill apple-platform-engineer agent-harness apple-platform-setup \
+  apple-development-health xcode-project-workflow xcodebuild core-simulator-health \
+  apple-platform-ui xcode-preview-design apple-platform-testing screenshot \
+  git-workflow code-review open-xcode-handoff
 ```
+
+With `-g`, the CLI keeps one copy of each skill under `~/.agents/skills`, which Codex reads directly, and links it into `~/.claude/skills` for Claude Code, so it works in every repository. Without `-g`, it installs into the current directory (`.claude/skills` or `.agents/skills`); run it from the app repository root. Each skill folder is installed on its own, so skills that link another skill need that skill installed too: `agent-harness` is required by the lead and by the specialists the [catalog](skills.md) lists. Add a specialist later with the same command and its name, or install the whole collection with `--skill '*'`. These flags match Skills CLI 1.5.23; if your version rejects one, compare with `npx skills add --help`.
 
 After installing for your client, use the [first-run setup](#first-run-setup-with-your-agent) for a new environment. Then open your app repository and type `$apple-platform-engineer <your task>` in [Codex](https://learn.chatgpt.com/docs/build-skills), or `/apple-platform-engineer <your task>` in [Claude Code](https://code.claude.com/docs/en/skills). See the [README usage examples and workflow](../README.md#after-installation) and the [skill catalog](skills.md) for focused tasks.
 
-Keep one active copy of each skill in the client's configured search roots. Avoid loading duplicate Codex and Claude installations into the same client. Check the [catalog](skills.md) for individual entry points; install the harness and its selected dependencies only for coordinated work.
+Keep one active copy of each skill in the client's configured search roots. Avoid loading duplicate Codex and Claude installations into the same client. Installing `agent-harness` adds files only; nothing is built or configured until you select coordinated work.
 
 Native builds, Previews, Simulator, and the Swift verifier need macOS and Xcode. Check the project's actual deployment targets and selected Xcode before choosing APIs. Follow the [official Xcode connection preflight](../skills/xcodebuild/references/xcode-mcp-provider-preflight.md); optional MCP integrations are selected per task, not mandatory installations. Apple documentation and Xcode's available tools come first.
 
@@ -77,27 +83,11 @@ For several tasks, provide their acceptance criteria and ask the lead to inspect
 
 ## Run the verifier
 
-Build once from the installed `agent-harness` folder with Swift 6 and a full Xcode toolchain:
-
-```sh
-AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
-swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1
-APE_BIN_DIR="$(swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
-APE="$APE_BIN_DIR/apple-verify"
-"$APE" --help
-```
-
-Run these commands with `DEVELOPER_DIR` set to the Xcode that the [selection rule](../skills/xcode-project-workflow/references/xcode-selection.md) chooses. That is the newest installed full Xcode unless the user or project pins one, whatever `xcode-select -p` points to (it may be Command Line Tools or an older Xcode). An App Store archive follows the rule's distribution exception instead. Do not change the user's global toolchain. Keep the built executable in its skill directory so it can locate the matching contracts.
-
-Use the same toolchain, configuration and build flags for the build and `--show-bin-path`; a guessed `.build/release` path may select an older executable. Check `--help` for `--app-root`, then observe `runtime-identity` before binding this executable in private setup.
-
-For an app outside the skill collection, pass its absolute authoritative root before the command:
-
-```sh
-"$APE" --app-root '<absolute-app-repository>' health '<private-report.json>' --harness '<private-harness.json>'
-```
-
-`--app-root` selects the app checked by health while schemas and source identity stay with the installed harness. `--repository-root` selects a **skills repository**, for example when the executable was copied; it is not the app-root option. Explicit flags go before the subcommand.
+Coordinated work uses the Swift verifier `apple-verify`, built from the installed
+`agent-harness` folder. The build, path resolution, toolchain selection,
+`--app-root` usage and command map ship inside that skill, so an installed copy
+has them without this repository: follow
+[Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
 
 For a single local task, run the applicable skill and focused verification. When several agents or tasks share build/Simulator resources, set up the [private host coordinator](../skills/agent-harness/references/coordinator-setup.md). Use `harness-local.json` for `local_verified`; its accepted plan explicitly selects whether independent review and Spec Kit are required. PR delivery uses the PR profile and stronger completion conditions.
 

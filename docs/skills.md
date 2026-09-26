@@ -2,6 +2,8 @@
 
 Load one specialist for a small task. Use `apple-platform-engineer` for a feature spanning several areas; skills are guidance, not a requirement to spawn agents.
 
+**Requires `agent-harness`:** app-website, apple-development-health, apple-platform-engineer, apple-platform-setup, apple-platform-ui, code-review, core-simulator-health, delivery-report, figma-bridge, git-workflow, icon-composer, screenshot, sketch-design-from-codebase, swift-package-manager, xcode-preview-design and xcodebuild follow shared references kept in `agent-harness` (task intake, design discovery, project customization and ownership, collaboration, cost, decisions and the verifier setup). The Skills CLI installs each skill folder on its own, so install `agent-harness` with any of these; the [starter command](getting-started.md#install) already does. Installing it adds files only; its guarded Swift runtime is built and configured only for coordinated work.
+
 | Skill | Helps with |
 | --- | --- |
 | [agent-harness](../skills/agent-harness/SKILL.md) | Ownership, authorization, resources, knowledge, and evidence contracts |

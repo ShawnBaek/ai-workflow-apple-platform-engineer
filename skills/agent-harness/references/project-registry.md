@@ -1,6 +1,6 @@
 # Optional private project registry
 
-Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+Set `APE` to the built Swift verifier; see [Build and locate the verifier](swift-verification.md#build-and-locate-the-verifier).
 
 Use the registry only when a developer wants one local inventory to locate
 several Apple projects or several checkouts of one project. It is a read-only candidate adapter before the harness is frozen. It is never authority, a task

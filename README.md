@@ -25,11 +25,17 @@ For new and existing iOS, iPadOS, watchOS, and macOS projects using SwiftUI or U
 
 ## Get started
 
-Install with the [Skills CLI](https://www.skills.sh/docs/cli):
+Install the starter set with the [Skills CLI](https://www.skills.sh/docs/cli). This command installs it for your user (`-g`) in Claude Code; use `-a codex` for Codex, or `-a claude-code codex` for both:
 
 ```sh
-npx skills add ShawnBaek/ai-workflow-apple-platform-engineer
+npx skills add ShawnBaek/ai-workflow-apple-platform-engineer -g -a claude-code \
+  --skill apple-platform-engineer agent-harness apple-platform-setup \
+  apple-development-health xcode-project-workflow xcodebuild core-simulator-health \
+  apple-platform-ui xcode-preview-design apple-platform-testing screenshot \
+  git-workflow code-review open-xcode-handoff
 ```
+
+With `-g`, the skills work in every repository (`~/.claude/skills` for Claude Code, linked to a copy in `~/.agents/skills`; `~/.agents/skills` for Codex). Without it, they install into the current directory, so run the command from your app repository. Add a specialist later with the same command and its name, or use `--skill '*'` for the whole collection. Keep `agent-harness` installed: the lead and many specialists follow its shared references (see the [catalog](docs/skills.md)). Its guarded Swift runtime stays opt-in.
 
 Apple builds and Simulator work require macOS and Xcode. Follow the [getting-started guide](docs/getting-started.md) before running coordinated app tasks.
 
@@ -91,8 +97,8 @@ Small fixes skip unrelated stages. [Multiple tasks](skills/agent-harness/referen
 
 ## Adapt it to your project
 
-Use individual skills with your existing tools and project policy. Figma, Trello,
-GitHub Projects, 1Password, and the guarded Swift runtime are opt-in. Authorized
+Use individual skills with your existing tools and project policy. Figma, Sketch,
+Trello, GitHub Projects, 1Password, and the guarded Swift runtime are opt-in. Authorized
 personal and organization repositories are supported; this collection's owner
 is only the upstream installation/report destination.
 

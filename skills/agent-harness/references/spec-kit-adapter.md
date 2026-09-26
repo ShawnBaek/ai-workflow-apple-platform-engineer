@@ -1,6 +1,6 @@
 # Optional GitHub Spec Kit adapter
 
-Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+Set `APE` to the built Swift verifier; see [Build and locate the verifier](swift-verification.md#build-and-locate-the-verifier).
 
 Keep the provider-neutral workflow and ledger authoritative. This adapter is
 pinned to Spec Kit `v1.0.1`; a newer CLI is a detected migration candidate, not

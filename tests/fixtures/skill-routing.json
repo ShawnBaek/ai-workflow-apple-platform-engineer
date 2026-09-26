@@ -192,6 +192,22 @@
       "why": "Swift patches were accepted on a build alone: no skill required swift-format, so formatting drift reached PRs unnoticed. The format-and-compile gate now lives beside build acceptance in apple-platform-testing; this case keeps every completion gate that cites build acceptance from dropping it."
     },
     {
+      "id": "standalone-ownership-check-defined",
+      "rule": "Text that requires standalone ownership before shared build, Simulator or account work, or that grants runtime access through a coordinator, must point to the defined standalone ownership check.",
+      "statesRule": "check ownership|exclusive (destination )?ownership|existing resource coordinator",
+      "patternNote": "statesRule matches the shipped single-line wording of each restatement. The qualifier matches the check's heading or its link anchor, so a restatement that drops the link fails even when the file mentions ownership elsewhere.",
+      "requiresQualifier": "standalone ownership check|standalone-ownership-check",
+      "appliesTo": [
+        "agent-harness",
+        "xcodebuild",
+        "core-simulator-health",
+        "swift-package-manager",
+        "screenshot",
+        "code-review"
+      ],
+      "why": "Review finding: project-customization.md told standalone work to 'check ownership' without saying how, and to use the coordinator whenever concurrent work could not be excluded, which is never possible without one. xcodebuild, core-simulator-health, swift-package-manager and screenshot required exclusive ownership by pointing there, and code-review allowed reviewer builds only through 'the existing resource coordinator', which standalone users do not have."
+    },
+    {
       "id": "swiftui-code-connect-parser-is-legacy",
       "rule": "SwiftUI FigmaConnect parser files are legacy; new CLI mappings are template files.",
       "statesRule": "FigmaConnect|\\.figma\\.swift|Figma\\.connect",

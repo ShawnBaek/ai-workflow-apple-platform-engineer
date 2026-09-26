@@ -1,6 +1,6 @@
 # Private delivery-channel setup
 
-Set `APE` to the built Swift verifier; see [setup](../../../docs/getting-started.md).
+Set `APE` to the built Swift verifier; see [Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
 
 This collection ships no transport. `"$APE" delivery-report` only renders and
 checks; every send, health check, and receipt below comes from a private

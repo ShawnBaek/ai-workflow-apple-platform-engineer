@@ -12,8 +12,8 @@ bounded, single-owner, evidence-backed, and non-destructive.
 ## Hard boundaries
 
 Lease operations below apply to guarded/coordinated work. Standalone diagnosis
-still requires exclusive ownership; use
-[project customization](../agent-harness/references/project-customization.md)
+still requires exclusive ownership; use the
+[standalone ownership check](../agent-harness/references/project-customization.md#standalone-ownership-check)
 and do not bypass an active coordinator or repair a resource owned by another task.
 
 1. Follow the repository's Xcode host-execution policy before any xcrun,

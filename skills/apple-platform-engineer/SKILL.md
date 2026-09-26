@@ -10,7 +10,11 @@ Locate the task, choose the smallest safe path, and hand each concern to its
 owner. Read [project customization](../agent-harness/references/project-customization.md)
 to select standalone guidance or guarded orchestration. Ordinary PR delivery uses
 `git-workflow`; coordinated multi-agent, RAG, or guarded resumable work uses
-`agent-harness`. Do not reimplement specialist guidance here.
+the guarded runtime in `agent-harness`. The shared intake, decision,
+collaboration and cost references linked here also live in `agent-harness`, so
+install it alongside this skill even for standalone work. If those links do not
+resolve, report the incomplete installation and route to `apple-platform-setup`
+rather than guessing their rules. Do not reimplement specialist guidance here.
 
 The entry skill is `apple-platform-engineer`: use `$apple-platform-engineer` in
 Codex or `/apple-platform-engineer` in Claude Code. It replaces `native-app-lead`.

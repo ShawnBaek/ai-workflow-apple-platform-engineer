@@ -42,7 +42,8 @@ landmarks from the design and view/hierarchy geometry, and record their origin.
 
 The Swift command `apple-verify compare --manifest comparison.json --output-dir
 comparison` writes a clean PNG, an annotated PNG, and a JSON report into a **new**
-directory whose parent exists. See [verification commands](../../../docs/verification.md).
+directory whose parent exists. Build and locate `apple-verify` as in
+[the Swift runtime setup](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
 A manifest uses one common upright viewport; paths are relative to the manifest:
 
 ```json
@@ -79,4 +80,4 @@ video duration is not a rendering-performance measurement. Use Swift with
 ImageIO/CoreGraphics for image inspection and AVFoundation for frame extraction
 or trimming when a custom evidence helper is needed.
 
-See the [synthetic Swift example](../../../docs/evidence/README.md) for a reproducible proof of the comparison tool itself.
+The collection repository's [synthetic Swift example](https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/blob/main/docs/evidence/README.md) is a reproducible proof of the comparison tool itself.

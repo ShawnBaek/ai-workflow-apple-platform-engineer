@@ -10,7 +10,8 @@ must not depend on the caller's working directory:
 
 ```sh
 AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
-# Build once as described in the Swift verification setup.
+# Build once; --show-bin-path below only prints the path and does not build.
+swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1
 APE_BIN_DIR="$(swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
 APE="$APE_BIN_DIR/apple-verify"
 APP_ROOT='<absolute-authoritative-app-repository>'
@@ -18,7 +19,7 @@ HARNESS_TEMPLATE="$AGENT_HARNESS_ROOT/templates/harness-local.json"
 # For PR delivery, select "$AGENT_HARNESS_ROOT/templates/harness.json" instead.
 ```
 
-Build the [Swift verifier](swift-verification.md) first. For a local outcome use
+Build the [Swift verifier](swift-verification.md#build-and-locate-the-verifier) first. For a local outcome use
 `templates/harness-local.json`; set its review/Spec Kit flags from the accepted
 plan and keep GitHub/Apple scope null. Use the PR template only for PR delivery.
 Use the same toolchain/configuration/build flags when resolving the executable

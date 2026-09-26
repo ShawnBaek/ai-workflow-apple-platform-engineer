@@ -17,10 +17,64 @@ authorized changes through existing specialists, then returns here for readiness
 Do not turn a health probe into an installer or require working harness health
 before first-run dependency inventory can begin.
 
-This skill requires `agent-harness` from the same installed Apple Platform
-Engineer collection. Health binds its exact Swift executable, source bundle,
-coordinator contract and state. A missing or mismatched runtime blocks; do not
-substitute an arbitrary executable or create a new coordinator as repair.
+The guarded profiles below require `agent-harness` from the same installed Apple
+Platform Engineer collection. Health binds its exact Swift executable, source
+bundle, coordinator contract and state. A missing or mismatched runtime blocks
+a guarded profile; do not substitute an arbitrary executable or create a new
+coordinator as repair. Without a selected guarded profile or private harness,
+use [standalone readiness](#standalone-readiness-no-harness) instead.
+
+## Standalone readiness (no harness)
+
+Use this when the user asks whether the environment is ready for a task and no
+guarded profile is selected. It needs no `apple-verify`, harness, coordinator
+or `--harness` report, and follows the same no-repair boundary. Label the result
+standalone observations: it cannot satisfy a guarded profile's gate.
+
+Probe only the surfaces the stated task uses. Run each probe once under the
+client's command timeout, since macOS ships no `timeout` command: about 10
+seconds, or 30 seconds for the runtime inventory. Do not retry in a loop.
+
+| Surface | Bounded read-only probe |
+| --- | --- |
+| Required CLIs | `command -v` for each selected tool (`git`, `gh`, `swift`, `xcrun`, `asc`, …), then its `--version`; `xcodebuild -version` for Xcode |
+| Selected Xcode | Resolve it by the [selection rule](../xcode-project-workflow/references/xcode-selection.md), then `DEVELOPER_DIR='<selected Xcode>/Contents/Developer' xcodebuild -version`; `xcode-select -p` is only a comparison |
+| GitHub, for PR delivery | `gh auth status` (never `--show-token`), then `gh repo view <owner/repo> --json nameWithOwner,viewerPermission` for the delivery repository |
+| MCP registration | The [registration read](#mcp-registration-read) below, which prints server names and transport only. `claude mcp list` and `get` health-check approved servers, so they are not a registration-only read |
+| MCP exposure and connectivity | Whether the current task's tool list includes the selected server (Xcode, Figma, Sketch, Trello, 1Password; plugin and connector servers appear only there), then at most one read-only call its owning skill names |
+| Simulator runtimes | `xcrun simctl list runtimes --json` within 30 seconds; add `xcrun simctl list devices available --json` only when the task needs a destination |
+| Installed skills | Each selected skill resolves once in the client's skill root, and its `../<skill>/` links resolve there, including `agent-harness` |
+
+Report each component with the same vocabulary:
+
+- `healthy`: the probe returned the capability the task needs.
+- `degraded`: an optional surface failed, or a required one works with a stated
+  limit, such as `gh` signed in without the Project scope an optional board needs.
+- `blocked`: a required surface is missing, unauthenticated, not exposed in this
+  task (a registration may need a new session), failing or timed out. A
+  timed-out runtime inventory blocks Simulator work as infrastructure, not as an
+  app failure; start no second inventory.
+- `not_applicable`: the task does not use the surface. The coordinator, leases,
+  harness bindings and run authorization are always `not_applicable` here.
+
+Include the probe, bounded evidence (versions, IDs, sanitized states) and a next
+action with its owner for each non-healthy component. Route installation or
+configuration to `apple-platform-setup`.
+
+### MCP registration read
+
+Print names and transport only; never print or record `env`, header, token or
+account values, and never read `~/.claude.json` or `.mcp.json` whole.
+`codex mcp list --json` does not mask `env` the way its table does. `jq` ships
+in `/usr/bin` since macOS 15.
+
+```sh
+# Codex
+codex mcp list --json | jq '[.[] | {name, enabled, transport: .transport.type}]'
+# Claude Code: user and local scope, then the repository's project scope
+jq --arg p '<absolute repository path>' '{user: (.mcpServers // {} | map_values(.type // "stdio")), local: (.projects[$p].mcpServers // {} | map_values(.type // "stdio"))}' ~/.claude.json
+jq '.mcpServers // {} | map_values(.type // "stdio")' .mcp.json
+```
 
 ## Choose one profile
 
@@ -56,7 +110,7 @@ it.
 5. A required `blocked` component stops the affected graph node. An optional
    failure makes the report `degraded`; it never silently expands scope.
 
-Set `APE` using the [Swift setup](../agent-harness/references/swift-verification.md), then evaluate a populated private report:
+Set `APE` using the [Swift setup](../agent-harness/references/swift-verification.md#build-and-locate-the-verifier), then evaluate a populated private report:
 
 ```sh
 "$APE" --app-root '<absolute-authoritative-app-repository>' health '<health-observations.json>' \
