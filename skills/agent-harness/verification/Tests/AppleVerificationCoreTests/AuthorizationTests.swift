@@ -709,6 +709,91 @@ final class AuthorizationTests: XCTestCase {
       })
   }
 
+  func testEverySchemaNodeStatusAndImprovementRecordPassesTheRuntimeLedgerCheck() throws {
+    let nodeStatuses = try ledgerPayloadEnum("node", field: "status")
+    let improvementStatuses = try ledgerPayloadEnum("improvement", field: "status")
+    XCTAssertEqual(nodeStatuses.count, 12)
+    XCTAssertTrue(nodeStatuses.contains("passed"))
+    XCTAssertEqual(improvementStatuses.count, 5)
+    let intake = record(1, "node", ["node_id": "intake", "status": "passed"], second: 1)
+    for status in nodeStatuses where status != "passed" {
+      var records = [
+        intake,
+        record(2, "node", ["node_id": "guard", "status": status, "reason": "fixture"], second: 2),
+        record(3, "node", ["node_id": "verify", "status": status], second: 3),
+        record(4, "node", ["node_id": "claim_implementation_writer", "status": status], second: 4),
+      ]
+      // An append-only non-passed record must not block the node's later pass.
+      if status != "failed_terminal" {
+        records.append(record(5, "node", ["node_id": "guard", "status": "passed"], second: 5))
+      }
+      XCTAssertEqual(Authorization.ledgerContractErrors(records, context: context), [], status)
+    }
+    var candidate = [intake]
+    for (offset, status) in improvementStatuses.enumerated() {
+      var payload = improvementPayload()
+      payload["status"] = status
+      if status == "rolled_back" { payload["rollback_ref"] = "revert" }
+      candidate.append(record(offset + 2, "improvement", payload, second: offset + 2))
+    }
+    XCTAssertEqual(Authorization.ledgerContractErrors(candidate, context: context), [])
+  }
+
+  func testNonPassedNodeAndImprovementRecordsFailClosedWithoutGrantingProgress() {
+    let intake = record(1, "node", ["node_id": "intake", "status": "passed"], second: 1)
+    func contract(_ records: [[String: Any]]) -> [String] {
+      Authorization.ledgerContractErrors(records, context: context)
+    }
+    func lifecycle(_ records: [[String: Any]]) -> [String] {
+      Authorization.standaloneLedgerLifecycleErrors(records, context: context)
+    }
+    let unknownType = [intake, record(2, "checkpoint", ["node_id": "guard"], second: 2)]
+    XCTAssertFalse(contract(unknownType).isEmpty)
+    XCTAssertTrue(lifecycle(unknownType).contains { $0.contains("record type is unsupported") })
+    let unknownStatus = [
+      intake, record(2, "node", ["node_id": "guard", "status": "done"], second: 2),
+    ]
+    XCTAssertFalse(contract(unknownStatus).isEmpty)
+    XCTAssertTrue(lifecycle(unknownStatus).contains { $0.contains("node status is unsupported") })
+    let unknownNode = [
+      intake, record(2, "node", ["node_id": "invented", "status": "blocked"], second: 2),
+    ]
+    XCTAssertTrue(
+      contract(unknownNode).contains { $0.contains("not present in the installed workflow") })
+
+    // Non-passed and improvement records never satisfy a dependency or the pr_ready binding.
+    var approved = improvementPayload()
+    approved["status"] = "applied"
+    let unmet = [
+      intake, record(2, "node", ["node_id": "guard", "status": "awaiting_approval"], second: 2),
+      record(3, "improvement", approved, second: 3),
+      record(4, "node", ["node_id": "health", "status": "passed"], second: 4),
+    ]
+    XCTAssertTrue(contract(unmet).contains { $0.contains("passed before dependencies: guard") })
+    let unbound = [
+      record(1, "node", ["node_id": "pr_ready", "status": "verifying"], second: 1),
+      record(2, "node", ["node_id": "bind_pr_ready", "status": "passed"], second: 2),
+    ]
+    XCTAssertTrue(contract(unbound).contains { $0.contains("cannot bind before pr_ready") })
+    let resurrected = [
+      intake, record(2, "node", ["node_id": "guard", "status": "failed_terminal"], second: 2),
+      record(3, "node", ["node_id": "guard", "status": "passed"], second: 3),
+    ]
+    XCTAssertTrue(contract(resurrected).contains { $0.contains("after failed_terminal: guard") })
+
+    var unsourced = improvementPayload()
+    unsourced["derived_from_feedback_ids"] = []
+    var authority = improvementPayload()
+    authority["action_grants"] = []
+    var unknownOutcome = improvementPayload()
+    unknownOutcome["status"] = "merged"
+    for payload in [unsourced, authority, unknownOutcome] {
+      let records = [intake, record(2, "improvement", payload, second: 2)]
+      XCTAssertFalse(contract(records).isEmpty)
+      XCTAssertTrue(lifecycle(records).contains { $0.contains("improvement record") })
+    }
+  }
+
   func testLedgerRejectsFractionalSequence() {
     let fractional: [String: Any] = [
       "schema_version": "1.0.0", "run_id": "run", "sequence": 1.5,
@@ -845,6 +930,26 @@ final class AuthorizationTests: XCTestCase {
       "recorded_at": String(format: "2026-01-01T00:00:%02dZ", second), "record_type": type,
       "payload": payload,
     ]
+  }
+  private func improvementPayload() -> [String: Any] {
+    [
+      "candidate_id": "candidate", "derived_from_feedback_ids": ["feedback"],
+      "scope": "private_project_overlay",
+      "proposal_hash": "sha256:" + String(repeating: "a", count: 64), "status": "proposed",
+      "validation_evidence_ids": [],
+    ]
+  }
+  private func ledgerPayloadEnum(_ type: String, field: String) throws -> [String] {
+    let schema = try HarnessRuntime.object(
+      repositoryRoot.appendingPathComponent(
+        "skills/agent-harness/contracts/schemas/ledger-record.schema.json"))
+    let branch = (schema["oneOf"] as? [[String: Any]] ?? []).first {
+      (($0["properties"] as? [String: Any])?["record_type"] as? [String: Any])?["const"]
+        as? String == type
+    }
+    let payload = (branch?["properties"] as? [String: Any])?["payload"] as? [String: Any]
+    let property = (payload?["properties"] as? [String: Any])?[field] as? [String: Any]
+    return try XCTUnwrap(property?["enum"] as? [String])
   }
   private func currentApprovedEnvelope() throws -> [String: Any] {
     var envelope = try HarnessRuntime.object(
