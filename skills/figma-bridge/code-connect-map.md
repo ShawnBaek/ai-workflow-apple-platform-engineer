@@ -4,7 +4,7 @@ This is the *informal* code-connect map: a one-line `// figma: <url>` comment at
 
 | Mechanism | Granularity | Setup cost | What it maps |
 |---|---|---|---|
-| **Formal Code Connect** | Component | CLI install + `figma.config.json` + `.figma.swift` per mapping + publish step | Design-system primitives (Button, Card, Field) — designers see real code in Dev Mode |
+| **Formal Code Connect** | Component | A Code Connect UI mapping in Figma, or CLI install + `figma.config.json` + a template file (`.figma.ts`) per mapping + publish step | Design-system primitives (Button, Card, Field) — Dev Mode and the MCP server point at the real component (CLI mappings also show its code) |
 | **`// figma:` map (this doc)** | File / screen | Zero — just a comment | Anything: screens, partial flows, sub-views, one-offs — engineers click through from code to design |
 
 Use both. Formal Code Connect for the design system; `// figma:` comments for everything else.

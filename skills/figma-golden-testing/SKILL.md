@@ -18,8 +18,17 @@ future run compares the same state.
 ## Workflow
 
 1. Require a node-specific Figma URL. Record the file key, node ID, frame name,
-   natural width/height, and a raw node-tree export. Download the Figma PNG at
-   scale 1. Inspect the tree for every visible `TEXT` node and record its string,
+   natural width/height, and a raw node-tree export. Export the Figma PNG at the
+   capture device's screen scale, which is known once the step 3 device is chosen:
+   1 for the `displayScale: 1` snapshot; for a native simulator or XCUITest
+   screenshot, the device's scale factor (2 or 3 on Retina screens), which equals
+   the capture's pixel width divided by the device's point width. Pass it as the
+   Figma MCP `download_assets` `defaultScale` or the REST `/v1/images` `scale`;
+   `get_screenshot` only caps the longer edge (`maxDimension`) and cannot export
+   at an exact scale. If the capture's pixel width divided by the frame's point
+   width is not that scale, the device and frame sizes differ: fix that at the
+   source (step 4) instead of exporting at the ratio. Record the scale with the
+   capture. Inspect the tree for every visible `TEXT` node and record its string,
    bounds, and node ID.
 2. Locate the real SwiftUI view or view controller used by the route. Record a
    mapping in a private `figma-map.json` (or an existing approved project mapping) with
@@ -29,8 +38,8 @@ future run compares the same state.
    explicitly approved. Never copy a consuming project's evidence into the public
    skill collection. A missing required URL is a question for the user, not a
    reason to guess a frame.
-3. Render the screen at the Figma frame's pixel dimensions on a deterministic
-   simulator/device fixture chosen under
+3. Render the screen at the Figma frame's point size and the step 1 scale on a
+   deterministic simulator/device fixture chosen under
    [destination reuse](../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination),
    which also governs creating a device when none matches the frame size.
    Capture the full screen and hierarchy from the same settled state. Set
@@ -41,7 +50,8 @@ future run compares the same state.
    to interpret a pass, a missing baseline, or a pixel mismatch. The agent must
    write/update and run the test; a prose instruction to run snapshot testing is
    not a validation result. Use XCTest/XCUITest attachments and the supplied
-   comparator when the project does not use Point-Free SnapshotTesting. Do not
+   comparator when the project does not use Point-Free SnapshotTesting; export
+   Figma at that device's scale (step 1). Do not
    hand-roll SwiftUI capture: `UIGraphicsImageRenderer` with
    `layer.render(in:)` draws UIKit-bridged SwiftUI controls (segmented pickers,
    some toolbars) blank, and `ImageRenderer` returns a zero-size image without
@@ -56,25 +66,30 @@ future run compares the same state.
    `--minimum-match` produces `not_evaluated` metrics, not a passing test.
    Exit 0 means successful reporting (or an explicit pixel pass), exit 2 means
    pixel comparison failed with artifacts retained, and exit 1 is an input/tool
-   error. Run the renderer even after exit 2 to make failure evidence reviewable.
-   It writes `overlay.png` (50% aligned blend), `diff.png` (red difference heatmap),
+   error. Continue to step 5 and the renderer even after exit 2 to make failure
+   evidence reviewable. The comparator writes `overlay.png` (50% aligned blend),
+   `diff.png` (the Figma image dimmed to grayscale; solid red where the max RGB
+   delta exceeds the threshold, a faint yellow tint for smaller nonzero deltas),
    `side-by-side.png`, and `metrics.json`. Images must have identical dimensions;
    never silently resize, crop, or mask them. Match dimensions at the source:
-   capture on a device whose point size equals the frame, or export and capture
-   the same content node (Figma frames often bake a status bar and a fixed
-   device size into the artwork). Do not linearly stretch a different device
-   size to fit — the status-bar and safe-area rows then misalign everything
+   capture on a device whose point size equals the frame at the export scale, or
+   export and capture the same content node (Figma frames often bake a status bar
+   and a fixed device size into the artwork). Do not linearly stretch a different
+   device size to fit — the status-bar and safe-area rows then misalign everything
    below them. When the match percentage plateaus, name the cause (device
    size, baked chrome, system list spacing) instead of iterating crop offsets;
    a plateau explained is a valid result, a hidden one is not.
-   To make the JSON results directly visible in a PR, render them as SVG images:
-   `swift "$FIGMA_GOLDEN_ROOT/scripts/render_report.swift" --metrics report/metrics.json --text report/text-results.json --out report`.
-   This adds `metrics.svg` and `text-results.svg` without changing the source
-   JSON.
 5. Check visible strings independently from pixels. Report missing, extra, or
    changed labels/buttons/text views with Figma node IDs and source accessibility
    identifiers when available. Pixel agreement is a review signal, not a semantic
-   assertion.
+   assertion. Neither script produces text results: write this check's outcome to
+   `report/text-results.json` using the [report schema](references/report-schema.md)
+   and the [synthetic example](references/text-results.example.json). The
+   `missing`, `extra`, `changed`, and `matches` arrays are all required, even when
+   empty. To make the JSON results directly visible in a PR, render them as SVG images:
+   `swift "$FIGMA_GOLDEN_ROOT/scripts/render_report.swift" --metrics report/metrics.json --text report/text-results.json --out report`.
+   This adds `metrics.svg` and `text-results.svg` without changing the source
+   JSON.
 6. Fix the owning view/layout, recapture, and rerun the same command until the
    agreed tolerance passes or a concrete blocker/bounded-attempt limit is reached. A documented mismatch
    remains failed; never lower the tolerance or replace the design to claim success.
@@ -83,8 +98,8 @@ future run compares the same state.
 ## Report
 
 Show the Figma image and actual capture side by side, plus the overlay and diff.
-Report device, OS, viewport, safe-area insets, fixture, source mapping, visible
-text results, threshold, matching pixels, and percentage. Use the comparator's
+Report device, OS, viewport, display scale, safe-area insets, fixture, source
+mapping, visible text results, threshold, matching pixels, and percentage. Use the comparator's
 `matchPercentage` only as raw pixel agreement; do not call it perceptual similarity
 or acceptance by itself. Name large gaps by component and likely owning constraint.
 
