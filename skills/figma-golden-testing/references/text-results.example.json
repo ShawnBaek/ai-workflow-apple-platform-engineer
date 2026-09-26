@@ -1,0 +1,16 @@
+{
+  "exampleOnly": true,
+  "provenance": "Synthetic strings; no Figma file or app hierarchy was queried",
+  "missing": [
+    {"field": "currency", "figmaNodeId": "12:41", "expected": "USD"}
+  ],
+  "extra": [
+    {"field": "debug badge", "figmaNodeId": "12:34", "actual": "DEV", "accessibilityIdentifier": "debugBadge"}
+  ],
+  "changed": [
+    {"field": "time", "figmaNodeId": "12:37", "expected": "9:30 AM", "actual": "8:00 PM", "accessibilityIdentifier": "itemTime"}
+  ],
+  "matches": [
+    {"field": "place", "figmaNodeId": "12:38", "expected": "Example Cafe", "actual": "Example Cafe", "accessibilityIdentifier": "itemPlace"}
+  ]
+}

@@ -63,9 +63,11 @@ Use this strategy as written for SwiftUI. Do not substitute a hand-rolled
 neighboring UIKit test already uses one: it renders UIKit-bridged SwiftUI
 controls such as `Picker(.segmented)` blank, and `ImageRenderer(content:)`
 yields a zero-size image unless the content carries an explicit `.frame`.
-`displayScale: 1` keeps the capture at the Figma frame's 1x pixel dimensions.
-The first run records the baseline and fails with "No reference was found";
-that is the expected recording path, not a regression.
+`displayScale: 1` keeps the capture at the Figma frame's 1x pixel dimensions,
+so export the Figma node at scale 1 for this path; a different `displayScale`
+needs the Figma export at that same scale. The first run records the baseline
+and fails with "No reference was found"; that is the expected recording path,
+not a regression.
 
 For a UIKit controller, snapshot the controller with the same explicit device
 configuration or snapshot its view at a fixed size:
@@ -200,7 +202,8 @@ rendering the failure report after exit 2; do not hide it behind a success-only
 command chain. Semantic assertions remain separate from the pixel exit code.
 
 To show the JSON results as images in a pull request, run the Swift report
-renderer after the comparator:
+renderer after the comparator and after writing `text-results.json` from the
+visible-text check below ([schema](report-schema.md)):
 
 ```sh
 swift "$FIGMA_GOLDEN_ROOT/scripts/render_report.swift" \
@@ -232,8 +235,11 @@ comparison) so a wrong date/place cannot be hidden by a high pixel score:
 ```
 
 If a check fails, name the Figma node ID, expected string, actual string, and
-source accessibility identifier in the report. Keep the test green only after
-both the semantic checks and the image comparison have been reviewed.
+source accessibility identifier in the report. Record every checked string in
+`text-results.json` under `missing`, `extra`, `changed`, or `matches`
+([schema](report-schema.md), [synthetic example](text-results.example.json)).
+Keep the test green only after both the semantic checks and the image
+comparison have been reviewed.
 
 ## Result record
 
@@ -244,7 +250,7 @@ Record these independent outcomes in the PR or evidence directory:
 | Swift Testing execution | `TEST SUCCEEDED` or failure output and `.xcresult` | The fixture rendered and the test ran |
 | Snapshot baseline | reference comparison result | The implementation stayed stable against the reviewed code baseline |
 | Figma pixel comparison | `metrics.json`, `overlay.png`, `diff.png`, `side-by-side.png` | Raw image agreement with the node export |
-| Visible text | missing/extra/changed arrays | Date, time, place, buttons, and text views match semantically |
+| Visible text | missing/extra/changed/matches arrays in `text-results.json` | Date, time, place, buttons, and text views match semantically |
 
 The failure message above is illustrative synthetic data, not an executed app
 result. The checked-in collection proof uses synthetic images only. App testing
