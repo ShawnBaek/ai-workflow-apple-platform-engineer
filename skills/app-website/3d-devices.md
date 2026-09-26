@@ -4,7 +4,9 @@ Scope: optional SwiftUI-For-Web recipe, used only when selected by the project.
 Adapt example layout, tokens, sections and hosting to the accepted brief.
 
 
-For an Apple-platform marketing site, a 3D iPhone / iPad / MacBook / Apple Watch you can spin and zoom is more memorable than a flat PNG. Use it in **exactly one place** (the parallax showcase, Section 3) — the same restraint as the parallax rule.
+**Check the device-imagery rules first.** Apple's [App Store marketing guidelines](https://developer.apple.com/app-store/marketing/guidelines/) list rendering an Apple product in 3D, or simulating one, among the uses not permitted in marketing materials. They also ask for Apple product images as is: no spinning, animating or added shadows. For device imagery on an app's marketing site, default to Apple's [product bezels](https://developer.apple.com/design/resources/#product-bezels) as static images (see `sections.md`). Don't build a 3D model of an Apple device for app marketing unless the user explicitly chooses it after reviewing those guidelines, for example with Apple's permission. A marketplace license covers the model file; it doesn't change Apple's guidelines. The `<model-viewer>` mechanics below also fit models the project owns, such as its own hardware accessory.
+
+When 3D is chosen, use it in **exactly one place per page**: the Section 3 showcase, or the hero visual in its place — the same restraint as the parallax rule.
 
 **Tooling**: Google's [`<model-viewer>`](https://modelviewer.dev) web component. Drop in via a `<script type="module">` in `index.html`; works in every modern browser; supports both **GLB for the web** and **USDZ for iOS AR Quick Look** (tap-to-AR on iPhone visitors).
 
@@ -12,16 +14,16 @@ For an Apple-platform marketing site, a 3D iPhone / iPad / MacBook / Apple Watch
 
 | Source | What's there | License | Format |
 |---|---|---|---|
-| **Internet Archive — Apple AR Products** ([archive.org/details/21-10-24-ar-products](https://archive.org/details/21-10-24-ar-products)) | **87 official Apple USDZ files**: MacBook 13/14/16 (silver + space gray), MacBook Air (all colors), Mac Mini, Mac Pro, iMac 24", Pro Display XDR, iPhone SE/12/13 (all colors + variants), iPad Pro 11/12.9, iPad Air, iPad 10.2, iPad Mini, Apple Watch S3/S7/SE, AirPods Gen 3/Pro/Max, Apple TV 4K, AirTag, HomePod Mini. **407 MB total** | Apple's originals, archived publicly | USDZ |
-| **Apple AR Quick Look gallery** ([developer.apple.com/augmented-reality/quick-look](https://developer.apple.com/augmented-reality/quick-look/)) | Apple's current showcase models | Apple, demo use | USDZ |
+| **Internet Archive — Apple AR Products** ([archive.org/details/21-10-24-ar-products](https://archive.org/details/21-10-24-ar-products)) | **83 USDZ files depicting Apple products**: MacBook 13/14/16 (silver + space gray), MacBook Air (all colors), Mac Mini, Mac Pro, iMac 24", Pro Display XDR, iPhone SE/12/13 (all colors + variants), iPad Pro 11/12.9, iPad Air, iPad 10.2, iPad Mini, Apple Watch S3/S7/SE, AirPods Gen 3/Pro/Max, Apple TV 4K, AirTag, HomePod Mini. **~400 MB total** | **None granted.** A public archive copy is not permission; don't ship these on a commercial site without Apple's permission | USDZ |
+| **Apple AR Quick Look gallery** ([developer.apple.com/quick-look-gallery](https://developer.apple.com/quick-look-gallery/)) | Sample objects (toys, instruments, food); no Apple devices. Useful for testing `ios-src` / AR Quick Look wiring | Apple site terms; no redistribution. Local wiring tests only | USDZ |
 | **Sketchfab** ([sketchfab.com/tags/iphone](https://sketchfab.com/tags/iphone), `/tags/macbook`, `/tags/ipad`, `/tags/apple-watch`) | Community GLBs, recent generations | Per-model (many CC; check before commercial use) | **GLB** (native web) |
 | **3DModels.org** ([3dmodels.org/3d-models/apple-iphone-15-green](https://3dmodels.org/3d-models/apple-iphone-15-green/)) | Royalty-free iPhone 15, iPhone 13 with separated screen material | Royalty-free | GLB + glTF |
 
 ## Pick one path
 
-- **iPhone visitor → AR Quick Look magic**: ship a `.usdz` from the Internet Archive, link via `<model-viewer ios-src>`. Tapping the AR badge opens AR Quick Look — the iPhone appears in the user's room.
-- **Web rendering**: you need a `.glb`. Either grab one directly from Sketchfab / 3DModels.org, or convert a USDZ via [Apple's `usdzconvert`](https://developer.apple.com/download/all/?q=USDZ%20Tools) (CLI in USDZ Tools).
-- **Best of both**: ship both. `<model-viewer src="iphone.glb" ios-src="iphone.usdz">` — desktop sees the GLB spin, iPhone visitors get AR.
+- **iPhone visitor → AR Quick Look magic**: ship a `.usdz` you have the rights to, linked via `<model-viewer ios-src>`. Tapping the AR badge opens AR Quick Look — the model appears in the user's room.
+- **Web rendering**: you need a `.glb`. Either get one directly from a source whose license covers your use, or convert a USDZ you have the rights to: import it with [Blender's USD importer](https://docs.blender.org/manual/en/latest/files/import_export/usd.html) (it reads `.usdz`; review its texture-import option) and export **glTF Binary (`.glb`)** with Blender's bundled [glTF 2.0 add-on](https://docs.blender.org/manual/en/latest/addons/scene_gltf2.html). Check materials and scale in `<model-viewer>` afterwards. Apple's `usdzconvert` goes the other way (glTF/OBJ/FBX/USD → USDZ) and can't produce a GLB.
+- **Best of both**: ship both. `<model-viewer src="model.glb" ios-src="model.usdz">` — desktop sees the GLB, iPhone visitors get AR.
 
 ## Add the web component to `index.html` once
 
@@ -36,7 +38,9 @@ Pin to a specific version (`3.5.0`), not `@latest` — protects you from a silen
 ## The `modelViewer` helper for `sections/helpers.js`
 
 ```javascript
-export const modelViewer = ({ src, iosSrc, alt, poster, height = 600 }) => ({
+// still: true for an approved Apple product model (see the device-imagery check):
+// no auto-rotate and no added shadow.
+export const modelViewer = ({ src, iosSrc, alt, poster, height = 600, still = false }) => ({
   apply(el) {
     el.style.width = '100%';
     el.style.height = height + 'px';
@@ -47,10 +51,12 @@ export const modelViewer = ({ src, iosSrc, alt, poster, height = 600 }) => ({
     if (poster) mv.setAttribute('poster', poster);
     mv.setAttribute('alt', alt || '');
     mv.setAttribute('camera-controls', '');
-    mv.setAttribute('auto-rotate', '');
+    if (!still) {
+      mv.setAttribute('auto-rotate', '');
+      mv.setAttribute('shadow-intensity', '1');
+    }
     mv.setAttribute('ar', '');
     mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-    mv.setAttribute('shadow-intensity', '1');
     mv.setAttribute('exposure', '1');
     mv.setAttribute('loading', 'lazy');
     mv.style.width = '100%';
@@ -62,6 +68,8 @@ export const modelViewer = ({ src, iosSrc, alt, poster, height = 600 }) => ({
 
 ## Usage in the parallax section
 
+The worked example is a model the project owns (here, the app's companion tag), so motion is a design choice:
+
 ```javascript
 import { VStack } from 'swiftui-for-web';
 import { h1 } from './typography.js';
@@ -70,13 +78,13 @@ import { modelViewer, cls } from './helpers.js';
 
 export function ParallaxShowcase() {
   return VStack({ alignment: 'center', spacing: SPACING.s3 },
-    h1('Made for every Apple device.'),
+    h1('Clip it on. Find it in the app.'),
     VStack()
       .modifier(modelViewer({
-        src: '/assets/iphone.glb',
-        iosSrc: '/assets/iphone.usdz',
-        alt: 'iPhone you can spin and view in AR',
-        poster: '/assets/iphone-poster.webp',
+        src: '/assets/tag.glb',
+        iosSrc: '/assets/tag.usdz',
+        alt: 'The companion tag, which you can rotate and view in AR',
+        poster: '/assets/tag-poster.webp',
         height: 720
       }))
       .modifier(cls('parallax-figure'))
@@ -84,16 +92,18 @@ export function ParallaxShowcase() {
 }
 ```
 
+**Apple product model (only after the device-imagery check, with Apple's permission):** pass `still: true`, leave off `cls('parallax-figure')` and any other animation class, and use neutral alt text that names the device and screen, for example `'iPhone 13 showing the journal screen'`. Keep to what the permission covers.
+
 ## Multi-device tableau (iPhone + iPad + Mac + Watch)
 
-For an "Apple-ecosystem" hero, arrange four models in an HStack:
+For an "Apple-ecosystem" hero, arrange four models in an HStack. This renders four Apple products in 3D, so it needs the same permission as above; without it, place static product-bezel images side by side instead.
 
 ```javascript
 HStack({ alignment: 'bottom', spacing: SPACING.s3 },
-  VStack().modifier(modelViewer({ src: '/assets/iphone.glb',  height: 480 })),
-  VStack().modifier(modelViewer({ src: '/assets/ipad.glb',    height: 480 })),
-  VStack().modifier(modelViewer({ src: '/assets/macbook.glb', height: 480 })),
-  VStack().modifier(modelViewer({ src: '/assets/watch.glb',   height: 240 }))
+  VStack().modifier(modelViewer({ src: '/assets/iphone.glb',  alt: 'iPhone',      still: true, height: 480 })),
+  VStack().modifier(modelViewer({ src: '/assets/ipad.glb',    alt: 'iPad',        still: true, height: 480 })),
+  VStack().modifier(modelViewer({ src: '/assets/macbook.glb', alt: 'MacBook',     still: true, height: 480 })),
+  VStack().modifier(modelViewer({ src: '/assets/watch.glb',   alt: 'Apple Watch', still: true, height: 240 }))
 ).modifier(cls('row-wrap'))
 ```
 
@@ -121,6 +131,7 @@ Four model-viewers on one page is heavy — see the performance budget below bef
 
 ## When to skip 3D entirely
 
+- The model depicts an Apple product and the device-imagery decision at the top hasn't been made.
 - The app is a utility / productivity tool where the device look isn't the point.
 - The hero is a UX moment (a screen, a flow) rather than the hardware.
 - Performance budget is tight (Lighthouse target ≥ 95).
