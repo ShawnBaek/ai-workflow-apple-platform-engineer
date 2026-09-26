@@ -45,6 +45,38 @@ final class HealthAndContractTests: XCTestCase {
     }
   }
 
+  /// Serves each result only to the exact executable and argv expected at that step, so CLI
+  /// drift in a probe fails the test instead of consuming another command's fixture.
+  private final class ExactRunner: HealthProbeRunning {
+    private var steps: [(executable: String, arguments: [String], result: ProcessResult)]
+    private(set) var invocations: [(String, [String])] = []
+    init(_ steps: [(executable: String, arguments: [String], result: ProcessResult)]) {
+      self.steps = steps
+    }
+    var unconsumed: Int { steps.count }
+    func run(
+      executable: String, arguments: [String], directory: URL?, environment: [String: String]?,
+      timeout: TimeInterval, maxOutputBytes: Int
+    ) -> ProcessResult {
+      invocations.append((executable, arguments))
+      guard let step = steps.first, step.executable == executable, step.arguments == arguments
+      else {
+        XCTFail("unexpected probe invocation: \(([executable] + arguments).joined(separator: " "))")
+        return .init(stdout: "", stderr: "", exitCode: 64, timedOut: false, truncated: false)
+      }
+      steps.removeFirst()
+      return step.result
+    }
+  }
+
+  private static func succeeded(_ stdout: String) -> ProcessResult {
+    .init(stdout: stdout, stderr: "", exitCode: 0, timedOut: false, truncated: false)
+  }
+
+  private static let repositoryView = [
+    "--json", "nameWithOwner,viewerPermission,hasIssuesEnabled",
+  ]
+
   private final class FakeCoordinator: RuntimeRegistryCoordinating {
     private(set) var admissions = 0
     func withRuntimeRegistryAdmission<T>(
@@ -320,15 +352,16 @@ final class HealthAndContractTests: XCTestCase {
   }
 
   func testGitHubProbeRequiresExactRepositoryPermissionAndProjectReadback() {
-    let runner = FakeRunner([
-      .init(stdout: "Shawn\n", stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(
-        stdout:
-          #"{"nameWithOwner":"Shawn/App","viewerPermission":"WRITE","hasIssuesEnabled":true}"#,
-        stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(
-        stdout: #"{"number":7,"title":"Delivery"}"#, stderr: "", exitCode: 0, timedOut: false,
-        truncated: false),
+    let runner = ExactRunner([
+      (
+        "gh", ["repo", "view", "Shawn/App"] + Self.repositoryView,
+        Self.succeeded(
+          #"{"nameWithOwner":"Shawn/App","viewerPermission":"WRITE","hasIssuesEnabled":true}"#)
+      ),
+      (
+        "gh", ["project", "view", "7", "--owner", "Shawn", "--format", "json"],
+        Self.succeeded(#"{"number":7,"title":"Delivery"}"#)
+      ),
     ])
     let observations = HealthEvaluation.collectLiveObservations(
       report: [
@@ -340,8 +373,62 @@ final class HealthAndContractTests: XCTestCase {
     )
     XCTAssertEqual(observations["github.issue_pr"]?["status"] as? String, "healthy")
     XCTAssertEqual(observations["github.project"]?["status"] as? String, "healthy")
-    XCTAssertEqual(
-      runner.invocations.last?.1, ["project", "view", "7", "--owner", "Shawn", "--format", "json"])
+    XCTAssertEqual(runner.unconsumed, 0)
+  }
+
+  func testGitHubProbeAcceptsOrganizationRepositoryThroughViewerPermission() {
+    // An organization owner is never the authenticated login (for example acme vs alice), so
+    // repository permission is the authority and no login comparison may run.
+    let runner = ExactRunner([
+      (
+        "gh", ["repo", "view", "acme/app"] + Self.repositoryView,
+        Self.succeeded(
+          #"{"nameWithOwner":"acme/app","viewerPermission":"WRITE","hasIssuesEnabled":true}"#)
+      ),
+      (
+        "gh", ["project", "view", "3", "--owner", "acme", "--format", "json"],
+        Self.succeeded(#"{"number":3,"title":"Delivery"}"#)
+      ),
+    ])
+    let observations = HealthEvaluation.collectLiveObservations(
+      report: [
+        "required_check_ids": ["github.issue_pr", "github.project"],
+        "authoritative_targets": ["remote": "git@github.com:acme/app.git"],
+      ],
+      harness: ["github_tracking": ["project": ["number": 3]]],
+      policy: ["github": ["owner": "acme"]], authorization: nil, runner: runner
+    )
+    XCTAssertEqual(observations["github.issue_pr"]?["status"] as? String, "healthy")
+    XCTAssertEqual(observations["github.project"]?["status"] as? String, "healthy")
+    XCTAssertEqual(runner.unconsumed, 0)
+  }
+
+  func testGitHubProbeBlocksReadOnlyMismatchedAndForeignOwnerRepositories() {
+    let report: [String: Any] = [
+      "required_check_ids": ["github.issue_pr"],
+      "authoritative_targets": ["remote": "https://github.com/acme/app.git"],
+    ]
+    for response in [
+      #"{"nameWithOwner":"acme/app","viewerPermission":"READ","hasIssuesEnabled":true}"#,
+      #"{"nameWithOwner":"acme/app","viewerPermission":"TRIAGE","hasIssuesEnabled":true}"#,
+      #"{"nameWithOwner":"acme/app","hasIssuesEnabled":true}"#,
+      #"{"nameWithOwner":"acme/other","viewerPermission":"ADMIN","hasIssuesEnabled":true}"#,
+      #"{"nameWithOwner":"acme/app","viewerPermission":"WRITE","hasIssuesEnabled":false}"#,
+    ] {
+      let runner = ExactRunner([
+        ("gh", ["repo", "view", "acme/app"] + Self.repositoryView, Self.succeeded(response))
+      ])
+      let observations = HealthEvaluation.collectLiveObservations(
+        report: report, harness: [:], policy: ["github": ["owner": "acme"]], authorization: nil,
+        runner: runner)
+      XCTAssertEqual(observations["github.issue_pr"]?["status"] as? String, "blocked", response)
+    }
+    let foreign = ExactRunner([])
+    let observations = HealthEvaluation.collectLiveObservations(
+      report: report, harness: [:], policy: ["github": ["owner": "alice"]], authorization: nil,
+      runner: foreign)
+    XCTAssertEqual(observations["github.issue_pr"]?["status"] as? String, "blocked")
+    XCTAssertTrue(foreign.invocations.isEmpty, "a remote outside the policy owner must not probe")
   }
 
   func testGitHubTimeoutFailsClosedBeforeRepositoryClaim() {
@@ -359,23 +446,40 @@ final class HealthAndContractTests: XCTestCase {
     XCTAssertEqual(runner.invocations.count, 1)
   }
 
+  /// The exact read-only `asc` argv of the TestFlight probes for one guarded profile and app.
+  private static func ascGroupSteps(profile: String, appID: String, groups: String)
+    -> [(executable: String, arguments: [String], result: ProcessResult)]
+  {
+    [
+      ("asc", ["--profile", profile, "auth", "status", "--validate"], succeeded("authenticated")),
+      (
+        "asc", ["--profile", profile, "apps", "list", "--paginate", "--output", "json"],
+        succeeded(#"{"data":[{"id":"123","attributes":{"bundleId":"com.example.app"}}]}"#)
+      ),
+      (
+        "asc",
+        [
+          "--profile", profile, "testflight", "groups", "list", "--app", appID, "--paginate",
+          "--output", "json",
+        ], succeeded(groups)
+      ),
+    ]
+  }
+
   func testSelectedXcodeVersionAndExactASCAppGroupsAreReadBack() {
     let developer = "/Applications/Xcode.app/Contents/Developer"
     let xcodebuild = developer + "/usr/bin/xcodebuild"
-    let runner = FakeRunner([
-      .init(stdout: developer + "\n", stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(stdout: xcodebuild + "\n", stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(
-        stdout: "Xcode 18.0\nBuild version 22A1\n", stderr: "", exitCode: 0, timedOut: false,
-        truncated: false),
-      .init(stdout: "authenticated", stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(
-        stdout: #"{"data":[{"id":"123","attributes":{"bundleId":"com.example.app"}}]}"#, stderr: "",
-        exitCode: 0, timedOut: false, truncated: false),
-      .init(
-        stdout: #"{"data":[{"id":"group-a"},{"id":"group-b"}]}"#, stderr: "", exitCode: 0,
-        timedOut: false, truncated: false),
-    ])
+    let runner = ExactRunner(
+      [
+        ("/usr/bin/xcode-select", ["-p"], Self.succeeded(developer + "\n")),
+        ("/usr/bin/xcrun", ["--find", "xcodebuild"], Self.succeeded(xcodebuild + "\n")),
+        (xcodebuild, ["-version"], Self.succeeded("Xcode 18.0\nBuild version 22A1\n")),
+      ]
+        + Self.ascGroupSteps(
+          profile: "private", appID: "123",
+          groups:
+            #"{"data":[{"type":"betaGroups","id":"group-a","attributes":{"name":"Public","isInternalGroup":false}},{"type":"betaGroups","id":"group-b","attributes":{"name":"QA","isInternalGroup":true}}]}"#
+        ))
     let ids = [
       "xcode.authoritative_container", "apple.execution_path", "apple.account_guard", "cli.asc",
       "testflight.upload_target", "testflight.internal_groups",
@@ -390,24 +494,24 @@ final class HealthAndContractTests: XCTestCase {
         ]
       ], runner: runner)
     for id in ids { XCTAssertEqual(observations[id]?["status"] as? String, "healthy", id) }
-    XCTAssertEqual(runner.invocations[2].0, xcodebuild)
+    XCTAssertEqual(runner.unconsumed, 0)
   }
 
   func testASCGroupMismatchAndXcodeVersionTimeoutFailClosed() {
     let developer = "/Applications/Xcode.app/Contents/Developer"
     let xcodebuild = developer + "/usr/bin/xcodebuild"
-    let runner = FakeRunner([
-      .init(stdout: developer, stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(stdout: xcodebuild, stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(stdout: "", stderr: "", exitCode: 0, timedOut: true, truncated: false),
-      .init(stdout: "ok", stderr: "", exitCode: 0, timedOut: false, truncated: false),
-      .init(
-        stdout: #"{"data":[{"id":"123","attributes":{"bundleId":"com.example.app"}}]}"#, stderr: "",
-        exitCode: 0, timedOut: false, truncated: false),
-      .init(
-        stdout: #"{"data":[{"id":"other"}]}"#, stderr: "", exitCode: 0, timedOut: false,
-        truncated: false),
-    ])
+    let runner = ExactRunner(
+      [
+        ("/usr/bin/xcode-select", ["-p"], Self.succeeded(developer)),
+        ("/usr/bin/xcrun", ["--find", "xcodebuild"], Self.succeeded(xcodebuild)),
+        (
+          xcodebuild, ["-version"],
+          .init(stdout: "", stderr: "", exitCode: 0, timedOut: true, truncated: false)
+        ),
+      ]
+        + Self.ascGroupSteps(
+          profile: "p", appID: "123",
+          groups: #"{"data":[{"id":"other","attributes":{"isInternalGroup":true}}]}"#))
     let ids = ["apple.execution_path", "testflight.internal_groups"]
     let observations = HealthEvaluation.collectLiveObservations(
       report: ["required_check_ids": ids], harness: [:],
@@ -420,6 +524,46 @@ final class HealthAndContractTests: XCTestCase {
       ], runner: runner)
     XCTAssertEqual(observations["apple.execution_path"]?["status"] as? String, "blocked")
     XCTAssertEqual(observations["testflight.internal_groups"]?["status"] as? String, "blocked")
+    XCTAssertEqual(runner.unconsumed, 0)
+  }
+
+  func testASCAuthorizedGroupsMustEachBeLiveAndInternal() {
+    // asc omits a false isInternalGroup in some releases, so absence must read as external.
+    let cases: [(groups: String, authorized: [String])] = [
+      (#"{"data":[{"id":"group-a","attributes":{"isInternalGroup":false}}]}"#, ["group-a"]),
+      (#"{"data":[{"id":"group-a","attributes":{"name":"Public"}}]}"#, ["group-a"]),
+      (#"{"data":[{"id":"group-a"}]}"#, ["group-a"]),
+      (#"{"data":[{"id":"group-a","attributes":{"isInternalGroup":1}}]}"#, ["group-a"]),
+      (#"{"data":[{"id":"group-a","attributes":{"isInternalGroup":"true"}}]}"#, ["group-a"]),
+      (
+        #"{"data":[{"id":"group-a","attributes":{"isInternalGroup":true}},{"id":"group-b","attributes":{"isInternalGroup":false}}]}"#,
+        ["group-a", "group-b"]
+      ),
+      (
+        #"{"data":[{"id":"group-a","attributes":{"isInternalGroup":true}}]}"#,
+        ["group-a", "group-missing"]
+      ),
+      (
+        #"{"data":[{"id":"group-a","attributes":{"isInternalGroup":true}},{"id":"group-a","attributes":{"isInternalGroup":false}}]}"#,
+        ["group-a"]
+      ),
+      (#"{"data":[]}"#, ["group-a"]),
+    ]
+    for (groups, authorized) in cases {
+      let runner = ExactRunner(Self.ascGroupSteps(profile: "p", appID: "123", groups: groups))
+      let observations = HealthEvaluation.collectLiveObservations(
+        report: ["required_check_ids": ["testflight.internal_groups"]], harness: [:],
+        policy: ["apple": ["account_guard_ref": "p", "team_id": "T"]],
+        authorization: [
+          "apple": [
+            "account_guard_ref": "p", "team_id": "T", "app_id": "123",
+            "bundle_id": "com.example.app", "internal_group_ids": authorized,
+          ]
+        ], runner: runner)
+      XCTAssertEqual(
+        observations["testflight.internal_groups"]?["status"] as? String, "blocked", groups)
+      XCTAssertEqual(runner.unconsumed, 0, groups)
+    }
   }
 
   func testMCPRegistrationIsBoundBeforeInjectedToolsProbes() {
