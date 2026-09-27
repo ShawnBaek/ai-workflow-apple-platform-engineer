@@ -236,7 +236,7 @@ final class LowRuntimeAuthorizationTests: XCTestCase {
     try HarnessRuntime.atomicWriteJSON(overlay, to: overlayURL)
     let approval = try InitializeRun.approvalRecord(
       authorization: envelope, recordedAt: start, context: context)
-    try (HarnessRuntime.canonicalJSON(approval) + Data([0x0a])).write(to: ledger)
+    try GateRunSupport.writeApprovalLedger(approval, to: ledger, runRoot: root)
 
     _ = try ResourceCoordinator.bootstrap(statePath: state, legacyLeasesQuiesced: true)
     var harness = try HarnessRuntime.object(

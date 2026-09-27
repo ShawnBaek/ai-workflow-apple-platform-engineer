@@ -154,14 +154,17 @@ the latest record. Never backdate it to fit a deadline, lease or authorization
 window. When the true time misses a window, the ledger check rejects the run;
 recover as after an ambiguous crash, with readback and a fresh authorization.
 
-`authorize` and `verify-reservation` also keep `<ledger>.head.json` beside the
-ledger: the byte count and SHA-256 of the ledger as they last appended to it,
-bound to the ledger identity the coordinator registered. Each later call refuses
-a ledger that no longer begins with those bytes, so truncating, rewriting or
-restoring the ledger in place cannot make a reserved or claimed grant usable
-again. Once the ledger holds a reservation or claim, a missing head also blocks
-the run. Never edit, copy or delete the head; recover a blocked run with
-readback and a fresh authorization. The head detects a changed ledger, not a
+The runtime also keeps `<ledger>.head.json` beside the ledger: the byte count
+and SHA-256 of the ledger as the runtime last wrote it, bound to the ledger
+identity the coordinator registered. `initialize-run` writes it with the
+approval record, and `authorize` and `verify-reservation` advance it with each
+append. Each later call refuses a ledger that no longer begins with those
+bytes, so truncating, rewriting or restoring the ledger in place cannot make a
+reserved or claimed grant usable again. A missing head always blocks the run,
+and rerunning `initialize-run` does not recreate it. Never edit, copy or delete
+the head. Recover a blocked run, or one initialized by a runtime that wrote no
+head, with readback, then start a new run (a new run root and ledger) with a
+fresh authorization. The head detects a changed ledger, not a
 restore of the whole run directory.
 
 `authorize` and `verify-reservation` hold an exclusive `flock(2)` on the ledger

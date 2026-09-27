@@ -123,14 +123,14 @@ every deployment target and package platform minimum unchanged, as described in
 `apple-verify health` checks the toolchain with `xcode-select -p` and
 `xcrun --find xcodebuild` in the environment it inherits. Launch it with the
 same `DEVELOPER_DIR` so that it checks the selected Xcode rather than the global
-one. Its `mcp.xcode` check also runs `xcrun mcpbridge` in that environment and
-only looks for `xcrun` and `mcpbridge` in the client's registration. A pass
-therefore does not prove that the registration itself sets `DEVELOPER_DIR`.
-Check the registration as the provider preflight below describes. The check
-reads the registration with each client's `mcp get` in the directory where you
-launch it, so launch it from the repository root to see a project registration.
-Its own `xcrun mcpbridge` run starts a bridge, and so does Claude Code's
-`mcp get` health check of an approved server; Xcode alerts about each one.
+one. Its `mcp.xcode` check only looks for `xcrun` and `mcpbridge` in each
+client's registration for the harness's authoritative root, wherever you launch
+it: Claude Code's configuration files and Codex's `codex mcp get` in that root.
+A pass therefore does not prove that the registration itself sets
+`DEVELOPER_DIR`. Check the registration as the provider preflight below
+describes. The check starts no bridge unless you pass
+`--probe-xcode-mcp-bridge`; that run of `xcrun mcpbridge` inherits this
+environment, and Xcode alerts about it as one more external agent.
 
 The developer's authoritative window may run in a different installation. To
 check, list running copies with `ps -axo pid=,comm= | grep '/Contents/MacOS/Xcode$'`.

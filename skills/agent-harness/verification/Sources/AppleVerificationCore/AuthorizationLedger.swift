@@ -25,21 +25,15 @@ extension Authorization {
       ledgerPath.lastPathComponent + ".head.json")
   }
 
+  /// `initialize-run` records the head with the approval record, so a missing head means it was
+  /// removed and always fails closed.
   static func ledgerHeadErrors(
-    _ ledgerData: Data, records: [[String: Any]], ledgerPath: URL, runRoot: URL,
-    binding: [String: Any]
+    _ ledgerData: Data, ledgerPath: URL, runRoot: URL, binding: [String: Any]
   ) -> [String] {
     let head = ledgerHeadURL(ledgerPath)
     var info = stat()
     guard lstat(head.path, &info) == 0 else {
-      let absent = errno == ENOENT
-      // Before its first append the runtime has recorded nothing, and the ledger holds none of
-      // the records only the runtime writes.
-      let runtimeRecord = records.contains {
-        ["grant_reservation", "grant_dispatch"].contains($0["record_type"] as? String ?? "")
-      }
-      return absent && !runtimeRecord
-        ? [] : ["coordination_required: ledger head checkpoint is missing or unreadable"]
+      return ["coordination_required: ledger head checkpoint is missing or unreadable"]
     }
     guard let document = try? loadStablePrivateJSON(head, root: runRoot) as? [String: Any],
       Set(document.keys) == [
@@ -71,6 +65,14 @@ extension Authorization {
     guard current.starts(with: prefix) else {
       throw VerificationError.invalid("ledger changed below the runtime's append")
     }
+    try writeLedgerHead(current, ledgerPath: ledgerPath, runRoot: runRoot, binding: binding)
+  }
+
+  /// Writes the head for `ledgerData`. `initialize-run` calls it before it publishes the ledger,
+  /// so no published ledger is ever without its head.
+  static func writeLedgerHead(
+    _ ledgerData: Data, ledgerPath: URL, runRoot: URL, binding: [String: Any]
+  ) throws {
     let head = ledgerHeadURL(ledgerPath)
     guard
       head.deletingLastPathComponent().resolvingSymlinksInPath()
@@ -81,7 +83,8 @@ extension Authorization {
         "schema_version": "1.0.0",
         "ledger_identity_sha256": binding["ledger_identity_sha256"] ?? NSNull(),
         "ledger_approval_sha256": binding["ledger_approval_sha256"] ?? NSNull(),
-        "byte_count": current.count, "prefix_sha256": "sha256:" + HarnessRuntime.sha256(current),
+        "byte_count": ledgerData.count,
+        "prefix_sha256": "sha256:" + HarnessRuntime.sha256(ledgerData),
       ], to: head)
   }
 

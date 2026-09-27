@@ -64,7 +64,9 @@ configuration to `apple-platform-setup`.
 ### MCP registration read
 
 Print names and transport only; never print or record `env`, header, token or
-account values, and never read `~/.claude.json` or `.mcp.json` whole.
+account values, and never read `~/.claude.json` or `.mcp.json` whole into the
+conversation. The evaluator's `mcp.xcode` check parses them in process and
+records only the scope and a hash of the matching entry.
 `codex mcp list --json` does not mask `env` the way its table does. `jq` ships
 in `/usr/bin` since macOS 15.
 
@@ -117,7 +119,17 @@ Set `APE` using the [Swift setup](../agent-harness/references/swift-verification
   --harness '<authoritative-harness.json>'
 ```
 
-The evaluator performs bounded read-only probes but no repair. Caller-written
+The evaluator performs bounded read-only probes but no repair. For
+`mcp.xcode` it reads each selected client's registration for the app root and
+starts no server; the current task's tool list and one read-only call prove
+exposure and connectivity. It honours `disabledMcpjsonServers` from the user,
+project, local and `managed-settings.json` settings files and the `/mcp` toggle's `disabledMcpServers`, which turns the
+server off for the app in every scope, and Codex's
+`enabled`. A server only a plugin, claude.ai or managed configuration provides
+reads as `registration_missing` and fails closed, and a project server's
+approval is not checked. Add `--probe-xcode-mcp-bridge` only when the
+developer asks for a live bridge check: it starts one `xcrun mcpbridge` for a
+bounded `tools/list`, and Xcode alerts about it as another external agent. Caller-written
 status/evidence never establishes high-risk success: the evaluator overwrites
 it from live observations and repeats those observations at action dispatch.
 Missing commands, offline providers, timeouts, target/account drift, or a

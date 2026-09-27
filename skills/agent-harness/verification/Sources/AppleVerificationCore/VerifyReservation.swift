@@ -131,7 +131,7 @@ extension Authorization {
           return (["coordination_required: canonical ledger binding drifted"], nil)
         }
         let headErrors = ledgerHeadErrors(
-          ledgerData, records: records, ledgerPath: ledgerPath, runRoot: runRoot, binding: bindings)
+          ledgerData, ledgerPath: ledgerPath, runRoot: runRoot, binding: bindings)
         if !headErrors.isEmpty { return (headErrors, nil) }
         let matching = records.filter {
           $0["record_type"] as? String == "grant_reservation"

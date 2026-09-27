@@ -179,7 +179,11 @@ or kill the other Xcode.
    above, contain the server, enabled. `codex mcp list` and `codex mcp get` read
    them without starting it; `claude mcp list` and `claude mcp get` health-check
    approved servers, which starts a bridge. This does not prove that the current
-   task loaded it.
+   task loaded it. `apple-verify health` reads registrations the same way for
+   the harness's authoritative root and starts no bridge by default. Its
+   `--probe-xcode-mcp-bridge` opt-in starts one `xcrun mcpbridge` for a bounded
+   `tools/list`, which Xcode alerts about; use it only when the developer asks
+   for a live bridge check.
 3. **Exposed:** after the client-prescribed restart or a new task, the expected
    Xcode tool namespace is visible. Do not assume hot reload.
 4. **Connected:** one bounded, read-only workspace-list call returns from the

@@ -604,21 +604,24 @@ final class HealthAndContractTests: XCTestCase {
   func testMCPRegistrationIsBoundBeforeInjectedToolsProbes() {
     let runner = FakeRunner([
       .init(
-        stdout: #"{"command":"xcrun","args":["mcpbridge"]}"#, stderr: "", exitCode: 0,
+        stdout: #"{"enabled":true,"transport":{"command":"xcrun","args":["mcpbridge"]}}"#,
+        stderr: "", exitCode: 0,
         timedOut: false, truncated: false),
       .init(
-        stdout: #"{"url":"https://mcp.applesamplecode.com/mcp"}"#, stderr: "", exitCode: 0,
+        stdout: #"{"enabled":true,"transport":{"url":"https://mcp.applesamplecode.com/mcp"}}"#,
+        stderr: "", exitCode: 0,
         timedOut: false, truncated: false),
     ])
     let mcp = FakeMCPProbe()
     let harness: [String: Any] = [
+      "authoritative_root": "/fixture/app",
       "agent_skills": [
         "installations": ["codex": ["collection_root": "/fixture"], "claude": NSNull()]
-      ]
+      ],
     ]
     let observations = HealthEvaluation.collectLiveObservations(
       report: ["required_check_ids": ["mcp.xcode", "mcp.apple_sample_code"]], harness: harness,
-      policy: [:], authorization: nil, runner: runner, mcpProbe: mcp)
+      policy: [:], authorization: nil, runner: runner, mcpProbe: mcp, liveXcodeBridgeProbe: true)
     XCTAssertEqual(observations["mcp.xcode"]?["status"] as? String, "healthy")
     XCTAssertEqual(observations["mcp.apple_sample_code"]?["status"] as? String, "healthy")
     XCTAssertEqual(mcp.xcodeCalls, 1)
@@ -632,13 +635,14 @@ final class HealthAndContractTests: XCTestCase {
     ])
     let mcp = FakeMCPProbe()
     let harness: [String: Any] = [
+      "authoritative_root": "/fixture/app",
       "agent_skills": [
         "installations": ["codex": ["collection_root": "/fixture"], "claude": NSNull()]
-      ]
+      ],
     ]
     let first = HealthEvaluation.collectLiveObservations(
       report: ["required_check_ids": ["mcp.xcode"]], harness: harness, policy: [:],
-      authorization: nil, runner: registration, mcpProbe: mcp)
+      authorization: nil, runner: registration, mcpProbe: mcp, liveXcodeBridgeProbe: true)
     XCTAssertEqual(first["mcp.xcode"]?["status"] as? String, "blocked")
     XCTAssertEqual(mcp.xcodeCalls, 0)
     let second = HealthEvaluation.collectLiveObservations(

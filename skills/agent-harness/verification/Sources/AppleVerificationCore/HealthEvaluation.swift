@@ -19,7 +19,8 @@ public struct HealthMCPProbeResult {
 
 /// The transport is injectable so tests never need a live MCP server. The system
 /// implementation performs only initialize, notifications/initialized, tools/list,
-/// and AppleSampleCode get_status.
+/// and AppleSampleCode get_status. `probeXcode` starts its own `xcrun mcpbridge`, which Xcode
+/// reports as one more external agent, so the evaluator calls it only on explicit opt-in.
 public protocol HealthMCPProbing {
   func probeXcode(timeout: TimeInterval) -> HealthMCPProbeResult
   func probeAppleSampleCode(endpoint: URL, timeout: TimeInterval) -> HealthMCPProbeResult
@@ -154,9 +155,12 @@ public enum HealthEvaluation {
   private static let fingerprint = try! NSRegularExpression(pattern: "^sha256:[0-9a-f]{64}$")
   private static let identifier = try! NSRegularExpression(pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$")
   // ICU spells a code point `\x{hh}`; the Swift-style `\u{hhhh}` made this pattern trap on its
-  // first use, which is the first resolved candidate that lists an Xcode container.
-  private static let xcodeContainer = try! NSRegularExpression(
-    pattern: #"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[^\x{0}-\x{1f}\x{7f}]+\.(?:xcodeproj|xcworkspace)$"#)
+  // first use, which is the first resolved candidate that lists an Xcode container. The `..`
+  // lookahead spans every code point: ICU's `.` stops at U+0085, U+2028 and U+2029, which the
+  // path class admits, so `App<U+2028>/../x.xcodeproj` would otherwise pass.
+  static let xcodeContainer = try! NSRegularExpression(
+    pattern:
+      #"^(?!/)(?![\s\S]*(?:^|/)\.\.(?:/|$))[^\x{0}-\x{1f}\x{7f}]+\.(?:xcodeproj|xcworkspace)$"#)
   private static let staleRegistryReasons: Set<String> = [
     "missing_path", "not_git_root", "missing_xcode_container", "remote_fingerprint_mismatch",
   ]
@@ -304,7 +308,7 @@ public enum HealthEvaluation {
     report: [String: Any], harness: [String: Any], policy: [String: Any],
     authorization: [String: Any]?, runner: HealthProbeRunning,
     runtimeCoordinator: RuntimeRegistryCoordinating? = nil, runtimeScope: RuntimeProbeScope? = nil,
-    mcpProbe: HealthMCPProbing = SystemHealthMCPProbe(),
+    mcpProbe: HealthMCPProbing = SystemHealthMCPProbe(), liveXcodeBridgeProbe: Bool = false,
     environment: [String: String] = ProcessInfo.processInfo.environment
   ) -> [String: [String: Any]] {
     let required = Set(report["required_check_ids"] as? [String] ?? []).intersection(
@@ -565,21 +569,28 @@ public enum HealthEvaluation {
     }
 
     if required.contains("mcp.xcode") {
+      // By default only the registrations are read: a bridge started here would be one more
+      // external agent for Xcode to alert about. Current-task exposure and the one read-only
+      // tool call stay with the task's own client.
       let registration = probeRegistration(
-        harness: harness, name: "xcode", expectedFragments: ["xcrun", "mcpbridge"], runner: runner)
-      let connection =
-        registration.passed
-        ? mcpProbe.probeXcode(timeout: 15)
-        : .init(passed: false, material: ["failure": "registration_blocked"])
+        harness: harness, name: "xcode", expectedFragments: ["xcrun", "mcpbridge"], runner: runner,
+        environment: environment)
+      let connection: HealthMCPProbeResult =
+        !registration.passed
+        ? .init(passed: false, material: ["failure": "registration_blocked"])
+        : liveXcodeBridgeProbe
+          ? mcpProbe.probeXcode(timeout: 15)
+          : .init(passed: true, material: ["probe": "not_requested"])
       record(
-        "mcp.xcode", registration.passed && connection.passed, "registration_and_read_only_tools",
+        "mcp.xcode", registration.passed && connection.passed,
+        liveXcodeBridgeProbe ? "registration_and_read_only_tools" : "registration_read_only",
         ["registration": registration.material, "connection": connection.material])
     }
     if required.contains("mcp.apple_sample_code") {
       let endpoint = URL(string: "https://mcp.applesamplecode.com/mcp")!
       let registration = probeRegistration(
         harness: harness, name: "apple-sample-code", expectedFragments: [endpoint.absoluteString],
-        runner: runner)
+        runner: runner, environment: environment)
       let connection =
         registration.passed
         ? mcpProbe.probeAppleSampleCode(endpoint: endpoint, timeout: 15)
@@ -649,7 +660,7 @@ public enum HealthEvaluation {
     reportBytes: Data, expectedBytesSHA256: String? = nil, harness: [String: Any],
     policy: [String: Any], authorization: [String: Any]?, runner: HealthProbeRunning,
     runtimeCoordinator: RuntimeRegistryCoordinating? = nil, runtimeScope: RuntimeProbeScope? = nil,
-    mcpProbe: HealthMCPProbing = SystemHealthMCPProbe(),
+    mcpProbe: HealthMCPProbing = SystemHealthMCPProbe(), liveXcodeBridgeProbe: Bool = false,
     environment: [String: String] = ProcessInfo.processInfo.environment,
     context: RuntimeContext? = nil,
     executableURL: URL = URL(fileURLWithPath: CommandLine.arguments[0]), now: Date = Date()
@@ -679,7 +690,7 @@ public enum HealthEvaluation {
     let observations = collectLiveObservations(
       report: report, harness: harness, policy: policy, authorization: authorization,
       runner: runner, runtimeCoordinator: runtimeCoordinator, runtimeScope: runtimeScope,
-      mcpProbe: mcpProbe, environment: environment)
+      mcpProbe: mcpProbe, liveXcodeBridgeProbe: liveXcodeBridgeProbe, environment: environment)
     return evaluate(
       reconcile(report: report, observations: observations), now: now,
       evaluatorObservedCheckIDs: Set(observations.keys))
@@ -691,6 +702,7 @@ public enum HealthEvaluation {
     var values: [String: String] = [:]
     var positionals: [String] = []
     var observeSkills = false
+    var probeXcodeBridge = false
     var index = 0
     while index < arguments.count {
       let argument = arguments[index]
@@ -699,6 +711,16 @@ public enum HealthEvaluation {
           throw VerificationError.invalid("duplicate --observe-agent-skills")
         }
         observeSkills = true
+        index += 1
+        continue
+      }
+      // Explicit opt-in: starts one `xcrun mcpbridge` for a bounded tools/list, which Xcode
+      // reports as another external agent.
+      if argument == "--probe-xcode-mcp-bridge" {
+        guard !probeXcodeBridge else {
+          throw VerificationError.invalid("duplicate --probe-xcode-mcp-bridge")
+        }
+        probeXcodeBridge = true
         index += 1
         continue
       }
@@ -716,6 +738,10 @@ public enum HealthEvaluation {
       positionals.append(argument)
       index += 1
     }
+    if observeSkills && probeXcodeBridge {
+      throw VerificationError.invalid(
+        "--observe-agent-skills does not accept a report or --probe-xcode-mcp-bridge")
+    }
     guard positionals.count <= 1, values["--report"] == nil || positionals.isEmpty,
       let harnessPath = values["--harness"]
     else { throw VerificationError.invalid("health requires one report and --harness") }
@@ -724,7 +750,8 @@ public enum HealthEvaluation {
       harnessPath: harnessURL, context: context)
     if observeSkills {
       guard values["--report"] == nil, positionals.isEmpty else {
-        throw VerificationError.invalid("--observe-agent-skills does not accept a report")
+        throw VerificationError.invalid(
+          "--observe-agent-skills does not accept a report or --probe-xcode-mcp-bridge")
       }
       do {
         _ = try HealthCollection.observeResourceCoordinator(harness: harness, context: context)
@@ -782,7 +809,7 @@ public enum HealthEvaluation {
       expectedBytesSHA256: expected, harness: harness, policy: policy, authorization: authorization,
       runner: SystemHealthRunner(),
       runtimeCoordinator: scope == nil ? nil : ResourceCoordinatorRuntimeAdmission(),
-      runtimeScope: scope, context: context)
+      runtimeScope: scope, liveXcodeBridgeProbe: probeXcodeBridge, context: context)
     let output: [String: Any] = [
       "report": result.report, "valid": result.valid, "errors": result.errors,
     ]
@@ -854,27 +881,61 @@ public enum HealthEvaluation {
     return normalized
   }
 
+  /// Reads each selected client's registration for the app at the harness's authoritative root,
+  /// wherever the evaluator was launched from, and never starts the server. `codex mcp get`
+  /// reads configuration without starting a stdio server, and its working directory selects a
+  /// trusted project's `.codex/config.toml`. `claude mcp get` and `list` health-check approved
+  /// servers, so Claude Code's configuration files are read instead.
   private static func probeRegistration(
-    harness: [String: Any], name: String, expectedFragments: [String], runner: HealthProbeRunning
+    harness: [String: Any], name: String, expectedFragments: [String], runner: HealthProbeRunning,
+    environment: [String: String]
   ) -> HealthMCPProbeResult {
     let installations =
       (harness["agent_skills"] as? [String: Any])?["installations"] as? [String: Any] ?? [:]
+    guard let rootValue = harness["authoritative_root"] as? String, rootValue.hasPrefix("/") else {
+      return .init(passed: false, material: ["failure": "app_root_unavailable"])
+    }
+    let appRoot = URL(fileURLWithPath: rootValue)
     var material: [[String: Any]] = []
     for client in ["codex", "claude"]
     where installations[client] != nil && !(installations[client] is NSNull) {
-      let executable = client == "codex" ? "codex" : "claude"
-      let arguments = client == "codex" ? ["mcp", "get", name, "--json"] : ["mcp", "get", name]
       do {
-        let result = try successful(
-          runner.run(
-            executable: executable, arguments: arguments, directory: nil, environment: nil,
-            timeout: 15, maxOutputBytes: 1_048_576))
-        let combined = result.stdout + "\n" + result.stderr
-        guard expectedFragments.allSatisfy(combined.contains) else {
+        var observed: [String: Any] = ["client": client]
+        let registration: String
+        if client == "codex" {
+          let result = try successful(
+            runner.run(
+              executable: "codex", arguments: ["mcp", "get", name, "--json"], directory: appRoot,
+              environment: nil, timeout: 15, maxOutputBytes: 1_048_576))
+          // `--json` prints the entry with `enabled`; a disabled server is not started.
+          guard
+            let entry = try JSONSerialization.jsonObject(with: Data(result.stdout.utf8))
+              as? [String: Any]
+          else { throw ProbeError.invalid }
+          guard let enabled = entry["enabled"], HarnessRuntime.isBoolean(enabled),
+            enabled as? Bool == true
+          else {
+            return .init(passed: false, material: ["client": client, "failure": "disabled"])
+          }
+          registration = String(decoding: try HarnessRuntime.canonicalJSON(entry), as: UTF8.self)
+        } else {
+          guard
+            let entry = try claudeRegistration(
+              name: name, appRoot: appRoot, environment: environment)
+          else {
+            return .init(
+              passed: false, material: ["client": client, "failure": "registration_missing"])
+          }
+          observed["scope"] = entry.scope
+          registration = String(
+            decoding: try HarnessRuntime.canonicalJSON(entry.server), as: UTF8.self)
+        }
+        guard expectedFragments.allSatisfy(registration.contains) else {
           return .init(
             passed: false, material: ["client": client, "failure": "registration_drift"])
         }
-        material.append(["client": client, "registration_sha256": sha(combined)])
+        observed["registration_sha256"] = sha(registration)
+        material.append(observed)
       } catch {
         return .init(
           passed: false, material: ["client": client, "failure": probeErrorClass(error)])
@@ -883,6 +944,80 @@ public enum HealthEvaluation {
     return material.isEmpty
       ? .init(passed: false, material: ["failure": "no_selected_client"])
       : .init(passed: true, material: ["clients": material])
+  }
+
+  /// The Claude Code entry that applies in `appRoot`, by the client's precedence: local scope,
+  /// then project scope, then user scope. It reads, without starting any server:
+  /// - `.claude.json` in `CLAUDE_CONFIG_DIR` when that is set, else in `HOME`: user-scope
+  ///   `mcpServers`, and under `projects[<app root>]` the local-scope `mcpServers` and the `/mcp`
+  ///   toggle's `disabledMcpServers`, which disables the named server for this app whatever
+  ///   its scope (and the legacy `disabledMcpjsonServers`);
+  /// - the app's `.mcp.json` for project scope;
+  /// - `disabledMcpjsonServers`, a settings key honoured from any settings file, from the user's
+  ///   `settings.json` (`CLAUDE_CONFIG_DIR`, else `~/.claude`), the app's `.claude/settings.json`
+  ///   and `.claude/settings.local.json`, and `managed-settings.json`; it rejects a project
+  ///   entry, which leaves a same-named user entry in effect.
+  /// Not read: `managed-settings.d` drop-ins, MDM or plist managed preferences, server-delivered
+  /// managed settings and a `--settings` file. Plugin, claude.ai and managed-only servers are
+  /// not read either and so fail closed as missing. Approval of a project server is not
+  /// checked; the task's own tool list proves exposure.
+  private static func claudeRegistration(
+    name: String, appRoot: URL, environment: [String: String]
+  ) throws -> (scope: String, server: [String: Any])? {
+    guard let home = environment["HOME"].flatMap({ $0.hasPrefix("/") ? $0 : nil }) else {
+      throw ProbeError.unavailable
+    }
+    let homeURL = URL(fileURLWithPath: home)
+    let custom = environment["CLAUDE_CONFIG_DIR"].flatMap {
+      $0.hasPrefix("/") ? URL(fileURLWithPath: $0) : nil
+    }
+    func optionalObject(_ url: URL) throws -> [String: Any]? {
+      let resolved = url.resolvingSymlinksInPath()
+      var info = stat()
+      guard lstat(resolved.path, &info) == 0 else {
+        if errno == ENOENT { return nil }
+        throw ProbeError.unavailable
+      }
+      return try boundedJSONObject(
+        resolved, maximumBytes: 64 * 1_024 * 1_024, requireSingleLink: false)
+    }
+    // With CLAUDE_CONFIG_DIR set the client keeps `.claude.json` there, so the home directory's
+    // is another configuration's; a missing file reads as no registration and fails closed.
+    let global =
+      try optionalObject((custom ?? homeURL).appendingPathComponent(".claude.json")) ?? [:]
+    let projects = global["projects"] as? [String: Any] ?? [:]
+    var spellings = [appRoot.path, appRoot.standardizedFileURL.path]
+    if let real = realpath(appRoot.path, nil) {
+      spellings.append(String(cString: real))
+      free(real)
+    }
+    let project = spellings.lazy.compactMap { projects[$0] as? [String: Any] }.first ?? [:]
+    // The `/mcp` toggle disables the named server for this app in every scope.
+    if (project["disabledMcpServers"] as? [String] ?? []).contains(name) { return nil }
+    if let local = (project["mcpServers"] as? [String: Any])?[name] as? [String: Any] {
+      return ("local", local)
+    }
+    let settingsFiles = [
+      (custom ?? homeURL.appendingPathComponent(".claude")).appendingPathComponent(
+        "settings.json"),
+      appRoot.appendingPathComponent(".claude/settings.json"),
+      appRoot.appendingPathComponent(".claude/settings.local.json"),
+      URL(fileURLWithPath: "/Library/Application Support/ClaudeCode/managed-settings.json"),
+    ]
+    var rejected = Set(project["disabledMcpjsonServers"] as? [String] ?? [])
+    for file in settingsFiles {
+      rejected.formUnion(try optionalObject(file)?["disabledMcpjsonServers"] as? [String] ?? [])
+    }
+    if let shared =
+      (try optionalObject(appRoot.appendingPathComponent(".mcp.json"))?[
+        "mcpServers"] as? [String: Any])?[name] as? [String: Any]
+    {
+      if !rejected.contains(name) { return ("project", shared) }
+    }
+    if let user = (global["mcpServers"] as? [String: Any])?[name] as? [String: Any] {
+      return ("user", user)
+    }
+    return nil
   }
 
   private static func selectedWriterSkillPath(harness: [String: Any], name: String) throws -> URL {

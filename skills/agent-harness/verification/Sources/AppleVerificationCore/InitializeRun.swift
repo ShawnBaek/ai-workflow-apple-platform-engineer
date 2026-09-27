@@ -88,7 +88,9 @@ public enum InitializeRun {
 
   /// Stages the complete approval record beside the ledger and publishes it with an exclusive
   /// rename, so an interrupted creation leaves no empty or truncated ledger that every rerun
-  /// would reject as drifted, and a concurrent reader never sees a partial record.
+  /// would reject as drifted, and a concurrent reader never sees a partial record. The ledger
+  /// head is written for the staged inode before the rename, so a published ledger always has
+  /// one and a missing head can only mean it was removed.
   private static func publishLedger(_ record: [String: Any], at ledgerPath: URL, runRoot: URL)
     throws
   {
@@ -111,6 +113,24 @@ public enum InitializeRun {
         }
       }
       guard fsync(fd) == 0 else { throw InitializeError("ledger could not be created") }
+      // The rename keeps this device and inode, which with the final path and the approval
+      // record are the identity the coordinator binds.
+      var stagedInfo = Darwin.stat()
+      guard fstat(fd, &stagedInfo) == 0,
+        let approval = try JSONSerialization.jsonObject(with: line) as? [String: Any]
+      else { throw InitializeError("ledger could not be created") }
+      let identity: [String: Any] = [
+        "path": runRoot.appendingPathComponent(ledgerPath.lastPathComponent).path,
+        "device": NSNumber(value: stagedInfo.st_dev), "inode": NSNumber(value: stagedInfo.st_ino),
+      ]
+      do {
+        try Authorization.writeLedgerHead(
+          line, ledgerPath: ledgerPath, runRoot: runRoot,
+          binding: [
+            "ledger_identity_sha256": try ResourceCoordinator.digest(identity),
+            "ledger_approval_sha256": try ResourceCoordinator.digest(approval),
+          ])
+      } catch { throw InitializeError("ledger head could not be created") }
     } catch {
       close(fd)
       throw error
@@ -131,6 +151,26 @@ public enum InitializeRun {
     if dfd >= 0 {
       _ = fsync(dfd)
       close(dfd)
+    }
+  }
+
+  /// A ledger adopted on a rerun must still carry the head written when it was created; a
+  /// removed or drifted head fails closed rather than being recreated over a rewritten ledger.
+  private static func verifyLedgerHead(
+    ledgerPath: URL, runRoot: URL, authorization: [String: Any]
+  ) throws {
+    let errors: [String]
+    do {
+      let binding = try ResourceCoordinator.ledgerBinding(
+        ledgerPath, expectedRunID: authorization["run_id"] as? String,
+        expectedAuthorizationHash: Authorization.authorizationHash(authorization))
+      errors = Authorization.ledgerHeadErrors(
+        try Data(contentsOf: ledgerPath), ledgerPath: ledgerPath, runRoot: runRoot,
+        binding: binding)
+    } catch { throw InitializeError("existing ledger binding cannot be read") }
+    guard errors.isEmpty else {
+      throw InitializeError(
+        errors.joined(separator: "; ") + "; start a new run with a fresh authorization")
     }
   }
 
@@ -209,9 +249,13 @@ public enum InitializeRun {
         NSDictionary(dictionary: records[0]).isEqual(
           to: try approvalRecord(authorization: authorization, recordedAt: date, context: context))
       else { throw InitializeError("existing ledger approval drifted") }
+      try verifyLedgerHead(
+        ledgerPath: ledgerPath, runRoot: canonicalRoot, authorization: authorization)
       record = records[0]
     } else {
       try publishLedger(record, at: ledgerPath, runRoot: canonicalRoot)
+      try verifyLedgerHead(
+        ledgerPath: ledgerPath, runRoot: canonicalRoot, authorization: authorization)
       created = true
     }
     let authority: [String: Any]

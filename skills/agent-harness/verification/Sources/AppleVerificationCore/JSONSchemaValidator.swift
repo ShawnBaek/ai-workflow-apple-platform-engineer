@@ -33,7 +33,9 @@ public enum JSONSchemaValidator {
 
   /// Compiles a JSON Schema `pattern` (ECMA-262, no flags) for ICU. Outside a character class an
   /// unescaped ECMA-262 `$` matches only at the end of input, but ICU's `$` also matches before a
-  /// final line terminator, so it is rewritten to ICU's end-of-input `\z`.
+  /// final line terminator, so it is rewritten to ICU's end-of-input `\z`. An unescaped ECMA-262
+  /// `.` there excludes only the LineTerminator code points LF, CR, U+2028 and U+2029, while ICU's
+  /// also excludes VT, FF and U+0085, so it is rewritten to that exact negated class.
   static func expression(_ pattern: String) throws -> NSRegularExpression {
     var translated = ""
     var escaped = false
@@ -49,6 +51,9 @@ public enum JSONSchemaValidator {
         inClass = false
       } else if scalar == "$" && !inClass {
         translated += "\\z"
+        continue
+      } else if scalar == "." && !inClass {
+        translated += "[^\\n\\r\\u2028\\u2029]"
         continue
       }
       translated.unicodeScalars.append(scalar)
