@@ -254,7 +254,7 @@ final class AuthorizationRobustnessTests: XCTestCase {
     let start = Date().addingTimeInterval(-5)
     let approval = try InitializeRun.approvalRecord(
       authorization: envelope, recordedAt: start, context: context)
-    try (HarnessRuntime.canonicalJSON(approval) + Data([0x0a])).write(to: ledger)
+    try GateRunSupport.writeApprovalLedger(approval, to: ledger, runRoot: root)
 
     _ = try ResourceCoordinator.bootstrap(statePath: state, legacyLeasesQuiesced: true)
     let harness = GateRunSupport.prReadyHarness(

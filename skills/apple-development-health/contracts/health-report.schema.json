@@ -178,7 +178,7 @@
             "canonical_root": {
               "type": "string",
               "minLength": 2,
-              "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))/[^\\u0000-\\u001f\\u007f]*$"
+              "pattern": "^(?![\\s\\S]*(?:^|/)\\.\\.(?:/|$))/[^\\u0000-\\u001f\\u007f]*$"
             },
             "remote_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
             "kind": {"enum": ["primary", "worktree"]},
@@ -188,7 +188,7 @@
               "items": {
                 "type": "string",
                 "minLength": 1,
-                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+\\.(?:xcodeproj|xcworkspace)$"
+                "pattern": "^(?!/)(?![\\s\\S]*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+\\.(?:xcodeproj|xcworkspace)$"
               }
             }
           },

@@ -7,7 +7,7 @@ let usage = """
     repository --root <repository> [--output <new-report.json>]
     compare --manifest <comparison.json> --output-dir <new-directory>
     runtime-identity
-    health <report.json> --harness <private-harness.json>
+    health <report.json> --harness <private-harness.json> [--probe-xcode-mcp-bridge]
     authorize, verify-reservation, prepare-action, initialize-run
     resources <state.json> bootstrap|status|acquire|verify|heartbeat|release|recover|configure-host-policy|bundle-digest
     resolve-project, materialize, spec-snapshot

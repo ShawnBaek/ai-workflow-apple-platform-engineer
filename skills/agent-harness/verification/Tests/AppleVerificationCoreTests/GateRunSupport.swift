@@ -59,6 +59,16 @@ enum GateRunSupport {
     return harness
   }
 
+  /// Writes the approval record as the ledger's only line together with the head checkpoint
+  /// `initialize-run` records beside it.
+  static func writeApprovalLedger(_ approval: [String: Any], to ledger: URL, runRoot: URL) throws {
+    let data = try HarnessRuntime.canonicalJSON(approval) + Data([0x0a])
+    try data.write(to: ledger)
+    try Authorization.writeLedgerHead(
+      data, ledgerPath: ledger, runRoot: runRoot,
+      binding: try ResourceCoordinator.ledgerBinding(ledger))
+  }
+
   static func record(
     _ sequence: Int, _ type: String, _ payload: [String: Any], at stamp: String,
     runID: String = "run"

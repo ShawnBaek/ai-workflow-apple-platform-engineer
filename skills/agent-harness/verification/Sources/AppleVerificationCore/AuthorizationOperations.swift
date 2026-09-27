@@ -467,7 +467,7 @@ extension Authorization {
         let ledgerData = try Data(contentsOf: ledgerPath)
         let records = try ledgerRecords(ledgerData)
         let headErrors = ledgerHeadErrors(
-          ledgerData, records: records, ledgerPath: ledgerPath, runRoot: runRoot,
+          ledgerData, ledgerPath: ledgerPath, runRoot: runRoot,
           binding: boundLedger)
         if !headErrors.isEmpty { return (headErrors, nil) }
         let now = ledgerClock(records, now: Date())

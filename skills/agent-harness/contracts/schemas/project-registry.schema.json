@@ -52,7 +52,7 @@
                 "path": {
                   "type": "string",
                   "minLength": 2,
-                  "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))/[^\\u0000-\\u001f\\u007f]*$"
+                  "pattern": "^(?![\\s\\S]*(?:^|/)\\.\\.(?:/|$))/[^\\u0000-\\u001f\\u007f]*$"
                 },
                 "kind": {"enum": ["primary", "worktree"]},
                 "xcode_containers": {
@@ -61,7 +61,7 @@
                   "items": {
                     "type": "string",
                     "minLength": 1,
-                    "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+\\.(?:xcodeproj|xcworkspace)$"
+                    "pattern": "^(?!/)(?![\\s\\S]*(?:^|/)\\.\\.(?:/|$))[^\\u0000-\\u001f\\u007f]+\\.(?:xcodeproj|xcworkspace)$"
                   }
                 }
               },
