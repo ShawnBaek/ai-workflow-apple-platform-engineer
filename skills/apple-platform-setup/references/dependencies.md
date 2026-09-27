@@ -46,6 +46,18 @@ or install an overlapping ASC skill pack. Package-manager installation itself
 needs its own applicable scope. Complete interactive OS/account prompts through
 their supported UI without asking the user to paste credentials.
 
+When another installed skill pack, such as an App Store Connect CLI pack, covers
+the same trigger as a collection skill, report the overlap: both skill names,
+their paths and the shared trigger. Unless the app repository selects one for
+that job, let the user pick one owner per trigger and apply that choice only with user-level toggles: Claude Code `skillOverrides` in
+`~/.claude/settings.json` or `.claude/settings.local.json` for skills with
+different names, since it matches names only (or `/plugin` for a plugin), and
+Codex `[[skills.config]]` entries with `path` and `enabled = false` in
+`~/.codex/config.toml`. Never delete, move or edit the other pack. The app
+repository's own skills are not a pack to toggle: they take precedence as
+[repository skill precedence](../../agent-harness/references/repo-skill-precedence.md)
+describes.
+
 For Xcode MCP, follow the existing
 [provider preflight](../../xcodebuild/references/xcode-mcp-provider-preflight.md),
 which owns registration and the installed/configured/exposed/connected checks.
