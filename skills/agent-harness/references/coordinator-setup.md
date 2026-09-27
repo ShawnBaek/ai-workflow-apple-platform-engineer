@@ -225,6 +225,58 @@ The same burn-and-readback rule applies when a coordinator heartbeat, release,
 or recovery was persisted but its response or corresponding ledger append was
 lost. Never reconstruct a success timestamp or confirmation from memory.
 
+## Runtime probe scope
+
+The `runtime_ui` health profile requires `simulator.runtime`. Health runs its
+two read-only `simctl list` inventories only while it holds a short
+`coresimulator_runtime_registry` admission, and it takes that admission as a
+separate **probe run**. The task's own run cannot hold it: health is collected
+before the task is authorized and registered, and a run authority copied into
+the task harness would have to contain the SHA-256 of that same harness.
+
+1. Create the probe run like any other run: its own private run root, harness,
+   authorization and ledger, on the same coordinator binding as the tasks it
+   serves. Its approved `resource_plan` holds one
+   `coresimulator_runtime_registry` entry whose descriptor is exactly
+   `{"coordinator_instance_id": "<bootstrap instance>", "registry_scope": "<scope>"}`.
+   Its window must cover every task run that names it: a task harness cannot
+   switch probe runs without a new task authorization. Its probe leases stay in
+   state until seven days after that window ends (see
+   [state retention](#state-retention)), so prefer a probe run per batch of
+   tasks over one long-lived run. Run `initialize-run` for it and leave its own
+   `runtime_probe_scope` null.
+2. In each `runtime_ui` task harness, set:
+
+   ```json
+   "runtime_probe_scope": {
+     "harness": "<probe-run-root>/private-harness.json",
+     "owner_run_id": "<probe run_id>",
+     "plan_id": "<probe resource_plan plan_id>",
+     "descriptor": {
+       "coordinator_instance_id": "<bootstrap instance>",
+       "registry_scope": "<scope>",
+       "platform": "iOS",
+       "destination_id": "<exact destination UDID>",
+       "runtime_identifier": "<exact CoreSimulator runtime identifier>"
+     },
+     "ttl_seconds": 120
+   }
+   ```
+
+Every evaluation (`health`, `authorize` and `verify-reservation`) loads the
+probe harness, requires its `resource_coordinator` binding to equal the task
+harness's, and derives the probe run's authority from its own authorization and
+ledger, as `acquire` does. The admission must match the named plan entry and
+the probe authorization must be active. A scope naming the task's own run, an
+uninitialized, unplanned or expired probe run, or a different coordinator
+blocks the check as `runtime_registry_ownership_blocked`. `ttl_seconds` must be
+at least 90; see [host resources](host-resources.md).
+
+The earlier scope shape with `state_path`, `owner_actor` and a copied
+`run_authority` is no longer accepted: a harness that still has it fails the
+schema as `untrusted_binding`. Replace it with the shape above when you rebind
+the harness after the update.
+
 ## Trust boundary
 
 This local harness coordinates cooperative Codex, Claude, and developer
@@ -251,6 +303,22 @@ observe the new `runtime-identity`, update the private harness, and
 rerun health. If status cannot read
 the old state, stop for an explicit migration decision; never replace it with a
 fresh parallel coordinator to keep working.
+
+## State retention
+
+The state keeps every active lease, every registered run authority, the host
+policy history and `next_fencing_token`. A released or recovered lease stays
+until seven days after both its terminal transition and its owner's
+authorization window have ended; the next acquire, heartbeat, release or
+recovery drops it. While the owner's window is open, its ledger check still
+compares each release or recovery confirmation with the stored lease. After it
+is dropped, the receipt stays stale, its confirmation no longer validates
+against the state, and fencing tokens are never reissued. The run ledger keeps
+the receipts, confirmations and recovery evidence as the audit record. The
+lease holding `next_fencing_token`, and a replacement that a kept recovery
+names, are kept past the window so the state stays valid. The layout and schema
+version are unchanged, so an older schema-2 runtime still reads a compacted
+state.
 
 ## Recovery boundary
 

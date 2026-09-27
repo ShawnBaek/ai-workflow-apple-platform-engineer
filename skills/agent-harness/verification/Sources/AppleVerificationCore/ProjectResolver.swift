@@ -395,6 +395,52 @@ public enum ProjectResolver {
     return result
   }
 
+  /// The registry-backed result: the stable health projection plus, for `needs_selection`, the
+  /// local choices. An explicit root or opened Xcode container still decides the target, and the
+  /// registry must then list that exact checkout, including the opened container; otherwise
+  /// health would receive a result that names no registry candidate.
+  static func registryProjection(
+    registry: Any, developerID: String?, hostID: String?, explicitPath: String? = nil,
+    projectID: String? = nil, openedXcodeContainer: String? = nil, allowWorktree: Bool = false,
+    context: RuntimeContext
+  ) throws -> [String: Any] {
+    let registered = resolveProject(
+      registry: registry, developerID: developerID, hostID: hostID, projectID: projectID,
+      allowWorktree: allowWorktree, context: context)
+    var value = registered
+    if explicitPath != nil || openedXcodeContainer != nil {
+      let target = resolveProject(
+        registry: nil, explicitPath: explicitPath, openedXcodeContainer: openedXcodeContainer,
+        allowWorktree: allowWorktree, context: context)
+      let candidates =
+        (registered["candidate"] as? [String: Any]).map { [$0] }
+        ?? registered["candidates"] as? [[String: Any]] ?? []
+      if target["status"] as? String != "resolved" {
+        value = target
+      } else if !candidates.isEmpty {
+        let facts = target["candidate"] as! [String: Any]
+        value = ["status": "unavailable", "reason_code": "authoritative_target_not_registered"]
+        if let match = candidates.first(where: {
+          $0["canonical_root"] as? String == facts["canonical_root"] as? String
+        }) {
+          let opened =
+            openedXcodeContainer == nil ? [] : facts["xcode_containers"] as? [String] ?? []
+          value =
+            Set(opened).isSubset(of: match["xcode_containers"] as? [String] ?? [])
+            ? ["status": "resolved", "reason_code": "registry_candidate", "candidate": match]
+            : ["status": "blocked", "reason_code": "opened_xcode_container_not_registered"]
+        }
+        value["warnings"] = registered["warnings"]
+      }
+    }
+    value["resolver_version"] = resolverVersion
+    value["registry_sha256"] = try registrySHA256(registry)
+    value["worktree_authorized"] = allowWorktree
+    if value["warnings"] == nil { value["warnings"] = [] as [[String: String]] }
+    if value["candidate"] == nil { value["candidate"] = NSNull() }
+    return value
+  }
+
   public static func registrySHA256(_ registry: Any) throws -> String {
     "sha256:" + HarnessRuntime.sha256(try HarnessRuntime.canonicalJSON(registry, ensureASCII: true))
   }
@@ -568,30 +614,20 @@ public enum ProjectResolver {
       } catch let error as ProjectResolverError {
         output = ["status": "blocked", "reason_code": error.code]
       }
-    } else {
-      let authoritative = explicitPath != nil || opened != nil
-      var registry: Any?
-      if let registryPath, !authoritative {
-        do { registry = try loadRegistry(URL(fileURLWithPath: registryPath)) } catch {
-          registry = NSNull()
-        }
-      }
-      if registry is NSNull {
-        output = ["status": "blocked", "reason_code": "invalid_registry"]
-      } else {
-        var value = resolveProject(
+    } else if let registryPath {
+      if let registry = try? loadRegistry(URL(fileURLWithPath: registryPath)) {
+        output = try registryProjection(
           registry: registry, developerID: developerID, hostID: hostID, explicitPath: explicitPath,
           projectID: projectID, openedXcodeContainer: opened, allowWorktree: allowWorktree,
           context: context)
-        if let registry {
-          value["resolver_version"] = resolverVersion
-          value["registry_sha256"] = try registrySHA256(registry)
-          value["worktree_authorized"] = allowWorktree
-          if value["warnings"] == nil { value["warnings"] = [] as [[String: String]] }
-          if value["candidate"] == nil { value["candidate"] = NSNull() }
-        }
-        output = value
+      } else {
+        output = ["status": "blocked", "reason_code": "invalid_registry"]
       }
+    } else {
+      output = resolveProject(
+        registry: nil, developerID: developerID, hostID: hostID, explicitPath: explicitPath,
+        projectID: projectID, openedXcodeContainer: opened, allowWorktree: allowWorktree,
+        context: context)
     }
     FileHandle.standardOutput.write(
       try HarnessRuntime.canonicalJSON(output, ensureASCII: true) + Data([0x0a]))

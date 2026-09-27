@@ -16,19 +16,9 @@ extension Authorization {
       let harness = try ResourceCoordinator.loadTrustedHarness(
         harnessPath: harnessPath, context: context)
       let exactBytesHash = "sha256:" + HarnessRuntime.sha256(bytes)
-      let scope: RuntimeProbeScope? = {
-        guard let value = harness["runtime_probe_scope"] as? [String: Any],
-          let state = value["state_path"] as? String,
-          let descriptor = value["descriptor"] as? [String: Any],
-          let run = value["owner_run_id"] as? String,
-          let actor = value["owner_actor"] as? String,
-          let authority = value["run_authority"] as? [String: Any]
-        else { return nil }
-        return RuntimeProbeScope(
-          statePath: URL(fileURLWithPath: state), descriptor: descriptor, ownerRunID: run,
-          ownerActor: actor, ttlSeconds: intValue(value["ttl_seconds"]) ?? 120,
-          runAuthority: authority)
-      }()
+      let scope =
+        (try? ResourceCoordinator.runtimeProbeScope(trustedHarness: harness, context: context))
+        ?? nil
       let evaluated = HealthEvaluation.revalidate(
         reportBytes: bytes, expectedBytesSHA256: exactBytesHash, harness: harness, policy: policy,
         authorization: authorization, runner: SystemHealthRunner(),
