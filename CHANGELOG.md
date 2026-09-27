@@ -4,6 +4,10 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+### Changed
+
+- **One allowed-path rule everywhere** ([#106]). The authorization `allowed_paths` check, the active lease's `allowed_paths` check and the `git.commit` path scope now use the same rule as the rest of the runtime: an allowed entry is compared with its surrounding `/` trimmed, so an entry written as `dir/` now also admits the path `dir` at those three checks, as it already did elsewhere. Sibling prefixes (`dir-evil`), `..` segments, absolute and empty paths, and an empty allowed list are still refused. This slightly widens what an already-approved envelope or lease admits, so review such grants before reuse: for example, an entry `vendor/lib/` now also admits the path `vendor/lib` itself, which can be a submodule gitlink. See [run authorization](skills/agent-harness/references/run-authorization.md).
+
 ## [2.0.0-beta.11] - 2026-09-27
 
 This entry covers the 12 pull requests merged to `main` after 2.0.0-beta.10, which landed with [#92] (commit `1bbae0e`): [#93] through [#104]. Private guarded-runtime harnesses must be rebound and their runs replaced, so read Migration first. If you registered the Xcode MCP server globally, also read the two Xcode MCP items.
@@ -215,3 +219,4 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 [#102]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/102
 [#103]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/103
 [#104]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/104
+[#106]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/106
