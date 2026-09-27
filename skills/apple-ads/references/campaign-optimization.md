@@ -18,7 +18,9 @@ Use evidence in this order:
    evidence, with the exact project, market, platform, date, and returned fields;
 6. other third-party keyword tools and measurement providers, with methodology;
 7. third-party case studies and videos as hypotheses, never as current platform
-   guarantees.
+   guarantees. Their revenue claims, starting budgets, bid steps, thresholds, and
+   country tiers are not rules, and a video that promotes a vendor does not
+   justify adopting it.
 
 ## Official Apple video scope
 
@@ -27,96 +29,14 @@ current Apple Ads Help, Platform API documentation, or live account read-back.
 Record each session's year, preserve older product names when quoting it, and
 recheck every count, limit, field, and availability claim before acting.
 
-- [Get started with app discovery and marketing](https://developer.apple.com/videos/play/tech-talks/110358/)
-  is the closest official end-to-end campaign overview. It covers app,
-  placement, market, daily budget, max-CPT, Search Match versus managed keywords,
-  audience, custom-product-page ad variations, and reporting. Treat its numbers,
-  labels, and feature limits as presentation-time context, not current defaults.
-- [Enhance your presence on the App Store](https://developer.apple.com/videos/play/wwdc2026/205/)
-  explains creative assets, Asset Library, custom product pages, Product Page
-  Optimization, and Apple Ads Platform API setup automation. It is not a guide
-  to keyword selection, bid economics, campaign structure, or budget control.
-  Verify that any announced creative-asset capability is live for the requested
-  placement before depending on it, and preserve separate App Store Connect and
-  Apple Ads review gates.
-- [What’s new in App Store Connect — WWDC25](https://developer.apple.com/videos/play/wwdc2025/328/)
-  shows keywords associated with custom product pages for organic App Store
-  search discovery. These language-specific page associations are not paid Apple
-  Ads keyword bids and remain under App Store Connect authority.
-- [What’s new in App Store Connect — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10063/)
-  shows custom-product-page deep links used with Search Results and Today tab ad
-  variations. It does not grant Apple Ads authority to create, edit, submit, or
-  publish the underlying App Store Connect page.
-- [Get ready to optimize your App Store product page — WWDC21](https://developer.apple.com/videos/play/wwdc2021/10295/)
-  is historical guidance for custom product pages and Product Page Optimization.
-  Use current App Store Connect documentation for supported counts, metadata,
-  review, and analytics behavior.
-- [Meet AdAttributionKit — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10060/)
-  and [What’s new in AdAttributionKit — WWDC25](https://developer.apple.com/videos/play/wwdc2025/221/)
-  explain privacy-preserving attribution implementation. They are not evidence
-  for Apple Ads campaign settings, keyword strategy, bids, budgets, or account
-  operations; use Apple Ads reporting and AdServices sources for those claims.
-
-## Third-party case-study scope
-
-The 2026 video [I Built a $10K/Month App With Only Apple Ads](https://www.youtube.com/watch?v=dbt2Mt1VpLo)
-is a useful case study, not normative documentation. Its full automatic captions
-and 1,131 one-second samples were reviewed for this guide. The video shows a form
-being configured but not the final create action, server read-back, or operating
-results. It also contains promotional segments for third-party tooling, SDKs,
-dashboards, and an advertising-credit offer, so it is not neutral comparative
-evidence and does not justify adopting any promoted vendor. Do not claim that its
-example campaign was created or activated.
-
-## Third-party video lessons and corrections
-
-| Time | Observed lesson | Reusable decision |
+| Session | Use it for | Not evidence for |
 | --- | --- | --- |
-| 00:00–03:02 | A self-reported revenue case and suggested test budgets of 200–500 for competitive markets and 100–300 for lower-competition markets, in the presenter's currency. | Search intent can be valuable, but revenue and starting amounts are unverified heuristics. Size tests from the app's economics and authorized loss. |
-| 03:02–05:12 | Align the query, product page, install, onboarding, paywall, price, and purchase. | Preserve this funnel alignment and test keyword-themed ad variations when appropriate. |
-| 05:12–06:53 | Markets are placed into three fixed cost or purchasing-power tiers. | Treat tiers as time- and app-specific hypotheses. Validate current country eligibility, localization, bids, conversion, and value. |
-| 06:53–10:11 | Compare keyword spend with attributed subscriptions or revenue; lower losers and scale winners. A slide calls conversion under 80 percent "free money," while the narration is more qualified. | Preserve unit-economics analysis, but reject a universal 80-percent threshold. Require a stated attribution window, conversion delay, funnel baseline, and sufficient sample. |
-| 10:11–11:31 | Localize first, then test short and long queries; a slide says 91 countries are supported. | Validate natural local intent and demand. Length alone does not make a keyword cheaper or better, and the video-era country count must be rechecked. |
-| 11:32–13:37 | The form uses Search Results, Germany, Manage Bids, daily budget `20`, `$1.00` default max CPT, and `$1.46` suggested max CPT. | The daily-budget field does not visibly show its currency. Search Results is an intent-first example, not a rule excluding Apple's other placements. Starting about 30 percent below a suggestion is one example, not a rule. |
-| 13:37–15:23 | Search Match is shown on at 13:37, toggled off by 13:46, and three bracketed terms are then added as exact match at `$1.00`. | Brackets are web-UI notation. APIs use keyword text plus match type. Exact includes close variants; Search Match remains useful in a separately controlled discovery test. |
-| 13:55–15:23 | The recommendation list visibly contains many unrelated social and game terms and offers bulk add. | Review every recommendation; never bulk-add an unvalidated list. |
-| 15:25–16:43 | The final example narrows to iPhone and new users, leaves age, gender, and location at All, and uses the default ad. The UI conditionally warns that applying age or gender disables custom-product-page deep links. | Reach All Eligible Users is the safer baseline unless the hypothesis needs narrowing. Age or gender refinement can suppress AdServices attribution and disable those deep links; the warning does not apply to the final All setting shown. |
-| 17:10–18:03 | Slides suggest fixed 0.50 bid steps, an approximate 3.00 ceiling, and treating under-90-percent impression share as being outbid. | Do not encode fixed amounts or a universal share threshold. Diagnose relevance, popularity, eligibility, budget, and economics too. |
-| 18:03–18:38 | The presenter usually waits three or four days, sometimes seeing movement sooner. | Apple suggests allowing 24–48 hours for initial data, but decide with elapsed time plus sample and attribution delay. |
-
-The video's third-party SDK/dashboard promotion, free-credit marketing, revenue
-graphic, and closing tool promotion are not Apple platform evidence. Automatic
-caption values that conflict with visible UI, such as an apparent 50-dollar bid
-where the slide shows an approximately 3-dollar ceiling, must not become rules.
-
-## Kickstart MCP ASO checks
-
-Use Paul Hudson's Kickstart MCP as the preferred third-party ASO checker when it
-is available. Its current general MCP is bundled with the Kickstart app and its
-live `tools/list` response is authoritative for exact schemas.
-
-For a paid-keyword hypothesis:
-
-1. Resolve the exact approved Kickstart project and App Store app ID without
-   browsing unrelated projects when the project name is already known.
-2. Use read-only calls such as `get_project`, `list_localizations`,
-   `check_keyword_rankings`, `get_search_rankings`, and
-   `get_competitor_analysis` as the current schema permits.
-3. Record country, platform, locale, query, retrieval date, returned app rank and
-   competitors, result count, trend, and any difficulty or entry-barrier fields.
-4. Separate observed values from inference. Rank is not search volume; result
-   count is not demand; difficulty is not a bid; localization is not proof of
-   natural local-language intent.
-5. Cross-check candidates against the app's real features and live Apple Ads
-   popularity, impressions, search terms, conversion, and value evidence.
-
-Do not use `refresh_project_data`, App Store Connect update tools, tracked-keyword
-mutations, or Search Ads create/update tools under a read-only ASO request. A
-Kickstart Apple Ads report or mutation is an Apple Ads operation: explicitly pass
-the approved ad-account ID, reapply the private organization guard, and stop if
-the tool would fall back to Kickstart's selected account. If Kickstart is missing
-or rate-limited, preserve the gap instead of silently replacing it with a vendor
-promoted by a case-study video.
+| [Get started with app discovery and marketing](https://developer.apple.com/videos/play/tech-talks/110358/) | The closest official end-to-end campaign overview: placement, market, daily budget, max CPT, Search Match versus managed keywords, audience, ad variations, reporting | Current defaults; its numbers, labels, and limits are presentation-time context |
+| [Enhance your presence on the App Store — WWDC26](https://developer.apple.com/videos/play/wwdc2026/205/) | Creative assets, Asset Library, custom product pages, Product Page Optimization, Apple Ads Platform API setup automation | Keyword selection, bid economics, structure, or budget control; confirm an announced capability is live for the placement |
+| [What’s new in App Store Connect — WWDC25](https://developer.apple.com/videos/play/wwdc2025/328/) | Keywords associated with custom product pages for organic search | Paid Apple Ads keyword bids; the associations stay under App Store Connect authority |
+| [What’s new in App Store Connect — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10063/) | Custom-product-page deep links in Search Results and Today tab ad variations | Authority to create, edit, submit, or publish the App Store Connect page |
+| [Get ready to optimize your App Store product page — WWDC21](https://developer.apple.com/videos/play/wwdc2021/10295/) | Historical custom product page and Product Page Optimization background | Current counts, metadata, review, or analytics behavior |
+| [Meet AdAttributionKit — WWDC24](https://developer.apple.com/videos/play/wwdc2024/10060/), [What’s new in AdAttributionKit — WWDC25](https://developer.apple.com/videos/play/wwdc2025/221/) | Privacy-preserving attribution implementation | Apple Ads campaign settings, keywords, bids, budgets, or account operations |
 
 ## Budget and bid math
 
@@ -144,24 +64,9 @@ For current daily-budget campaigns:
 - campaigns that used lifetime budget were paused in June 2026, so do not design
   a new safety plan around that retired setting.
 
-Recheck these rules immediately before a paid write. To use promotional credit,
-verify top-level eligibility and expiry on the scoped Billing page and calculate
-remaining balance from applied invoices. Record the latest invoice cutoff because
-that balance is not real-time. Confirm that the requested amount is denominated
-in, or explicitly converted to, the account currency.
-
-For a credit-only test, calculate a conservative exposure bound:
-
-- add spend posted after the invoice cutoff and all known unbilled or later spend;
-- add the maximum remaining exposure through the end date of every active
-  campaign sharing the account, including the proposed campaign;
-- add a declared reserve for reporting latency and the longest monitoring gap;
-- require the result to remain strictly below eligible, unexpired credit.
-
-An active campaign without an end date makes that future exposure unbounded for
-this purpose. Pause or end it and verify the state, or do not promise credit-only
-operation. Credit can expire or change under its terms and can require a valid
-payment method. Neither an invoice-derived balance nor monitoring is a hard stop.
+Recheck these rules immediately before a paid write. For promotional credit, feed
+these exposure figures for the proposed campaign and every active campaign
+sharing the account into the credit-only bound in the skill entry point.
 
 ## Campaign and keyword structure
 
@@ -182,15 +87,15 @@ term into the controlled exact group. Negative exact blocks only the precise ter
 negative broad requires all included words and does not necessarily block every
 variant, so verify the actual behavior in current documentation.
 
-Before adding recommendations, normalize and deduplicate them against existing
-exact and broad keywords, check negative-keyword conflicts, and respect the
-current 5,000-keyword limit per ad group. New keywords default to broad match and
-inherit the ad group's default max CPT unless explicitly overridden. Read that
-effective bid before the write. A saved keyword's match type cannot be edited;
-changing it requires pausing the old keyword and adding a new one, each under the
-approved mutation scope. Create new paid objects paused when supported, verify
-their keyword text, match type, bid, parent, and status, then gate activation as a
-separate write.
+Keyword write checks: before adding a keyword or recommendation, normalize and
+deduplicate it against existing exact and broad keywords, check negative-keyword
+conflicts, and respect the current 5,000-keyword limit per ad group. New keywords
+default to broad match and inherit the ad group's default max CPT unless
+explicitly overridden. Read that effective bid before the write, and verify that
+the campaign daily budget satisfies the current API constraint relative to the
+ad group's default bid. A saved keyword's match type cannot be edited; changing
+it requires pausing the old keyword and adding a new one, each with fresh
+approval under the mutation steps in the skill entry point.
 
 A single-country campaign improves budget isolation and simplifies country-level
 analysis. A multi-country campaign still exposes country dimensions and reduces
@@ -219,9 +124,8 @@ of interpreting the first days as a clean new-user cohort.
 Map each keyword theme to what the customer sees first. Use the default ad when
 the default App Store page already matches the intent. Use an approved custom
 product page and ad variation when a meaningful theme needs different screenshots,
-promotional text, preview video, or deep link. Product-page creation, localization,
-review submission, and metadata keywords belong to App Store Connect authority,
-not Apple Ads authority.
+promotional text, preview video, or deep link; its creation and metadata stay
+under App Store Connect authority.
 
 ## Performance decisions
 
@@ -276,32 +180,14 @@ For each decision, record:
 - hypothesis, approved before/after values, total exposure and stop condition;
 - server read-back state and the next review condition.
 
-## Current official references
+## Additional official references
 
-- https://developer.apple.com/documentation/apple-ads-platform-api
-- https://developer.apple.com/documentation/adservices/
-- https://developer.apple.com/videos/play/tech-talks/110358/
-- https://developer.apple.com/videos/play/wwdc2026/205/
-- https://developer.apple.com/videos/play/wwdc2025/328/
-- https://developer.apple.com/videos/play/wwdc2024/10063/
-- https://developer.apple.com/videos/play/wwdc2021/10295/
-- https://developer.apple.com/videos/play/wwdc2024/10060/
-- https://developer.apple.com/videos/play/wwdc2025/221/
-- https://ads.apple.com/app-store/certification
-- https://ads.apple.com/app-store/help/campaigns/0056-structure-campaigns
-- https://ads.apple.com/app-store/help/campaigns/0006-understand-search-match
+The skill entry point lists the core sources; the videos are linked above.
+
 - https://ads.apple.com/app-store/help/keywords/0014-add-and-manage-keywords
-- https://ads.apple.com/app-store/help/keywords/0059-understand-keyword-match-types
-- https://ads.apple.com/app-store/help/bids-and-budget/0062-set-and-adjust-bids
-- https://ads.apple.com/app-store/help/bids-and-budget/0016-manage-budgets
-- https://ads.apple.com/app-store/help/reporting/0023-reporting-options-and-definitions
 - https://ads.apple.com/app-store/help/reporting/0007-tips-for-solving-performance-issues
-- https://ads.apple.com/app-store/help/attribution/0028-measuring-ad-performance
 - https://ads.apple.com/app-store/help/attribution/0027-mobile-measurement-providers
 - https://ads.apple.com/app-store/help/ad-groups/0021-modify-audience-settings
-- https://ads.apple.com/app-store/help/ads/0077-create-ad-variations
-- https://ads.apple.com/app-store/help/billing/0032-apple-ads-promo-credit
-- https://ads.apple.com/app-store/help/apple-ads-basic/0001-compare-apple-ads-solutions
 
 ## Selected third-party ASO source
 
