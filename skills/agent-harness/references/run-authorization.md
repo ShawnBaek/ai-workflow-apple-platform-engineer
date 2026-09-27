@@ -24,6 +24,14 @@ scope, not a file list: each entry lies within `allowed_paths` and uses the same
 prefix rule. The commit request must name exactly the live reviewed staged set,
 in any order, and every staged path must fall within that scope.
 
+The envelope is also bounded in time and effort. Its approval window,
+`expires_at` minus `issued_at`, is at most 24 hours. Its `limits` allow at most
+10 implementation attempts, 10 review cycles and 10 transient retries, and at
+most 1,440 active and 1,440 asynchronous-wait minutes. The schema declares the
+limit ceilings; `initialize-run`, `prepare-action`, `authorize` and
+`verify-reservation` enforce the window and the ceilings. A task that needs more
+asks for a fresh authorization; never widen an approved envelope.
+
 ## Three delivery targets
 
 | Target | Terminal evidence |
@@ -54,8 +62,9 @@ new record. Never label a stricter two-gate repository as one-shot by silently
 skipping its second gate.
 
 Before each action, run `apple-verify authorize` with the current exact
-request. It recomputes live repository and Spec Kit state, verifies the private
-checkpoint remains append-only, matches the operation descriptor/digest and
+request. It recomputes live repository and Spec Kit state, verifies the Spec Kit
+workflow checkpoint remains append-only and the run ledger still begins with the
+bytes the runtime last appended to, matches the operation descriptor/digest and
 canonical lease, checks a fresh guarded ASC observation for Apple actions, and
 atomically appends a single-use reservation before returning authority. The
 external writer must use that exact descriptor while the same unexpired lease
@@ -115,11 +124,22 @@ ambiguous crash.
 
 Write each record as one JSON object followed by a single 0x0A byte. It has
 exactly `schema_version` (`1.0.0`), the run's `run_id`, a `sequence` one above
-the current maximum, `recorded_at`, `record_type` and `payload`. Stamp
+the current maximum (the ledger check rejects a gap, so a removed record stays
+visible), `recorded_at`, `record_type` and `payload`. Stamp
 `recorded_at` with the current UTC time and an explicit zone, never earlier than
 the latest record. Never backdate it to fit a deadline, lease or authorization
 window. When the true time misses a window, the ledger check rejects the run;
 recover as after an ambiguous crash, with readback and a fresh authorization.
+
+`authorize` and `verify-reservation` also keep `<ledger>.head.json` beside the
+ledger: the byte count and SHA-256 of the ledger as they last appended to it,
+bound to the ledger identity the coordinator registered. Each later call refuses
+a ledger that no longer begins with those bytes, so truncating, rewriting or
+restoring the ledger in place cannot make a reserved or claimed grant usable
+again. Once the ledger holds a reservation or claim, a missing head also blocks
+the run. Never edit, copy or delete the head; recover a blocked run with
+readback and a fresh authorization. The head detects a changed ledger, not a
+restore of the whole run directory.
 
 `authorize` and `verify-reservation` hold an exclusive `flock(2)` on the ledger
 file while they read, validate and append, and never stamp their records earlier

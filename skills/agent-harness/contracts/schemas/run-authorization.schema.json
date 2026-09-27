@@ -44,7 +44,11 @@
     "actor": {"type": "string", "minLength": 1},
     "selected_writer": {"enum": ["codex", "claude"]},
     "issued_at": {"type": "string", "format": "date-time"},
-    "expires_at": {"type": "string", "format": "date-time"},
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "$comment": "At most 24 hours after issued_at; the runtime enforces this window."
+    },
     "delivery_target": {
       "enum": ["local_verified", "pr_ready", "testflight_uploaded", "testflight_distributed"]
     },
@@ -199,11 +203,11 @@
         "async_wait_minutes"
       ],
       "properties": {
-        "max_implementation_attempts": {"type": "integer", "minimum": 1},
-        "max_review_cycles": {"type": "integer", "minimum": 1},
-        "max_transient_retries": {"type": "integer", "minimum": 0},
-        "active_wall_minutes": {"type": "integer", "minimum": 1},
-        "async_wait_minutes": {"type": "integer", "minimum": 1}
+        "max_implementation_attempts": {"type": "integer", "minimum": 1, "maximum": 10},
+        "max_review_cycles": {"type": "integer", "minimum": 1, "maximum": 10},
+        "max_transient_retries": {"type": "integer", "minimum": 0, "maximum": 10},
+        "active_wall_minutes": {"type": "integer", "minimum": 1, "maximum": 1440},
+        "async_wait_minutes": {"type": "integer", "minimum": 1, "maximum": 1440}
       },
       "additionalProperties": false
     },

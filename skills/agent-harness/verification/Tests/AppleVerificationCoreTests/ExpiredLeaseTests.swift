@@ -234,6 +234,7 @@ final class ExpiredLeaseTests: XCTestCase {
       "contracts/schemas/run-authorization.schema.json")
     envelope["$schema"] = schema.absoluteString
     envelope["contract_schema_sha256"] = "sha256:" + (try HarnessRuntime.sha256File(schema))
+    envelope = approvalWindow(of: envelope, containing: f.now)
     let approval = try InitializeRun.approvalRecord(
       authorization: envelope, recordedAt: f.now, context: context)
     let repo = envelope["repository"] as! [String: Any]
@@ -359,6 +360,7 @@ final class ExpiredLeaseTests: XCTestCase {
       "contracts/schemas/run-authorization.schema.json")
     envelope["$schema"] = schema.absoluteString
     envelope["contract_schema_sha256"] = "sha256:" + (try HarnessRuntime.sha256File(schema))
+    envelope = approvalWindow(of: envelope, containing: Date())
     try HarnessRuntime.atomicWriteJSON(envelope, to: authPath)
     let approval = try InitializeRun.approvalRecord(
       authorization: envelope, recordedAt: Date(), context: context)

@@ -145,6 +145,9 @@ or unusable status response is blocked when selected. If not selected, report
   present. Bind the explicit feature directory and approved Git branch as two
   independent identities. Compare immutable accepted artifacts before every
   external write and mutable workflow continuity as a separate checkpoint.
+- When Spec Kit is selected, record the `specify --version` answer; any answer
+  other than `specify 1.0.1` is a migration candidate that `spec-snapshot`
+  refuses.
 - Spec Kit logs describe specification/workflow state; the harness ledger owns
   approvals, attempts, leases, evidence, and external writes.
 - For TestFlight profiles, verify the private Apple account/team guard before

@@ -7,6 +7,15 @@ pinned to Spec Kit `v1.0.1`; a newer CLI is a detected migration candidate, not
 an implicit upgrade. Do not vendor Spec Kit or install/update `specify` during a
 health check.
 
+`apple-verify spec-snapshot` checks the pin before it reads anything. It runs
+the first `specify` on `PATH` once as `specify --version` (read-only, 10-second
+timeout), which `v1.0.1` answers with `specify 1.0.1`. Any other release, or an
+answer it cannot read, is a migration candidate: the command fails without a
+snapshot until the adapter is reviewed for that release or the pinned CLI is
+selected. With no `specify` on `PATH` it notes that the installed release is
+unverified and snapshots the repository files. The authorize, dispatch and
+health gates compare the bound snapshot, not the CLI.
+
 ## Artifact and log mapping
 
 Spec Kit `v1.0.1` persists the selected directory in
