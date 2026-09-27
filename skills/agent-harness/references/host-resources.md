@@ -8,7 +8,7 @@ The version 2 coordinator admits host-wide `heavy_jobs`, `active_devices`, and `
 
 `internal_workers` counts admitted local tool workers, not LLM subagents. A read-only research agent does not consume that budget merely because it is called a worker. Count the resources its actual tools request; use the client's separate effective slot limit for model concurrency.
 
-The lead/client queues work when the coordinator returns `resource_conflict` or `capacity_exceeded`; the coordinator is an admission gate, not a waiter queue or agent launcher. Retry when the conflicting work releases ownership or capacity, within the task's retry policy. Do not duplicate a coordinator, steal an expired lease, kill unrelated processes, or turn on maximum parallel testing to make progress. Prefer a lower-cost model for bounded extraction/formatting, a balanced model for ordinary implementation, and stronger reasoning for uncertain architecture or authorization review. The [shared routing policy](cost-and-usage.md) separates model cost from host resource limits.
+The lead/client queues work when the coordinator returns `resource_conflict` or `capacity_exceeded`; the coordinator is an admission gate, not a waiter queue or agent launcher. Retry when the conflicting work releases ownership or capacity, within the task's retry policy. Do not duplicate a coordinator, steal an expired lease, kill unrelated processes, or turn on maximum parallel testing to make progress. Model choice follows the [shared routing policy](cost-and-usage.md), which keeps model cost separate from these host resource limits.
 
 Describe the blocked operation and canonical reason, not “the skill is locked”:
 

@@ -3,9 +3,10 @@
 Use the [workflow test plan](workflow-test-plan.md) for scenario selection, pass
 criteria and the current distinction between runtime, agent and live integration
 coverage. The commands below verify the bundled runtime and repository.
-The [functional audit](evidence/skill-functional-audit.md) records actual artifact
-generation, native framework probes, discovered guidance defects and per-skill
-integration gaps; it does not treat metadata checks as end-to-end proof.
+The [functional audit](evidence/skill-functional-audit.md) of the 34 skills present
+on 2026-09-05 records actual artifact generation, native framework probes,
+discovered guidance defects and per-skill integration gaps; it does not treat
+metadata checks as end-to-end proof, and it has not been rerun since.
 
 All bundled runtime helpers and their tests use Swift. The package has no third-party dependencies: Foundation, CryptoKit, SQLite, CoreGraphics, ImageIO, and CoreText provide the implementation. Xcode, `git`, `gh`, and selected Apple tools remain subprocess dependencies where the operation needs them. Custom Python helpers are not required.
 
@@ -17,7 +18,7 @@ APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1
 "$APE_BIN_DIR/apple-verify" repository --root .
 ```
 
-The first command builds the executable and runs targeted regression tests. The second validates skill metadata, documentation links, JSON/schema pairs, workflow dependencies and lease intervals, terminal conditions, capability policies, fixtures, and the example ledger. It does not contact GitHub, boot Simulator, evaluate model quality, or measure an app's performance.
+The first command builds the executable and runs targeted regression tests. The second validates skill metadata and the description budget, documentation links, JSON/schema pairs, workflow dependencies and lease intervals, terminal conditions, capability policies, fixtures including the [routing fixture](../tests/fixtures/skill-routing.json), and the example ledger. It does not contact GitHub, boot Simulator, evaluate model quality, or measure an app's performance.
 
 CI runs the same checks on macOS. Keep worker counts bounded; do not add a second build just to repeat a passing result. Generated `.build` content is ignored and excluded from installed-source identity.
 
@@ -99,8 +100,11 @@ the installed skill root still supplies trusted schemas and source identity.
 
 ## Evidence and limits
 
-The [open-source portability audit](evidence/open-source-portability.md) inventories
-all current skills and records synthetic consumer decision checks. Golden script
+The [open-source portability audit](evidence/open-source-portability.md) inventoried
+the 38 skills present at its base commit, `947022e`, and records synthetic
+consumer decision checks. Skills added since are not in either audit; the
+[current verification boundary](workflow-test-plan.md#current-verification-boundary)
+lists them with the latest suite result. Golden script
 regressions execute the real Swift scripts from an unrelated working directory;
 they do not require or validate a live Figma file or app capture.
 

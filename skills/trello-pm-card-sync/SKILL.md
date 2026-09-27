@@ -63,11 +63,17 @@ card.
 
 ## Target version for app Todo cards
 
-Before creating or normalizing a Todo card for an App Store app, verify the
-app's currently released App Store marketing version from live App Store or
-App Store Connect evidence. Confirm the app identity, such as its product page,
-bundle ID, or App Store ID, so a similarly named app or stale local project
-version is not treated as the current release.
+Resolve a target marketing version for an App Store app's Todo card, when
+creating it or normalizing one that has none, if the board tracks target
+versions (a named version label or visible custom field) or the user asks for
+one. Otherwise record `Target version: Not provided` and continue. A request that
+only tidies an existing card's text leaves its version as it is.
+
+Verify the app's currently released marketing version from live evidence; the
+public App Store product page is enough, and App Store Connect also works.
+Confirm the app identity, such as its product page, bundle ID, or App Store ID,
+so a similarly named app or stale local project version is not treated as the
+current release.
 
 Use the requested scope to recommend the next target marketing version:
 
@@ -76,14 +82,17 @@ Use the requested scope to recommend the next target marketing version:
 - Recommend a major increment only for an explicitly breaking or fundamental
   product change.
 
-Tell the user the verified current version and the recommended next version,
-then ask them to confirm the target version. Do not create or normalize the
-Todo card, or attach its target-version label, until the user explicitly
-confirms. After confirmation, apply the board's established target-version
-label or visible custom-field convention and read the card back to verify it.
-If the board has no named version label/convention, or the required label does
-not exist, report that and ask how to proceed instead of guessing, reusing an
-unnamed label, or creating a new label without authorization.
+Show the verified current version and the recommended target in the same
+message as the proposed card, so one explicit confirmation settles both; keep
+preparing the rest of the card meanwhile. Create a new Todo card, or attach the
+target-version label or field to an existing one, only after that confirmation;
+the rest of a requested normalization of an existing card can proceed with
+`Target version: Pending confirmation`. After confirmation, apply the board's
+established label or custom-field convention and read the card back to verify
+it. If the user asked for a version but the board has no version convention, or
+the required label does not exist, record the confirmed version in the brief and
+report the missing label; never guess, reuse an unnamed label, or create a label
+without authorization.
 
 ## Audit
 

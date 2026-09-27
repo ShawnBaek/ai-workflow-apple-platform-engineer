@@ -41,10 +41,9 @@ before architecture and task breakdown. Routine work does not need a new ADR.
   account discovery.
 - Broad work uses one repository writer and evidence-backed bounded attempts.
   Guarded/shared-resource work additionally requires the configured live leases.
-- Preserve an explicit model choice. Otherwise use the [shared model policy](../agent-harness/references/cost-and-usage.md):
-  efficient models for bounded mechanical work, balanced models for routine
-  implementation/review, and stronger reasoning for demonstrated risk or ambiguity.
-  Lead and reviewer roles do not automatically require the highest model.
+- Preserve an explicit model choice. Otherwise choose model and effort with the
+  [shared model policy](../agent-harness/references/cost-and-usage.md), which
+  sizes them to the work rather than to the lead or reviewer role.
 - For cross-layer features, the repository writer owns final integration across
   UI, package, persistence, and navigation boundaries. Specialists advise or
   change their layer; none may declare the feature complete from an isolated

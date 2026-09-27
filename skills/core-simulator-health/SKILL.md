@@ -108,7 +108,9 @@ identifier. Collect one bounded runtime inventory and correlate:
 Do not conclude that runtime count, beta duplication, or low storage is causal
 without a controlled result. Remove an exact runtime only with approval and
 through Xcode Settings > Components or another Apple-supported interface. Never
-delete runtime files directly.
+delete runtime files directly. One fresh official runtime re-download, also with
+approval, is the maximum repair attempt for one host/Xcode/runtime tuple; a
+repeated failure signature stops further reinstalling.
 
 ## Non-reboot recovery ladder
 

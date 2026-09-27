@@ -12,6 +12,12 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 - **`runtime_probe_scope` names a probe run.** The scope now holds `harness`, `owner_run_id`, `plan_id`, `descriptor` and `ttl_seconds`, and health derives the probe run's authority live from that harness, its authorization and its ledger. The old shape, with `state_path`, `owner_actor` and a copied `run_authority`, could never name the harness's own run and now fails the harness schema as `untrusted_binding`. Set up a separate probe run whose resource plan holds the `coresimulator_runtime_registry` admission, then rewrite the scope as described in [runtime probe scope](skills/agent-harness/references/coordinator-setup.md#runtime-probe-scope) when you rebind the harness. Harnesses with a null scope are unaffected.
 - **`resolve-project --registry` with a signal returns the registry projection.** With `--explicit-path` or `--opened-xcode-container`, the registry is now read. The call resolves as `registry_candidate` only when the registry lists that checkout and opened container, and it returns `opened_xcode_container_not_registered` (blocked) or `authoritative_target_not_registered` (unavailable) otherwise. An unreadable registry blocks the call. Resolve a target that is not in the registry without `--registry`.
 
+### Changed
+
+- [ADR 0002](docs/adr/0002-finalize-expired-quiescent-leases.md) is accepted. It shipped in 2.0.0-beta.10, whose entry below still calls it proposed.
+- `trello-pm-card-sync` resolves a target version only when the board tracks target versions or you ask for one, and asks for it together with the proposed card instead of holding back the rest of a normalization. For a new screen in an app with an established style, UI and Preview design discovery follows that style instead of asking the reference and style questions.
+- `apple-development-health` never builds, tests, installs, launches or boots a Simulator device; its runtime matrix cites those layers from the owning skills' evidence. The guarded runtime's documentation states that its authorization gate is agent-attested and when it is worth using, and `agent-harness` adds a worked local example.
+
 ### Fixed
 
 - A schema `pattern` `$` matches only at the end of input, as JSON Schema's ECMA-262 dialect requires, so a digest, path or identifier with a trailing newline no longer passes. A schema keyword whose value has the wrong JSON type now fails closed instead of being skipped.

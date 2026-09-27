@@ -1,6 +1,12 @@
 # ADR 0002: Finalize expired quiescent leases without takeover
 
-Status: proposed · Owner: repository maintainer
+Status: accepted · Date: 2026-09-27 · Owner: repository maintainer
+
+Accepted by the repository maintainer, who asked for this status update as a
+follow-up once the decision had shipped: `quiescent_release` merged in
+[#50](https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/50)
+and was released in [2.0.0-beta.10](../../CHANGELOG.md#200-beta10---2026-09-27).
+The decision below is unchanged.
 
 ## Context and decision
 

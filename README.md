@@ -7,13 +7,13 @@
       __|__
 ```
 
-**Give your AI coding agent a practical workflow for building native Apple apps.**
+**Agent skills for building iOS, iPadOS, watchOS and macOS apps with SwiftUI, UIKit and Xcode, in Claude Code and Codex.**
 
-Apple Platform Engineer is a collection of reusable skills for Codex and Claude Code. It helps your agent design, build, debug, test, and prepare reviewable changes using Apple documentation and Xcode tools.
+Apple Platform Engineer gives your AI coding agent a practical workflow for native Apple apps. It helps the agent design, build, debug, test, and prepare reviewable changes using Apple documentation and Xcode tools. It is for developers and small teams working on new or existing Apple-platform projects.
 
-Previously **iOS Experts**.
+Claude Code and Codex are supported equally: the same skills and skill names (`/name` in Claude Code, `$name` in Codex), and the same install command with a different `-a` value. The skills are standard Agent Skills Markdown that other clients may load, but the collection supports and documents only these two, and its optional guarded runtime runs only with them.
 
-For new and existing iOS, iPadOS, watchOS, and macOS projects using SwiftUI or UIKit.
+Previously **iOS Experts** (`ShawnBaek/iOS-experts`, which now redirects here).
 
 ## What it helps you do
 
@@ -109,6 +109,6 @@ linked third-party projects retain their own licenses.
 
 ## Explore
 
-[Skills](docs/skills.md) · [Workflow](skills/agent-harness/SKILL.md) · [Verification](docs/verification.md) · [Changelog](CHANGELOG.md) · [Contribute](CONTRIBUTING.md) · [Report a problem](skills/skill-maintenance/SKILL.md)
+[Skills](docs/skills.md) · [Workflow](skills/apple-platform-engineer/SKILL.md) · [Verification](docs/verification.md) · [Changelog](CHANGELOG.md) · [Contribute](CONTRIBUTING.md) · [Report a problem](skills/skill-maintenance/SKILL.md)
 
 **Version:** 2.0.0-beta.10
