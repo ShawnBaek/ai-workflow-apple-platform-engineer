@@ -1,7 +1,7 @@
 ---
 name: xcode-preview-design
 description: >-
-  Design SwiftUI, UIKit or AppKit screens in code with Xcode Previews, fixtures, review screenshots and Reduce Motion-checked motion. Use to design a new screen without Figma or to specify an animation.
+  Design SwiftUI, UIKit or AppKit screens in code with Xcode Previews (canvas or Xcode MCP RenderPreview), fixtures, review screenshots and Reduce Motion-checked motion. Use to design a new screen without Figma, render or fix a preview, or specify an animation.
 ---
 
 # Xcode Preview Design
@@ -28,8 +28,13 @@ For a new screen or substantial redesign, use [design discovery](../agent-harnes
    authoritative. The canvas renders in the Xcode that owns the open window. If
    that is not the selected installation, resolve the difference through the
    workflow before you compare previews with CLI builds.
-2. Prefer the official preview canvas and Xcode-integrated tools already exposed
-   by that Xcode window. Do not load a duplicate third-party preview provider.
+2. Render with that Xcode: its canvas, or the Xcode MCP server's
+   `RenderPreview` tool when this session has it for the same Xcode and
+   workspace; see [render through the Xcode MCP server](references/xcode-mcp-render.md).
+   Do not load a duplicate third-party preview provider. An inspection helper
+   that runs inside Apple's canvas, such as
+   [XRay](references/xray-inspection.md), which this collection's author
+   maintains, is optional and needs approval as a new dependency.
 3. Read Apple's current preview and motion guidance in
    [the review contract](references/preview-and-motion-contract.md) before a
    non-obvious API, motion, accessibility, or compatibility decision.
@@ -54,10 +59,17 @@ Design the real presentation before adding new domain/network/persistence logic.
    message, location, health, contact, credential, or customer data into Preview.
 5. Render the smallest relevant matrix in Xcode. A full screen commonly needs a
    baseline plus risk-relevant appearance, Dynamic Type, width, or state
-   variants; a small component may need fewer.
-6. Privacy-scan the rendered state, then capture a labeled canvas screenshot for
-   human review. Record preview name, source/diff identity, Xcode build,
-   device/trait configuration, and fixture; do not publish from this review step.
+   variants; a small component may need fewer. With `RenderPreview`, choose
+   each separate `#Preview` definition, such as a fixture state, or a dark or
+   extra-large-text variant defined as its own preview, by
+   `previewDefinitionIndexInFile`. Use the destination, variant, localization
+   and canvas-control overrides only for configurations that an earlier call
+   reported, and fix a failed render from its errors and diagnostics instead
+   of deleting the preview.
+6. Privacy-scan the rendered state, then capture a labeled canvas screenshot or
+   keep the `RenderPreview` snapshot for human review. Record preview name,
+   source/diff identity, Xcode build, rendered device/trait configuration, and
+   fixture; do not publish from this review step.
 7. Apply feedback to the acceptance decision and the affected fixture or motion
    spec. Durable workflow improvement is a reviewed repository change, never an
    unreviewed self-modifying rule.
@@ -119,7 +131,7 @@ Treat each layer as a different claim:
 
 | Evidence | Proves | Does not prove |
 | --- | --- | --- |
-| canvas render | one fixture renders in one recorded configuration | app build, launch, integration, or accessibility |
+| canvas or `RenderPreview` render | one fixture renders in one recorded configuration | app build, launch, integration, or accessibility |
 | canvas screenshot | point-in-time design review | runtime acceptance or motion |
 | interactive canvas review | a preview seam can respond in that canvas | full app navigation, persistence, or device behavior |
 | affected target build | selected code compiles for the recorded tuple | requested screen or interaction works |

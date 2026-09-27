@@ -146,8 +146,10 @@ they change persistent user state. Ask when the work needs another selection.
 
 - `XcodeRefreshCodeIssuesInFile` for changed source files;
 - `BuildProject`, then `GetBuildLog` with `severity: warning`;
-- when relevant, `RenderPreview` for changed previews and `RunSomeTests` for
-  selected tests, which use the active test plan;
+- when relevant, `RenderPreview` for changed previews, as
+  [`xcode-preview-design`](../xcode-preview-design/references/xcode-mcp-render.md)
+  describes, and `RunSomeTests` for selected tests, which use the active test
+  plan;
 - a runtime check only when asked, on the active run destination: resolve its
   exact UDID, because `deviceIdentifier` is matched loosely. The inline
   destination list has no UDID; read it from the file at
