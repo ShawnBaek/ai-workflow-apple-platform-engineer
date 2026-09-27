@@ -13,6 +13,8 @@ measures the requested app.
 ```swift
 func testScrollPerformance() {
     let app = XCUIApplication()
+    // Append once, outside the measured block, keeping Xcode's arguments.
+    app.launchArguments += ["-UITestScenario", "populated-notes"]
     let options = XCTMeasureOptions()
     options.invocationOptions = [.manuallyStart]
     measure(metrics: [
@@ -21,8 +23,7 @@ func testScrollPerformance() {
         XCTMemoryMetric(application: app)
     ], options: options) {
         // The app's existing fixture mode opens the same populated list at top.
-        app.terminate()
-        app.launchArguments = ["-UITestScenario", "populated-notes"]
+        // launch() ends the previous iteration's instance first.
         app.launch()
         let list = app.collectionViews["notes.list"]
         XCTAssertTrue(list.waitForExistence(timeout: 5))

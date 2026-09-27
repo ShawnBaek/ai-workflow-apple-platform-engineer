@@ -38,13 +38,16 @@ For repeated content, use a stable fixture/domain ID without PII and keep the
 semantic element unique inside its screen/container. Duplicate or missing IDs
 block the selector contract; do not fall through silently to coordinates. Seed
 deterministic state through an approved launch argument, environment variable,
-fixture, or dependency seam. Pass environment to the test process through the
-scheme, test plan, or `XCUIApplication.launchEnvironment`; `xcodebuild test`
-does not forward variables exported in the invoking shell, so a gate that reads
-`ProcessInfo.processInfo.environment` will silently skip. Wait explicitly for
-the expected element or state;
-do not use time-based sleeps as synchronization. Use hierarchy inspection before
-any documented coordinate fallback.
+fixture, or dependency seam, as the [launch contract](ui-test-architecture.md#govern-the-launch-contract)
+describes. Pass environment to the test process through the scheme, the test
+plan, or a shell variable prefixed `TEST_RUNNER_`, which `xcodebuild test`
+passes to the test runner with the prefix removed. Do not rely on other
+exported shell variables: a gate that reads one from
+`ProcessInfo.processInfo.environment` can silently skip. The app under test
+receives `XCUIApplication.launchEnvironment`, not the runner's environment;
+copy any runner value it needs into it. Wait explicitly for the expected
+element or state; do not use time-based sleeps as synchronization. Use
+hierarchy inspection before any documented coordinate fallback.
 
 Keep the test focused on the changed user contract. Prefer an assertion on the visible outcome over implementation details, and avoid recording-based selectors without reviewing and stabilizing them.
 

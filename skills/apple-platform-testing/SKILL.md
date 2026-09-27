@@ -1,6 +1,6 @@
 ---
 name: apple-platform-testing
-description: Plan and run minimum-sufficient Swift Testing, XCTest and XCUITest checks with deterministic UI evidence. Use to choose, write or run tests or read xcresult failures. Not for builds (use xcodebuild).
+description: Plan, structure and run minimum-sufficient Swift Testing, XCTest, XCUITest and E2E checks with deterministic launch scenarios and UI evidence. Use to choose, write or run tests, unblock system permission alerts in UI tests, or read xcresult failures. Not for builds (use xcodebuild).
 ---
 
 # Apple Platform Testing
@@ -42,6 +42,8 @@ semantics are themselves the contract, not as a fragile substitute for an
 identifier.
 
 Read [XCTest and UI automation practice](references/xctest-and-ui-automation.md) before changing UI/performance tests or interpreting results.
+
+Read [UI and end-to-end test architecture](references/ui-test-architecture.md) before adding UI or E2E tests or the app code that prepares their launch. Test support sits behind one composition-root seam that Release does not compile; a named, strictly parsed scenario sets each launch's whole state; permission prompts never block a test that is not about them; and E2E tests stay limited to journeys across a real service boundary.
 
 ## Run and report
 
