@@ -48,4 +48,6 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [xcode-storage](../skills/xcode-storage/SKILL.md) | Audit and safely reclaim owned Xcode storage |
 | [xcodebuild](../skills/xcodebuild/SKILL.md) | Official Xcode build, run, debug, and result tooling |
 
+The [skill lifecycle file](../skills/agent-harness/lifecycle/skill-lifecycle.json), installed with `agent-harness`, lists these skills as `current` for the release in [`VERSION`](../VERSION). It also records retired IDs and what replaced them (`native-app-lead` became `apple-platform-engineer` in 2.0.0-beta.10), the repository's former name and legacy Claude Code plugins, and the names reserved for Xcode's Apple skills and each client's bundled skills. Adding, retiring or renaming a skill updates it together with this catalog, as [Add a skill](../CONTRIBUTING.md#add-a-skill) describes.
+
 [Setup](getting-started.md) · [Verification](verification.md) · [Workflow research](research-notes.md)

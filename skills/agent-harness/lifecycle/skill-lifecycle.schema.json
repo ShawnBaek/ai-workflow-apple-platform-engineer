@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ios-experts:schema:skill-lifecycle:1.0.0",
+  "$comment": "Shape only. SkillLifecycleValidation checks the rest: current equals the skills/ folders, a retired ID never returns to current, each non-null replacedBy is current, a current skill takes a reserved name only with an exception that gives the reason, each exception still matches a current reserved name, and version equals VERSION. Never name this file manifest.json: before v2.1.280, Claude Code moved the skill folders that a manifest.json in ~/.claude/skills/ listed into ~/.claude/skills/.trash/. Keep this file and its schema out of agent-harness/contracts/: private harnesses bind the source-bundle digest of that folder, and version changes at every release.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "version",
+    "source",
+    "legacySources",
+    "current",
+    "retired",
+    "legacyClaudePlugins",
+    "reservedNames"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": "1.0.0"},
+    "version": {
+      "$ref": "#/$defs/version",
+      "description": "The collection release this file describes; equals the repository VERSION."
+    },
+    "source": {"const": "ShawnBaek/ai-workflow-apple-platform-engineer"},
+    "legacySources": {
+      "description": "Former GitHub names of this repository. An installation or lock entry that names one still belongs to this collection.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$"}
+    },
+    "current": {
+      "description": "Every skill this release ships: one ID per skills/<id>/ folder, equal to its frontmatter name.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/skillID"}
+    },
+    "retired": {
+      "description": "IDs this collection shipped and no longer ships. A retired ID is never reused.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "replacedBy", "since"],
+        "properties": {
+          "id": {"$ref": "#/$defs/skillID"},
+          "replacedBy": {
+            "description": "The current skill that took over, or null when the skill was removed without a successor.",
+            "anyOf": [{"$ref": "#/$defs/skillID"}, {"type": "null"}]
+          },
+          "since": {
+            "$ref": "#/$defs/version",
+            "description": "The first release that ships without this ID: the upcoming release when the retirement lands, not the version that still ships it."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "legacyClaudePlugins": {
+      "description": "The Claude Code plugin marketplace this repository published before it became a skills collection, and its plugins.",
+      "type": "object",
+      "required": ["marketplace", "plugins"],
+      "properties": {
+        "marketplace": {"$ref": "#/$defs/skillID"},
+        "plugins": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/skillID"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "reservedNames": {
+      "description": "Names a collection skill must not take, because another owner exposes them to the same agents.",
+      "type": "object",
+      "required": ["appleSkills", "appleNamespace", "clientBuiltins", "exceptions"],
+      "properties": {
+        "appleSkills": {
+          "description": "Skills that Xcode ships to its coding agents, across the supported Xcode releases; the set differs between releases.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/skillID"}
+        },
+        "appleNamespace": {
+          "description": "The plugin namespace under which Xcode exposes its skills as <namespace>:<skill>.",
+          "$ref": "#/$defs/skillID"
+        },
+        "clientBuiltins": {
+          "description": "Skills each supported client bundles. In Claude Code a same-name skill replaces the bundled one; in Codex a duplicate name makes a plain $name mention ambiguous.",
+          "type": "object",
+          "required": ["claudeCode", "codex"],
+          "properties": {
+            "claudeCode": {
+              "description": "Bundled skills: the entries marked Skill in the Claude Code commands reference.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"$ref": "#/$defs/skillID"}
+            },
+            "codex": {
+              "description": "System skills Codex embeds from codex-rs/skills/src/assets/samples.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"$ref": "#/$defs/skillID"}
+            }
+          },
+          "additionalProperties": false
+        },
+        "exceptions": {
+          "description": "Current skills that still take a reserved name, each with the reason, until a rename retires the ID.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "reason"],
+            "properties": {
+              "id": {"$ref": "#/$defs/skillID"},
+              "reason": {"type": "string", "pattern": "\\S"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "skillID": {"type": "string", "maxLength": 64, "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"}
+  }
+}
