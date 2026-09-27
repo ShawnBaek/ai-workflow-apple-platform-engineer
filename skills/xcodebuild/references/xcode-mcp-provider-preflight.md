@@ -15,9 +15,10 @@ Xcode-capable entry:
 - resolved executable and symlink target;
 - package-manager owner or direct installation source;
 - resolved provider version and selected Xcode build;
-- the server's `DEVELOPER_DIR` and `MCP_XCODE_PID`, which are a path and a
-  process ID, and the Xcode installation they resolve to, plus any
-  `MCP_XCODE_SESSION_ID`, which names an Xcode tool session; and
+- the server's `DEVELOPER_DIR` and the Xcode installation it resolves to, plus
+  any `MCP_XCODE_SESSION_ID`, which names an Xcode tool session, and any
+  `MCP_XCODE_PID`, a process ID that a registration should not set (see
+  below); and
 - the parent client/task of each running provider process.
 
 A `brew tap` only registers a formula source; it does not prove that a formula
@@ -28,10 +29,10 @@ later launch. Do not install, update, untap, uninstall, or rewrite configuration
 during this read-only inventory. Redact all other environment values and
 credentials. Read registrations from the configuration files, such as
 `~/.claude.json` and a project's `.mcp.json` for Claude Code, or
-`~/.codex/config.toml` for Codex. Do not run `claude mcp list` or
-`claude mcp get` while diagnosing a wrong-Xcode connection: they health-check
-approved servers, which starts `xcrun mcpbridge` and can launch another
-installation's Xcode Service.
+`~/.codex/config.toml` and a trusted project's `.codex/config.toml` for Codex.
+Do not run `claude mcp list` or `claude mcp get` while diagnosing a wrong-Xcode
+connection: they health-check approved servers, which starts `xcrun mcpbridge`
+and can launch another installation's Xcode Service.
 
 Multiple STDIO provider processes may be expected when several local tasks are
 open. Count them by parent client/task and in-flight operation before calling
@@ -52,6 +53,15 @@ Registering it is a configuration change and requires explicit approval. First
 confirm that the selected Xcode supports the route and that its Intelligence
 settings allow external agents. Then bind the registration to that Xcode as
 described below. Do not add the same provider under multiple names.
+
+Choose the scope before registering. Each bridge process is a new agent that
+Xcode alerts about, and a client starts one in every session where the server
+is registered. Apple's Codex command writes the global `~/.codex/config.toml`,
+and a Claude Code user-scope entry (`-s user`) is global too, so either one
+starts a bridge in every repository. Prefer registering the server only in the
+repositories that need Xcode, as
+[per-project registration](xcode-mcp-project-setup.md) describes for both
+clients.
 
 `xcrun mcp-server enable` is not Codex registration. It changes permission for
 Xcode's separate headless MCP service; Xcode 27 release notes describe that
@@ -78,9 +88,10 @@ high.
 
 Apple's registration sets no environment. In Xcode 27.1 beta and 27.2 beta,
 `xcrun mcpbridge --help` says the bridge connects to the Xcode selected by
-`xcode-select` unless `MCP_XCODE_PID` names an Xcode process. So if an older
-Xcode is selected globally and a newer one is open, the bridge can attach to
-the older Xcode, or launch that installation's headless Xcode Service
+`xcode-select` unless `MCP_XCODE_PID` names an Xcode process (do not set it;
+see below). So if an older Xcode is selected globally and a newer one is open,
+the bridge can attach to the older Xcode, or launch that installation's
+headless Xcode Service
 (`Contents/Developer/Library/Xcode/Agents/Xcode Service.app`, the Xcode Service
 menu bar extra), and answer from it instead of from the developer's window.
 
@@ -91,23 +102,30 @@ the `xcode-select` choice for `xcrun` and the tools it runs. Xcode has no
 `xcrun` of its own that you could point to instead.
 
 ```sh
-# Claude Code: put another option between --env and the server name.
-claude mcp add --env DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
+# Claude Code: a personal entry for the current repository (local scope).
+# Put another option between --env and the server name.
+claude mcp add --scope local \
+  --env DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
   --transport stdio xcode -- xcrun mcpbridge
-# Codex
-codex mcp add xcode --env DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
-  -- xcrun mcpbridge
+# Codex: start it with the variable; the project entry below forwards it.
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer codex
 ```
 
 ```toml
-# Codex config.toml equivalent
+# Codex project .codex/config.toml
 [mcp_servers.xcode]
 command = "xcrun"
 args = ["mcpbridge"]
-
-[mcp_servers.xcode.env]
-DEVELOPER_DIR = "/Applications/Xcode-beta.app/Contents/Developer"
+env_vars = ["DEVELOPER_DIR"]
 ```
+
+Codex starts a stdio server with a cleared environment, so `DEVELOPER_DIR`
+reaches the bridge only through `env_vars` or the entry's `env` table. A global
+Codex entry can set the path in `env`, with
+`codex mcp add xcode --env DEVELOPER_DIR=<path> -- xcrun mcpbridge`, but it then
+starts a bridge in every repository. Keep Xcode paths out of committed files;
+[per-project registration](xcode-mcp-project-setup.md) shows the portable shared
+entries for both clients.
 
 - Adding, replacing, or editing a registration is a persistent configuration
   change. Get explicit approval for the exact client, scope, and path. Change
@@ -121,9 +139,13 @@ DEVELOPER_DIR = "/Applications/Xcode-beta.app/Contents/Developer"
   removed, or when the selection rule picks another installation. Check it
   during each task's preflight, and propose an update rather than silently
   following the old path.
-- `MCP_XCODE_PID` pins one running process and stops matching when Xcode
-  relaunches. Use it only for a diagnosis within one session, never in a
-  persistent registration.
+- Do not set `MCP_XCODE_PID`, in a registration or for a one-session
+  diagnosis. On 2026-09-27 with Xcode 27.2 beta (27B5019j), setting it to the
+  running Xcode's process ID left `tools/list` unanswered after 45 seconds,
+  while `DEVELOPER_DIR` alone returned the tools in about 5 seconds. Bind the
+  bridge with `DEVELOPER_DIR`. If an existing registration sets
+  `MCP_XCODE_PID`, report it and propose removing it. If you cannot bind the
+  bridge with `DEVELOPER_DIR`, report the bridge as unbound.
 
 Before trusting a response, check which Xcode answered:
 
@@ -153,8 +175,11 @@ or kill the other Xcode.
 
 1. **Installed:** the configured command resolves to the recorded executable and
    version. A tap, cache entry, or old process is insufficient.
-2. **Registered:** the intended client lists the server as configured and
-   enabled. This does not prove that the current task loaded it.
+2. **Registered:** the intended client's configuration files, read as described
+   above, contain the server, enabled. `codex mcp list` and `codex mcp get` read
+   them without starting it; `claude mcp list` and `claude mcp get` health-check
+   approved servers, which starts a bridge. This does not prove that the current
+   task loaded it.
 3. **Exposed:** after the client-prescribed restart or a new task, the expected
    Xcode tool namespace is visible. Do not assume hot reload.
 4. **Connected:** one bounded, read-only workspace-list call returns from the
