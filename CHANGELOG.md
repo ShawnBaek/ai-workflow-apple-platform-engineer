@@ -4,6 +4,16 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+### Migration
+
+- **`runtime_probe_scope` names a probe run.** The scope now holds `harness`, `owner_run_id`, `plan_id`, `descriptor` and `ttl_seconds`, and health derives the probe run's authority live from that harness, its authorization and its ledger. The old shape, with `state_path`, `owner_actor` and a copied `run_authority`, could never name the harness's own run and now fails the harness schema as `untrusted_binding`. Set up a separate probe run whose resource plan holds the `coresimulator_runtime_registry` admission, then rewrite the scope as described in [runtime probe scope](skills/agent-harness/references/coordinator-setup.md#runtime-probe-scope) when you rebind the harness. Harnesses with a null scope are unaffected.
+- **`resolve-project --registry` with a signal returns the registry projection.** With `--explicit-path` or `--opened-xcode-container`, the registry is now read. The call resolves as `registry_candidate` only when the registry lists that checkout and opened container, and it returns `opened_xcode_container_not_registered` (blocked) or `authoritative_target_not_registered` (unavailable) otherwise. An unreadable registry blocks the call. Resolve a target that is not in the registry without `--registry`.
+
+### Fixed
+
+- The resource coordinator drops a released or recovered lease seven days after both its transition and its owner's authorization window ended, so its state no longer grows with every acquisition. The state schema is unchanged and older schema-2 runtimes still read it; see [state retention](skills/agent-harness/references/coordinator-setup.md#state-retention) and [ADR 0004](docs/adr/0004-bound-coordinator-lease-history.md).
+- Health no longer traps on a resolved project registry candidate that lists an Xcode container, and the documented resolver call for an Xcode task or explicit root produces a resolution health accepts.
+
 ## [2.0.0-beta.10] - 2026-09-27
 
 This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, which landed with #38 (commit `5f0ccae`): [#39] through [#91]. Several changes break existing installations or private guarded-runtime harnesses, so read Migration first.

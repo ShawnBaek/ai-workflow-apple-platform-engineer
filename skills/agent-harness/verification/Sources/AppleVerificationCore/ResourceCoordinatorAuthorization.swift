@@ -141,6 +141,62 @@ extension ResourceCoordinator {
     }
     return authority
   }
+
+  /// Resolves a trusted harness's `runtime_probe_scope`, or nil when it has none. The scope names a
+  /// separate, already initialized probe run by its private harness, run ID and resource-plan
+  /// entry. That run's authority is derived live from its own harness, authorization and ledger,
+  /// as for any acquire, rather than copied into this harness: a copied authority would have to
+  /// contain the SHA-256 of the harness that contains it. The probe run must be separate because
+  /// this run is not registered yet when its pre-authorization health report is collected.
+  public static func runtimeProbeScope(
+    trustedHarness harness: [String: Any], context: RuntimeContext
+  ) throws -> RuntimeProbeScope? {
+    guard let raw = harness["runtime_probe_scope"], !(raw is NSNull) else { return nil }
+    let descriptorFields: Set<String> = [
+      "coordinator_instance_id", "registry_scope", "platform", "destination_id",
+      "runtime_identifier",
+    ]
+    guard let value = raw as? [String: Any],
+      Set(value.keys) == ["harness", "owner_run_id", "plan_id", "descriptor", "ttl_seconds"],
+      let probePath = value["harness"] as? String, probePath.hasPrefix("/"),
+      let runID = value["owner_run_id"] as? String, !runID.isEmpty,
+      let planID = value["plan_id"] as? String, !planID.isEmpty,
+      let descriptor = value["descriptor"] as? [String: Any],
+      Set(descriptor.keys) == descriptorFields,
+      descriptor.values.allSatisfy({ ($0 as? String)?.isEmpty == false }),
+      let ttl = integer(value["ttl_seconds"]), ttl > 0, ttl <= maxTTLSeconds,
+      let binding = harness["resource_coordinator"] as? [String: Any],
+      let statePath = binding["state_path"] as? String,
+      let ownAuthorization = harness["run_authorization"] as? String
+    else { throw ResourceCoordinatorError("invalid_runtime_probe_scope") }
+    let probeURL = URL(fileURLWithPath: probePath)
+    let probe = try loadTrustedHarness(harnessPath: probeURL, context: context)
+    guard let probeAuthorization = probe["run_authorization"] as? String,
+      let actor = probe["selected_writer"] as? String
+    else { throw ResourceCoordinatorError("invalid_runtime_probe_scope") }
+    guard
+      URL(fileURLWithPath: probeAuthorization).resolvingSymlinksInPath()
+        != URL(fileURLWithPath: ownAuthorization).resolvingSymlinksInPath()
+    else {
+      throw ResourceCoordinatorError(
+        "invalid_runtime_probe_scope", "the probe run must be separate from this run")
+    }
+    guard jsonEqual(probe["resource_coordinator"], binding) else {
+      throw ResourceCoordinatorError(
+        "untrusted_binding", "the probe run is bound to a different coordinator")
+    }
+    let authority = try loadRunAuthority(
+      authorizationPath: URL(fileURLWithPath: probeAuthorization), harnessPath: probeURL,
+      harness: probe, runID: runID, resource: coreSimulator,
+      descriptor: descriptor.filter {
+        ["coordinator_instance_id", "registry_scope"].contains($0.key)
+      },
+      planID: planID, context: context)
+    return RuntimeProbeScope(
+      statePath: URL(fileURLWithPath: statePath), descriptor: descriptor, ownerRunID: runID,
+      ownerActor: actor, ttlSeconds: ttl, runAuthority: authority)
+  }
+
   public static func run(arguments: [String], context: RuntimeContext) throws -> Int32 {
     guard arguments.count >= 2 else { throw ResourceCoordinatorError("invalid_request") }
     let statePath = URL(fileURLWithPath: arguments[0])

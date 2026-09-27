@@ -36,8 +36,8 @@ a Homebrew formula are different provenance and drift risks.
 Select this component only when the run actually used the registry adapter. The
 required health check ID is `repository.project_registry`.
 
-Run the resolver once with the current opaque developer/host IDs and the same
-explicit-root/opened-container signals used by intake. Record its
+Run the resolver once with `--registry`, the current opaque developer/host IDs
+and the same explicit-root/opened-container signals used by intake. Record its
 `resolver_version`, canonical `registry_sha256`, status/reason code, selected opaque
 project/checkout IDs, remote fingerprint, and whether worktree consideration
 was explicitly authorized. Copy the stable health-projection fields into the

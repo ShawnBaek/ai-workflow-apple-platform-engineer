@@ -153,9 +153,10 @@ public enum HealthEvaluation {
   ]
   private static let fingerprint = try! NSRegularExpression(pattern: "^sha256:[0-9a-f]{64}$")
   private static let identifier = try! NSRegularExpression(pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$")
+  // ICU spells a code point `\x{hh}`; the Swift-style `\u{hhhh}` made this pattern trap on its
+  // first use, which is the first resolved candidate that lists an Xcode container.
   private static let xcodeContainer = try! NSRegularExpression(
-    pattern:
-      #"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[^\u{0000}-\u{001f}\u{007f}]+\.(?:xcodeproj|xcworkspace)$"#)
+    pattern: #"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[^\x{0}-\x{1f}\x{7f}]+\.(?:xcodeproj|xcworkspace)$"#)
   private static let staleRegistryReasons: Set<String> = [
     "missing_path", "not_git_root", "missing_xcode_container", "remote_fingerprint_mismatch",
   ]
@@ -771,19 +772,10 @@ public enum HealthEvaluation {
       }
     }
     let expected = values["--expected-report-bytes-sha256"]
-    let scope: RuntimeProbeScope? = {
-      guard let value = harness["runtime_probe_scope"] as? [String: Any],
-        let state = value["state_path"] as? String,
-        let descriptor = value["descriptor"] as? [String: Any],
-        let run = value["owner_run_id"] as? String,
-        let actor = value["owner_actor"] as? String,
-        let authority = value["run_authority"] as? [String: Any],
-        let ttl = strictPositiveInteger(value["ttl_seconds"])
-      else { return nil }
-      return RuntimeProbeScope(
-        statePath: URL(fileURLWithPath: state), descriptor: descriptor, ownerRunID: run,
-        ownerActor: actor, ttlSeconds: ttl, runAuthority: authority)
-    }()
+    // An unusable scope blocks simulator.runtime when that check is required, and only then.
+    let scope =
+      (try? ResourceCoordinator.runtimeProbeScope(trustedHarness: harness, context: context))
+      ?? nil
     let result = revalidate(
       reportBytes: try boundedRegularFile(
         reportURL, maximumBytes: 32 * 1_024 * 1_024, requireSingleLink: false),

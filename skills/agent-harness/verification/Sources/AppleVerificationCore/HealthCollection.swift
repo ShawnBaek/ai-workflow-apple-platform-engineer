@@ -3,14 +3,6 @@ import Darwin
 import Foundation
 
 public enum HealthCollection {
-  public static func registryResolution(
-    registry: Any?, harness: [String: Any], context: RuntimeContext
-  ) -> [String: Any] {
-    ProjectResolver.resolveProject(
-      registry: registry, explicitPath: harness["authoritative_root"] as? String,
-      openedXcodeContainer: harness["xcode_container"] as? String, allowWorktree: false,
-      context: context)
-  }
   public static func skillSHA256(_ path: URL) throws -> String {
     let fm = FileManager.default
     let root = path.resolvingSymlinksInPath()

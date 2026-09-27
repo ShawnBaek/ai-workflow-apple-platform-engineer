@@ -71,6 +71,17 @@ Pass `--explicit-path` when the user supplied an authoritative checkout. Pass
 `--opened-xcode-container` for an Xcode task. An existing worktree may be
 considered only after the current task explicitly authorizes `--allow-worktree`.
 
+With `--registry`, those signals still decide the target, and the output is the
+registry projection for it. It resolves as `registry_candidate` only when the
+registry lists that exact checkout and, for an Xcode task, the opened container
+among its `xcode_containers`. A listed checkout without the opened container is
+`blocked` (`opened_xcode_container_not_registered`). A target that none of the
+registry's valid candidates matches is `unavailable`
+(`authoritative_target_not_registered`); when the registry yields no candidate,
+its own reason is returned. Resolve such a target without `--registry` and do
+not select the `project_registry` health component. An unreadable registry
+blocks the call even when a signal is given.
+
 ## Static registry versus live task state
 
 The registry may contain only durable discovery data. Do not add branch, HEAD,

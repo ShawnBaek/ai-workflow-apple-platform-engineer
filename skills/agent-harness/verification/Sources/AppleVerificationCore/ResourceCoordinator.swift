@@ -27,6 +27,10 @@ public enum ResourceCoordinator {
     sourceWriter, xcodeProject, buildTuple, simulator, coreSimulator, macOSGUI, signing, github,
   ]
   public static let maxTTLSeconds = 3_600
+  /// A released or recovered lease stays in state until this long after both its terminal
+  /// transition and its owner's authorization window have ended. While that window is open, the
+  /// owner's ledger check still compares its release or recovery confirmation with the record.
+  public static let terminalLeaseRetentionSeconds = 7 * 24 * 60 * 60
 
   private static let cacheRoles: Set<String> = [
     "derived_data", "source_packages", "repository_checkouts", "artifacts", "package_cache",
@@ -69,7 +73,7 @@ public enum ResourceCoordinator {
     return value
   }
 
-  private static func integer(_ value: Any?) -> Int? {
+  static func integer(_ value: Any?) -> Int? {
     guard let n = value as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
     let kind = String(cString: n.objCType)
     if kind == "d" || kind == "f" {
@@ -524,6 +528,51 @@ public enum ResourceCoordinator {
     guard let bootstrap = state["migration_bootstrap"] as? [String: Any],
       bootstrap["legacy_leases_quiesced"] as? Bool == true
     else { throw ResourceCoordinatorError("migration_required") }
+  }
+
+  /// Drops terminal leases past their retention from a state `load` already validated, so the
+  /// state stops growing with every acquisition while every rule `load` enforces still holds:
+  /// the lease carrying `next_fencing_token` stays as its proof, and a kept recovery keeps the
+  /// replacement it names. Active leases, run authorities and the fencing sequence are untouched,
+  /// so a dropped receipt stays stale and no token is reissued. The layout is unchanged.
+  static func compactTerminalLeases(_ state: inout [String: Any], now: Date) {
+    guard var leases = state["leases"] as? [String: Any],
+      let authorities = state["run_authorities"] as? [String: Any],
+      let next = integer(state["next_fencing_token"])
+    else { return }
+    let horizon = now.addingTimeInterval(-TimeInterval(terminalLeaseRetentionSeconds))
+    var expired = Set<String>()
+    var kept: [String] = []
+    for (id, raw) in leases {
+      let lease = raw as? [String: Any] ?? [:]
+      let terminalAt: Any? =
+        switch lease["status"] as? String {
+        case "released": lease["released_at"]
+        case "recovered": lease["recovered_at"]
+        default: nil
+        }
+      guard let terminalAt, let terminal = try? parse(terminalAt), terminal <= horizon,
+        integer(lease["fencing_token"]) != next, integer(lease["recovery_fencing_token"]) != next,
+        let owner = lease["owner_run_id"] as? String,
+        let ownerExpires = try? parse(
+          (authorities[owner] as? [String: Any])?["authorization_expires_at"]),
+        ownerExpires <= horizon
+      else {
+        kept.append(id)
+        continue
+      }
+      expired.insert(id)
+    }
+    while let id = kept.popLast() {
+      if let replacement = (leases[id] as? [String: Any])?["replacement_lease_id"] as? String,
+        expired.remove(replacement) != nil
+      {
+        kept.append(replacement)
+      }
+    }
+    guard !expired.isEmpty else { return }
+    for id in expired { leases.removeValue(forKey: id) }
+    state["leases"] = leases
   }
 
   private static func load(_ path: URL) throws -> [String: Any] {
@@ -1322,6 +1371,7 @@ public enum ResourceCoordinator {
         state: &state, resource: resource, descriptor: descriptor, ownerRunID: ownerRunID,
         ownerActor: ownerActor, ttlSeconds: ttlSeconds, admission: admission,
         authorizationExpiresAt: window.1, now: now)
+      compactTerminalLeases(&state, now: now)
       try persist(state, to: path)
       return receipt(lease, instance: state["coordinator_instance_id"] as! String)
     }
@@ -1417,6 +1467,7 @@ public enum ResourceCoordinator {
       var leases = state["leases"] as! [String: Any]
       leases[lease["lease_id"] as! String] = lease
       state["leases"] = leases
+      compactTerminalLeases(&state, now: now)
       try persist(state, to: path)
       return receipt(lease, instance: state["coordinator_instance_id"] as! String)
     }
@@ -1445,6 +1496,7 @@ public enum ResourceCoordinator {
       var leases = state["leases"] as! [String: Any]
       leases[lease["lease_id"] as! String] = lease
       state["leases"] = leases
+      compactTerminalLeases(&state, now: now)
       try persist(state, to: path)
       return [
         "coordinator_instance_id": state["coordinator_instance_id"]!,
@@ -1693,6 +1745,7 @@ public enum ResourceCoordinator {
           "replacement_requested": replacement != nil,
         ]
       }
+      compactTerminalLeases(&state, now: now)
       try persist(state, to: path)
       return [
         "coordinator_instance_id": state["coordinator_instance_id"]!,

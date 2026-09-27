@@ -310,22 +310,16 @@
           ],
           "type": "object"
         },
-        "owner_actor": {
-          "enum": [
-            "codex",
-            "claude"
-          ]
+        "harness": {
+          "pattern": "^/",
+          "type": "string"
         },
         "owner_run_id": {
           "minLength": 1,
           "type": "string"
         },
-        "run_authority": {
-          "minProperties": 1,
-          "type": "object"
-        },
-        "state_path": {
-          "pattern": "^/",
+        "plan_id": {
+          "minLength": 1,
           "type": "string"
         },
         "ttl_seconds": {
@@ -335,12 +329,11 @@
         }
       },
       "required": [
-        "state_path",
-        "descriptor",
+        "harness",
         "owner_run_id",
-        "owner_actor",
-        "ttl_seconds",
-        "run_authority"
+        "plan_id",
+        "descriptor",
+        "ttl_seconds"
       ],
       "type": [
         "object",
