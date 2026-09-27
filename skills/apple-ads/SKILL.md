@@ -87,13 +87,15 @@ overage or as a guaranteed campaign stop. Verify its eligibility, expiry, and
 invoice-derived balance on the scoped Billing page, and record the invoice cutoff
 time. That balance is not a real-time spend meter. For credit-only authorization,
 calculate a conservative upper bound that includes spend since the invoice
-cutoff, current unbilled or later spend, the maximum remaining exposure of every
-other active campaign sharing the account before its end date, and an explicit
-reserve for reporting latency and the longest monitoring gap. If an active
+cutoff, current unbilled or later spend, the maximum remaining exposure of the
+proposed campaign and of every other active campaign sharing the account before
+its end date, and an explicit reserve for reporting latency and the longest
+monitoring gap. If an active
 campaign has no end date, or the upper bound cannot be proved strictly below the
 eligible credit in the account currency, pause or end the exposure and verify it,
 or do not activate unless the user explicitly accepts paid overage. Monitoring
-alone is not a hard cap.
+alone is not a hard cap, and credit can expire, change under its terms, or
+require a valid payment method.
 
 For Manage Bids, max CPT is a ceiling for a tap and the actual price may be lower.
 Derive a starting ceiling from unit economics, not from a universal dollar amount.
@@ -109,21 +111,26 @@ the current MCP tool schema, then bind the check to the exact project, app ID,
 country, platform, locale, keyword, and retrieval date. Avoid enumerating every
 project when the exact approved project name is already known.
 
-Use read-only ranking, localization, and competitor tools such as
-`check_keyword_rankings`, `get_search_rankings`, `list_localizations`, and
-`get_competitor_analysis`. Record the returned rank, result set, trend,
-difficulty, or entry barrier only when the response actually provides it. A low
-difficulty score is not proof of search volume, conversion, Apple Ads relevance,
-or an economical bid.
+Use read-only project, ranking, localization, and competitor tools such as
+`get_project`, `check_keyword_rankings`, `get_search_rankings`,
+`list_localizations`, and `get_competitor_analysis`. Record the returned rank,
+competitors, result count, trend, difficulty, or entry barrier only when the
+response actually provides it. Keep observed values apart from inference: rank is
+not search volume, result count is not demand, a low difficulty score is not an
+economical bid, and a localization does not prove natural local-language intent.
+Validate each candidate against the app's real features and live Apple Ads
+popularity, impressions, search terms, conversion, and value.
 
-Kickstart remains a third-party evidence source below current Apple documentation
-and live account read-back. Do not silently substitute another ASO vendor when
-Kickstart is unavailable; report the missing check. Do not call its App Store
-Connect refresh/mutation tools or Apple Ads create/update tools under read-only
-ASO authority. Any Kickstart Apple Ads report or write must still pass the account
-guard and explicitly set the approved ad-account ID rather than using its selected
-account default; if the organization cannot also be constrained as required by
-private policy, use another approved client or stop.
+Kickstart remains a third-party evidence source below current Apple
+documentation and live account read-back. Do not silently substitute another ASO
+vendor when Kickstart is unavailable or rate-limited; report the missing check.
+Do not call `refresh_project_data` or its other App Store Connect
+refresh/mutation tools, tracked-keyword mutations, or Apple Ads create/update
+tools under read-only ASO authority. Any
+Kickstart Apple Ads report or write must still pass the account guard and
+explicitly set the approved ad-account ID rather than using its selected account
+default; if the organization cannot also be constrained as required by private
+policy, use another approved client or stop.
 
 ## Design a test around search intent
 
@@ -148,19 +155,10 @@ private policy, use another approved client or stop.
 - Review recommendations individually. Never bulk-add a recommendation list or
   competitor names without checking product relevance, current policy, language,
   search popularity, and the resulting query intent.
-- Before adding a keyword, normalize and deduplicate it against existing exact
-  and broad keywords, check conflicts with negative keywords, verify the current
-  per-ad-group keyword limit, and read the effective or inherited max CPT. Verify
-  that the campaign daily budget satisfies the current API constraint relative
-  to the ad group's default bid before submission. New keywords can default to
-  broad match and the match type cannot be changed after save; pass the intended
-  match type explicitly and pause/re-add only with fresh approval when a saved
-  type is wrong.
-- Treat third-party ASO difficulty or entry-barrier scores as candidate evidence,
-  not search demand, Apple relevance, expected volume, or a bid recommendation.
-  Start with the scoped Kickstart MCP evidence above, then validate candidates
-  with current Apple popularity, impressions, search terms, conversion evidence,
-  and the app's real feature set.
+- Before adding a keyword, apply the keyword write checks in
+  [campaign optimization](references/campaign-optimization.md#campaign-and-keyword-structure).
+  A saved keyword's match type cannot be changed, so pass the intended match
+  type explicitly.
 
 Match the search intent through the product page, first screenshots, onboarding,
 paywall, and purchase. A default ad uses default App Store product-page assets.
@@ -183,26 +181,18 @@ proves local search demand.
 
 Use one consistent date range, time zone, attribution definition, and report
 granularity. Inspect campaign, ad group, keyword, search-term, and ad-variation
-levels with pagination and stable IDs.
+levels with pagination and stable IDs, then diagnose the first failing funnel
+layer with the
+[performance decisions](references/campaign-optimization.md#performance-decisions)
+table before buying more taps.
 
-- No impressions: check status, eligibility, relevance, search popularity,
-  placement, audience reach, budget, and bid competitiveness.
-- Impressions without taps: check query intent, keyword breadth, and visible ad
-  or product-page promise.
-- Taps without downloads: check localization, screenshots, page performance,
-  device compatibility, and expectation mismatch.
-- Downloads without the intended value event: check onboarding, activation,
-  paywall, price, product fit, and attribution plumbing before buying more taps.
-- Attributed value below target: wait for the stated conversion delay and a
-  sufficient sample, then lower or pause the bounded loser.
-- Value above target with constrained reach: consider a gradual bid or budget
-  test while preserving the target CPA or ROAS.
-
-Do not use a universal conversion rate, impression-share threshold, country tier,
-fixed bid increment, fixed max-CPT cutoff, or number of elapsed days as an
-automatic decision. Apple notes that initial data can take 24–48 hours and major
-changes need time, but low-volume terms may require longer. Change one material
-variable at a time and define the next review by both time and sample.
+Do not use a universal conversion rate, impression-share threshold, country
+tier, fixed bid increment or discount from a suggested bid, fixed max-CPT
+cutoff, keyword length, or number of elapsed days as an automatic decision.
+Treat third-party case studies and their revenue claims as hypotheses. Apple
+notes that initial data can take 24–48 hours and major changes need time, but
+low-volume terms may require longer. Change one material variable at a time and
+define the next review by both time and sample.
 
 Use the measurement path that matches the traffic. Use AdServices and Apple Ads
 reporting for Apple Ads campaign attribution; use AdAttributionKit for supported

@@ -36,11 +36,13 @@ capture follow their supported Xcode/OS paths, not a Simulator command substitut
 The inspected `simctl` defaults to HEVC; select a supported source codec explicitly
 and still check/derive the final preview's dimensions, frame rate and encoding.
 
-Installed `asc 2.2.0` exposes local `screenshots capture/run` as experimental;
-capture defaults to the `axe` provider and requires an installed app. It does not
-prove freshness by itself. Use it only when selected and available, with exact
-destination and independently established build identity. Do not install another
-capture provider when Apple's tools already meet the task.
+`asc` also has local `screenshots capture` and `run`. In asc 5.6.0, capture
+defaults to the `axe` provider for a Simulator (booted, or chosen with `--udid`)
+that already has the app installed, and `--provider macos` captures a running Mac
+app; 2.2.0 marked both commands experimental. Capture does not prove freshness by
+itself. Use it only when selected and available, with exact destination and
+independently established build identity. Do not install another capture
+provider when Apple's tools already meet the task.
 
 ## Check media through Apple frameworks
 
@@ -68,7 +70,7 @@ asc video-previews upload --help
 asc video-previews set-poster-frame --help
 ```
 
-In inspected 2.2.0, the command is `video-previews`, not `app-previews`.
+In asc 2.2.0 and 5.6.0, the command is `video-previews`, not `app-previews`.
 `screenshots validate` is a local format/size check and does not establish build
 freshness or compliance with every current Apple rule. `video-previews upload`
 uses an App Store **version-localization resource ID**, not the locale string.

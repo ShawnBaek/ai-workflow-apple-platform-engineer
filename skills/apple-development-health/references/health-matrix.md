@@ -93,6 +93,13 @@ Use a capability matrix rather than one connection bit:
 | hierarchy/touch/capture | actual interaction semantics |
 | direct Apple CLI path | fallback evidence, not proof MCP is healthy |
 
+Health itself probes only discovery and, after an access grant, one fresh
+session. The install/run and hierarchy/touch/capture rows cite evidence from
+the skill that performed them (`xcodebuild`, `screenshot`) for the same
+workspace and destination. Without that evidence, list the row as omitted in
+the check's `evidence`; a row the task requires then leaves the check
+`degraded` or `blocked`, never `healthy`.
+
 One capability may be degraded while another works. After a user grants Xcode
 agent access, discard a stale session, start one fresh session, retry the blocked
 read-only capability once, then stop if unchanged. Do not repeat 300-second
@@ -145,6 +152,9 @@ or unusable status response is blocked when selected. If not selected, report
   present. Bind the explicit feature directory and approved Git branch as two
   independent identities. Compare immutable accepted artifacts before every
   external write and mutable workflow continuity as a separate checkpoint.
+- When Spec Kit is selected, record the `specify --version` answer; any answer
+  other than `specify 1.0.1` is a migration candidate that `spec-snapshot`
+  refuses.
 - Spec Kit logs describe specification/workflow state; the harness ledger owns
   approvals, attempts, leases, evidence, and external writes.
 - For TestFlight profiles, verify the private Apple account/team guard before
@@ -157,40 +167,40 @@ or unusable status response is blocked when selected. If not selected, report
 
 ## CoreSimulator and runtime layers
 
-A project-independent runtime inventory that does not return within 30 seconds
-is an infrastructure gate failure. Use one bounded retry for a read-only MCP
-capability; stop Simulator mutation fan-out when CoreSimulator is invalid, a
-runtime disk service is unresponsive, or a process is in uninterruptible state.
+Health collects only the read-only runtime inventory: `xcrun simctl list
+runtimes --json`, plus `xcrun simctl list devices available --json` when the
+task needs a destination, each once within 30 seconds. An inventory that does
+not return in time is an infrastructure gate failure, not an app failure. Use
+one bounded retry for a read-only MCP capability. Route duplicate-build,
+disk-image, unavailable or `Deleting` findings to `core-simulator-health`
+without mutation; it owns runtime repair.
 
 Never infer a single root cause from old beta images, a large inventory, low
 disk space, multiple MCP processes, host/Xcode drift, or runtime verification
 error `-67054`. They are evidence or hypotheses until a controlled comparison
-proves causality. One fresh official runtime re-download is the maximum repair
-attempt for one host/Xcode/runtime tuple; a repeated signature stops reinstall.
+proves causality.
 
-Runtime health layers are separate:
+A fully usable runtime has further layers that health does not run, because
+they boot devices, install apps or run tests: a monitored boot of a temporary
+device (named and deleted as in
+[destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination)),
+a second boot when stability is an acceptance criterion, a system-app
+launch, project install and launch, XCTest execution with counts,
+hierarchy/screenshot/touch observation, and session shutdown.
+`core-simulator-health` (boot and recovery), `xcodebuild` and
+`apple-platform-testing` (install, launch and tests) run them under their own
+authorization and ownership. When the task needs them, cite that skill's
+current evidence for the same Xcode, runtime and destination. Otherwise list
+them as omitted layers in the simulator check's `evidence`. A required layer
+without current evidence leaves that check `degraded` or `blocked`; the
+inventory alone never makes it `healthy`.
 
-1. `xcrun simctl list runtimes --json` bounded availability inventory; route
-   duplicate-build, disk-image, unavailable, or `Deleting` diagnosis to
-   `core-simulator-health` without mutation;
-2. fresh temporary-device monitored boot reaches terminal `Finished`; name,
-   record and delete that device as in
-   [destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination)
-   step 3;
-3. complete shutdown and a strict second monitored boot when runtime stability
-   is an acceptance criterion;
-4. system-app launch;
-5. project install and project launch;
-6. XCTest worker materializes and tests actually execute with counts;
-7. hierarchy, screenshot, and touch/gesture observation;
-8. session shutdown and temporary UUID disappearance.
-
-Exit code 0, `Ready`, `Verified`, first boot, screenshot, or install alone does
-not prove the complete path. Parse terminal boot text: aggregate
-`Data Migration Failed` is Simulator OS migration evidence and does not
-implicate app Core Data/SwiftData when the app was not installed or launched.
-A runtime can be partially usable and should then be `degraded`, not healthy or
-dead.
+When reading that evidence, exit code 0, `Ready`, `Verified`, first boot,
+screenshot, or install alone does not prove the complete path. In terminal boot
+text, an aggregate `Data Migration Failed` is Simulator OS migration evidence
+and does not implicate app Core Data/SwiftData when the app was not installed or
+launched. A runtime can be partially usable and should then be `degraded`, not
+healthy or dead.
 
 Fresh-device runtime health and existing-device task validation are distinct.
 Likewise, a provider omitting an older runtime from its interaction targets is a

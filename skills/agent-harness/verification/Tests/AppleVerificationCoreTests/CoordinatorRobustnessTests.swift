@@ -85,6 +85,7 @@ final class CoordinatorRobustnessTests: XCTestCase {
       "contracts/schemas/run-authorization.schema.json")
     envelope["$schema"] = schema.absoluteString
     envelope["contract_schema_sha256"] = "sha256:" + (try HarnessRuntime.sha256File(schema))
+    envelope = approvalWindow(of: envelope, containing: Date())
     try HarnessRuntime.atomicWriteJSON(envelope, to: authorization)
     var document = try HarnessRuntime.object(
       context.harnessRoot.appendingPathComponent("templates/harness-local.json"))

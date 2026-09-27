@@ -1,6 +1,6 @@
 # Comparison example
 
-For the collection-wide execution status, see the [34-skill functional audit](skill-functional-audit.md).
+For per-skill execution status as of 2026-09-05, see the [34-skill functional audit](skill-functional-audit.md); the [workflow test plan](../workflow-test-plan.md#current-verification-boundary) lists the skills added since.
 
 These images are **synthetic fixtures**, generated in Swift. They demonstrate the comparison tool; they are not Figma exports, Simulator captures, or proof that an app matches a design.
 

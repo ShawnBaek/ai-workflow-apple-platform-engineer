@@ -464,7 +464,12 @@ extension Authorization {
         for (field, value) in boundLedger where !same(authority?[field], value) {
           return (["coordination_required: canonical ledger binding drifted"], nil)
         }
-        let records = try loadLedger(ledgerPath)
+        let ledgerData = try Data(contentsOf: ledgerPath)
+        let records = try ledgerRecords(ledgerData)
+        let headErrors = ledgerHeadErrors(
+          ledgerData, records: records, ledgerPath: ledgerPath, runRoot: runRoot,
+          binding: boundLedger)
+        if !headErrors.isEmpty { return (headErrors, nil) }
         let now = ledgerClock(records, now: Date())
         let verified = ResourceCoordinator.verifyReceipt(
           statePath: coordinatorState,
@@ -519,6 +524,8 @@ extension Authorization {
             expectedAuthorizationHash: authorizationHash(envelope)
           ).allSatisfy({ same(boundLedger[$0.key], $0.value) })
         else { return (["coordination_required: canonical ledger binding drifted"], nil) }
+        try advanceLedgerHead(
+          ledgerPath: ledgerPath, runRoot: runRoot, binding: boundLedger, prefix: ledgerData)
         try appendLedger(record, to: ledgerPath, expectedIdentity: ledgerIdentity)
         guard
           try ResourceCoordinator.ledgerBinding(
@@ -526,6 +533,8 @@ extension Authorization {
             expectedAuthorizationHash: authorizationHash(envelope)
           ).allSatisfy({ same(boundLedger[$0.key], $0.value) })
         else { return (["coordination_required: canonical ledger binding drifted"], nil) }
+        try advanceLedgerHead(
+          ledgerPath: ledgerPath, runRoot: runRoot, binding: boundLedger, prefix: ledgerData)
         return ([], record)
       }
     } catch { return (["coordination_required: \(errorCode(error))"], nil) }

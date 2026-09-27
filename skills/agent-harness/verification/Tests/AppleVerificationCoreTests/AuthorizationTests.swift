@@ -920,13 +920,15 @@ final class AuthorizationTests: XCTestCase {
 
   func testRegisteredRunAuthorityMatchesEquivalentApprovalInstantsAtReserveAndDispatch() throws {
     // Registration stores canonical UTC millisecond stamps; an approver may write any RFC 3339 form.
+    let issued = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down) - 60)
+    let expires = issued.addingTimeInterval(60 * 60)
     for (issuedAt, expiresAt) in [
-      ("2026-01-01T00:00:00Z", "2098-01-02T00:00:00Z"),
-      ("2026-01-01T09:00:00+09:00", "2098-01-02T09:00:00+09:00"),
+      (wallClock(issued, offset: 0) + "Z", wallClock(expires, offset: 0) + "Z"),
+      (wallClock(issued, offset: 32_400) + "+09:00", wallClock(expires, offset: 32_400) + "+09:00"),
     ] {
       let run = try registeredRun(issuedAt: issuedAt, expiresAt: expiresAt)
       XCTAssertEqual(
-        run.authority["authorization_issued_at"] as? String, "2026-01-01T00:00:00.000Z")
+        run.authority["authorization_issued_at"] as? String, HarnessRuntime.timestamp(issued))
       XCTAssertEqual(try reservationAuthorityErrors(run), [], issuedAt)
       XCTAssertEqual(try dispatchAuthorityErrors(run), [], issuedAt)
     }
@@ -935,10 +937,11 @@ final class AuthorizationTests: XCTestCase {
   func testRegisteredRunAuthorityRejectsADifferentApprovalInstantAtReserveAndDispatch() throws {
     let reserveDrift = "coordination_required: run authority drifted or is unregistered"
     let dispatchDrift = "coordination_required: dispatch run authority drifted"
+    let issued = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down) - 60)
+    let issuedAt = wallClock(issued, offset: 32_400) + "+09:00"
+    let expiresAt = wallClock(issued.addingTimeInterval(60 * 60), offset: 0) + "Z"
     for field in ["authorization_issued_at", "authorization_expires_at"] {
-      let run = try registeredRun(
-        issuedAt: "2026-01-01T09:00:00+09:00", expiresAt: "2098-01-02T00:00:00Z"
-      ) { authority in
+      let run = try registeredRun(issuedAt: issuedAt, expiresAt: expiresAt) { authority in
         let instant = try HarnessRuntime.parseTimestamp(authority[field] as! String)
         authority[field] = HarnessRuntime.timestamp(instant.addingTimeInterval(1))
       }
@@ -946,16 +949,16 @@ final class AuthorizationTests: XCTestCase {
       XCTAssertEqual(try dispatchAuthorityErrors(run), [dispatchDrift], field)
     }
     // The same wall-clock time in another offset is another instant; no timezone fails closed.
-    let run = try registeredRun(
-      issuedAt: "2026-01-01T09:00:00+09:00", expiresAt: "2098-01-02T00:00:00Z")
-    for issuedAt in ["2026-01-01T00:00:00+09:00", "2026-01-01T00:00:00"] {
+    let run = try registeredRun(issuedAt: issuedAt, expiresAt: expiresAt)
+    let utcWallClock = wallClock(issued, offset: 0)
+    for issuedAt in [utcWallClock + "+09:00", utcWallClock] {
       var authorization = run.envelope
       authorization["issued_at"] = issuedAt
       XCTAssertEqual(
         try dispatchAuthorityErrors(run, authorization: authorization), [dispatchDrift], issuedAt)
     }
     var undated = run.envelope
-    undated["issued_at"] = "2026-01-01T00:00:00"
+    undated["issued_at"] = utcWallClock
     var partial = run.authority
     partial["authorization_hash"] = Authorization.authorizationHash(undated)
     partial.removeValue(forKey: "authorization_issued_at")
@@ -964,6 +967,15 @@ final class AuthorizationTests: XCTestCase {
         partial, envelope: undated, selectedWriter: run.harness["selected_writer"] as? String,
         trustedHarnessSHA256: try ResourceCoordinator.portableDocumentSHA256(run.harness)),
       [reserveDrift])
+  }
+
+  /// The instant's wall-clock time `offset` seconds east of UTC, without a zone designator.
+  private func wallClock(_ date: Date, offset: Int) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: offset)
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+    return formatter.string(from: date)
   }
 
   private struct RegisteredRun {
@@ -980,7 +992,9 @@ final class AuthorizationTests: XCTestCase {
     adjustAuthority: (inout [String: Any]) throws -> Void = { _ in }
   ) throws -> RegisteredRun {
     let root = try temporaryDirectory().resolvingSymlinksInPath()
-    var envelope = try currentApprovedEnvelope()
+    var envelope = approvalWindow(
+      of: try currentApprovedEnvelope(),
+      containing: try HarnessRuntime.parseTimestamp(issuedAt).addingTimeInterval(60))
     envelope["issued_at"] = issuedAt
     envelope["expires_at"] = expiresAt
     let runID = envelope["run_id"] as! String

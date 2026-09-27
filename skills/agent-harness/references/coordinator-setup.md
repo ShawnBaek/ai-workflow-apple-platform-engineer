@@ -108,7 +108,8 @@ a regular non-symlink file directly under that run root. Set that exact future
 path as `run_ledger` in the run-specific private harness. Initialization binds
 the canonical pathname, device/inode identity, and first approval record into
 the coordinator. A second filename, copied ledger, hard link, or replaced inode
-cannot authorize the run.
+cannot authorize the run. The runtime keeps its ledger head checkpoint,
+`<ledger>.head.json`, beside the ledger; leave it in place.
 
 The private Apple observation executable is a no-argument read-only adapter. It
 must first compare the active App Store Connect profile/account/team with the
@@ -121,10 +122,12 @@ checks its pinned bytes before every run. Capture its first output as the Apple
 observation used to prepare and reserve the request. Dispatch executes the same
 pinned probe again and compares stable state while requiring a fresh timestamp.
 
-Materialize the pending authorization into that directory, fill every
-task/health/repository/resource/grant fact, change the decision to `approved`,
-and finalize the same file against the approved schema. `--replace` is explicit;
-it recomputes the installed contract ID/hash and never approves missing fields.
+Materialize the pending authorization into that directory and fill every
+task/health/repository/resource/grant fact. Show the user the filled file; only
+after their explicit approval, change the decision to `approved` and finalize
+the same file against the approved schema. The runtime cannot tell who made
+that edit (see [trust boundary](#trust-boundary)). `--replace` is explicit; it
+recomputes the installed contract ID/hash and never approves missing fields.
 
 Materialize a fresh run-specific harness in the same directory (or copy the
 reviewed host template), then set `run_authorization`, `run_ledger`, private
@@ -282,12 +285,33 @@ the harness after the update.
 ## Trust boundary
 
 This local harness coordinates cooperative Codex, Claude, and developer
-processes running as the same logged-in user. Private JSON, file modes, hashes,
-locks, and fencing prevent accidental drift, stale reuse, and normal concurrent
-collisions; they are not a security boundary against a hostile same-user
-process that can rewrite files or call `git`, `gh`, or `asc` directly. The
-printed dispatch result is audit evidence, not a bearer credential enforced by
-GitHub, Apple, or Git.
+processes running as the same logged-in user. Its authorization gate is
+agent-attested: the agent it checks also writes the inputs. The agent records
+the user's approval in the authorization file (`decision`, free-text `actor`),
+appends the repository approval, review, evidence and time records to the
+ledger, and runs the `git`, `gh` or `asc` command itself after
+`verify-reservation`. The runtime checks the shape, hashes, windows and order of
+those records; it cannot tell whether the user actually approved or whether a
+recorded result is true.
+
+Private JSON, file modes, hashes, locks, and fencing prevent accidental drift,
+stale reuse, and normal concurrent collisions; they are not a security boundary
+against a hostile same-user process, or a misbehaving agent, that can rewrite
+files or call `git`, `gh`, or `asc` directly. The printed dispatch result is
+audit evidence, not a bearer credential enforced by GitHub, Apple, or Git.
+
+The gate is worth its setup when that bookkeeping catches real mistakes:
+
+- several agents or tasks, including Codex and Claude together, share one
+  host's checkout, build or Simulator capacity and need leases and fencing;
+- an unattended run must stay inside one approved set of exact actions, with a
+  ledger someone can audit afterwards;
+- a TestFlight continuation must stay bound to the exact account, app, build and
+  internal group.
+
+For one interactive agent on one task, the client's own permission prompts and
+the standalone skills give comparable approval assurance with less setup,
+though without leases, fencing or an auditable ledger.
 
 If adversarial isolation is required, place write credentials in a separate
 trusted broker, accept only signed run authorizations, and have that broker

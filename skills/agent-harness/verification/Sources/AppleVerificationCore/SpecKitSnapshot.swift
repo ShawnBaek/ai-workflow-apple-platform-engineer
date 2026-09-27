@@ -50,6 +50,41 @@ public enum SpecKitSnapshot {
     return result
   }
 
+  /// Compares the `specify` CLI first found on `PATH` with the pinned release through one bounded,
+  /// read-only `specify --version`, which v1.0.1 answers with `specify 1.0.1`. Any other answer,
+  /// including none, is a migration candidate. Returns nil when no `specify` is on `PATH`.
+  static func installedCLIErrors(environment: [String: String]) -> [String]? {
+    let executable = (environment["PATH"] ?? "").split(separator: ":").lazy
+      .filter { $0.hasPrefix("/") }
+      .map { URL(fileURLWithPath: String($0)).appendingPathComponent("specify").path }
+      .first { path in
+        var info = stat()
+        return stat(path, &info) == 0 && (info.st_mode & S_IFMT) == S_IFREG
+          && access(path, X_OK) == 0
+      }
+    guard let executable else { return nil }
+    var childEnvironment = environment
+    childEnvironment["NO_COLOR"] = "1"
+    childEnvironment["TERM"] = "dumb"
+    childEnvironment["PYTHONDONTWRITEBYTECODE"] = "1"
+    let result = try? HarnessRuntime.run(
+      executable: executable, arguments: ["--version"], environment: childEnvironment,
+      timeout: 10, maxOutputBytes: 65_536)
+    let reported =
+      result.flatMap { result in
+        result.exitCode == 0 && !result.timedOut && !result.truncated
+          ? result.stdout.split(whereSeparator: \.isNewline).lazy
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { $0.hasPrefix("specify ") }
+            .map { String($0.dropFirst("specify ".count)) } : nil
+      }
+    if let reported, reported == pinnedRelease || "v" + reported == pinnedRelease { return [] }
+    return [
+      "installed Spec Kit CLI \(executable) reports \(reported ?? "no recognizable release"), "
+        + "not the pinned \(pinnedRelease); treat it as a migration candidate"
+    ]
+  }
+
   public static func verifySnapshot(expected: [String: Any], current: [String: Any]) -> [String] {
     var errors: [String] = []
     if expected["spec_kit_release"] as? String != pinnedRelease {
@@ -356,6 +391,14 @@ public enum SpecKitSnapshotCommand {
       throw VerificationError.invalid(
         "usage: spec-kit-snapshot snapshot|verify --root PATH (--feature-directory PATH|--discovery)"
       )
+    }
+    if let errors = SpecKitSnapshot.installedCLIErrors(
+      environment: ProcessInfo.processInfo.environment)
+    {
+      if !errors.isEmpty { throw VerificationError.invalid(errors.joined(separator: "; ")) }
+    } else {
+      FileHandle.standardError.write(
+        Data("note: no specify CLI on PATH; its installed Spec Kit release is unverified\n".utf8))
     }
     let snapshot = try SpecKitSnapshot.buildSnapshot(
       root: root, release: options.value("release") ?? SpecKitSnapshot.pinnedRelease,

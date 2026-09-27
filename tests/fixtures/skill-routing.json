@@ -239,6 +239,17 @@
         "skill-maintenance"
       ],
       "why": "Review finding: skill-maintenance said a request to report a problem authorizes the report, so an agent could run gh issue create against the public collection with a body drafted from a private app session that only the agent had checked. One missed redaction becomes public. The request now authorizes drafting; publication needs confirmation of the exact content."
+    },
+    {
+      "id": "embedded-bundle-version-match",
+      "rule": "An embedded app extension or watch app carries its containing app's version and build.",
+      "statesRule": "release train",
+      "patternNote": "A doc that mentions release trains must also state the containing-app rule, so restoring the old question about which bundles share the release train fails.",
+      "requiresQualifier": "containing app",
+      "appliesTo": [
+        "app-versioning"
+      ],
+      "why": "version-boundaries.md told agents to ask whether extensions and an embedded watch app share the release train. Xcode's embedded-binary and WatchKit validation and Apple TN2420 require them to match the containing app."
     }
   ]
 }

@@ -31,6 +31,66 @@ public enum JSONSchemaValidator {
     validate(instance, schema: schema, path: path, root: root ?? schema, depth: 0)
   }
 
+  /// Compiles a JSON Schema `pattern` (ECMA-262, no flags) for ICU. Outside a character class an
+  /// unescaped ECMA-262 `$` matches only at the end of input, but ICU's `$` also matches before a
+  /// final line terminator, so it is rewritten to ICU's end-of-input `\z`.
+  static func expression(_ pattern: String) throws -> NSRegularExpression {
+    var translated = ""
+    var escaped = false
+    var inClass = false
+    for scalar in pattern.unicodeScalars {
+      if escaped {
+        escaped = false
+      } else if scalar == "\\" {
+        escaped = true
+      } else if scalar == "[" {
+        inClass = true
+      } else if scalar == "]" {
+        inClass = false
+      } else if scalar == "$" && !inClass {
+        translated += "\\z"
+        continue
+      }
+      translated.unicodeScalars.append(scalar)
+    }
+    return try NSRegularExpression(pattern: translated)
+  }
+
+  /// The assertions below read each keyword as its JSON Schema type and would skip a value of any
+  /// other type, so such a value fails closed here instead.
+  private static func keywordValueErrors(_ schema: [String: Any], path: String) -> [String] {
+    let count: (Any) -> Bool = {
+      !HarnessRuntime.isBoolean($0) && (($0 as? NSNumber).flatMap { Int(exactly: $0) } ?? -1) >= 0
+    }
+    let number: (Any) -> Bool = { matchesType($0, "number") }
+    let string: (Any) -> Bool = { $0 is String }
+    let object: (Any) -> Bool = { $0 is [String: Any] }
+    let array: (Any) -> Bool = { $0 is [Any] }
+    let subschema: (Any) -> Bool = { $0 is [String: Any] || HarnessRuntime.isBoolean($0) }
+    let strings: (Any) -> Bool = { ($0 as? [Any])?.allSatisfy { $0 is String } == true }
+    var checks: [String: (Any) -> Bool] = [
+      "$ref": string, "pattern": string, "format": string, "enum": array, "required": strings,
+      "properties": object, "patternProperties": object, "$defs": object, "definitions": object,
+      "uniqueItems": { HarnessRuntime.isBoolean($0) }, "multipleOf": number,
+      "dependentRequired": { ($0 as? [String: Any])?.values.allSatisfy(strings) == true },
+    ]
+    for key in [
+      "minLength", "maxLength", "minItems", "maxItems", "minContains", "maxContains",
+      "minProperties", "maxProperties",
+    ] { checks[key] = count }
+    for key in ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"] {
+      checks[key] = number
+    }
+    for key in ["items", "additionalProperties", "contains", "not", "if", "then", "else"] {
+      checks[key] = subschema
+    }
+    for key in ["allOf", "anyOf", "oneOf", "prefixItems"] { checks[key] = array }
+    return checks.keys.sorted().compactMap { key in
+      guard let value = schema[key], !checks[key]!(value) else { return nil }
+      return "\(path): invalid schema keyword value \(key)"
+    }
+  }
+
   private static func matchesType(_ value: Any, _ type: String) -> Bool {
     switch type {
     case "null": return value is NSNull
@@ -63,6 +123,7 @@ public enum JSONSchemaValidator {
     var result = schema.keys.filter { !supported.contains($0) }.sorted().map {
       "\(path): unsupported schema keyword \($0)"
     }
+    result += keywordValueErrors(schema, path: path)
     func child(_ value: Any, _ specification: Any, _ childPath: String) -> [String] {
       if HarnessRuntime.isBoolean(specification), let flag = specification as? Bool {
         return flag ? [] : ["\(childPath): forbidden by schema"]
@@ -112,7 +173,7 @@ public enum JSONSchemaValidator {
       }
       if let pattern = schema["pattern"] as? String {
         do {
-          if try NSRegularExpression(pattern: pattern).firstMatch(
+          if try expression(pattern).firstMatch(
             in: string, range: NSRange(string.startIndex..., in: string)) == nil
           {
             result.append("\(path): pattern mismatch")
@@ -204,11 +265,11 @@ public enum JSONSchemaValidator {
           result += child(value, specification, "\(path).\(key)")
         }
         for pattern in patterns.keys.sorted() {
-          guard let expression = try? NSRegularExpression(pattern: pattern) else {
+          guard let compiled = try? expression(pattern) else {
             result.append("\(path): invalid patternProperties expression")
             continue
           }
-          if expression.firstMatch(in: key, range: NSRange(key.startIndex..., in: key)) != nil {
+          if compiled.firstMatch(in: key, range: NSRange(key.startIndex..., in: key)) != nil {
             matched = true
             result += child(value, patterns[pattern]!, "\(path).\(key)")
           }

@@ -113,7 +113,8 @@ extension Authorization {
           approved: (authorization["health_attestation"] as? [String: Any])?["overall_status"])
       else { return (["dispatch live health status fell below the approved status"], nil) }
       return try HarnessRuntime.withFileLock(at: ledgerPath) {
-        let records = try loadLedger(ledgerPath)
+        let ledgerData = try Data(contentsOf: ledgerPath)
+        let records = try ledgerRecords(ledgerData)
         let lifecycle = ledgerContractErrors(
           records, coordinatorState: coordinatorState, context: context)
         if !lifecycle.isEmpty { return (lifecycle, nil) }
@@ -129,6 +130,9 @@ extension Authorization {
         for (key, value) in bindings where !jsonSame(authority[key], value) {
           return (["coordination_required: canonical ledger binding drifted"], nil)
         }
+        let headErrors = ledgerHeadErrors(
+          ledgerData, records: records, ledgerPath: ledgerPath, runRoot: runRoot, binding: bindings)
+        if !headErrors.isEmpty { return (headErrors, nil) }
         let matching = records.filter {
           $0["record_type"] as? String == "grant_reservation"
             && ($0["payload"] as? [String: Any])?["reservation_id"] as? String == reservationID
@@ -249,6 +253,8 @@ extension Authorization {
             expectedAuthorizationHash: authorizationHash(authorization)
           ).allSatisfy({ jsonSame(bindings[$0.key], $0.value) })
         else { return (["coordination_required: canonical ledger binding drifted"], nil) }
+        try advanceLedgerHead(
+          ledgerPath: ledgerPath, runRoot: runRoot, binding: bindings, prefix: ledgerData)
         try appendRecord(record, ledgerPath, expectedIdentity: ledgerIdentity)
         guard
           try ResourceCoordinator.ledgerBinding(
@@ -256,6 +262,8 @@ extension Authorization {
             expectedAuthorizationHash: authorizationHash(authorization)
           ).allSatisfy({ jsonSame(bindings[$0.key], $0.value) })
         else { return (["coordination_required: canonical ledger binding drifted"], nil) }
+        try advanceLedgerHead(
+          ledgerPath: ledgerPath, runRoot: runRoot, binding: bindings, prefix: ledgerData)
         return (
           [],
           [

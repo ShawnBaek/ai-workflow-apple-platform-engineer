@@ -109,9 +109,8 @@ reference, not authorization to raise limits or a claim of five-worker execution
 
 ## Cost-aware model routing
 
-Use the single [model and usage policy](cost-and-usage.md). Choose capability by
-behavioral risk, bind the effective model/effort, and preserve writer and resource
-ownership. A lead or ordinary reviewer does not automatically need deep capability.
+Follow the single [model and usage policy](cost-and-usage.md). A model choice
+never changes the writer or resource ownership above.
 
 ## Naming
 

@@ -2,14 +2,87 @@ import Foundation
 
 extension Authorization {
   public static func loadLedger(_ path: URL) throws -> [[String: Any]] {
+    try ledgerRecords(Data(contentsOf: path))
+  }
+
+  static func ledgerRecords(_ data: Data) throws -> [[String: Any]] {
     var records: [[String: Any]] = []
-    for line in try ledgerLines(Data(contentsOf: path)) {
+    for line in try ledgerLines(data) {
       guard let record = try JSONSerialization.jsonObject(with: line.bytes) as? [String: Any] else {
         throw VerificationError.invalid("invalid ledger JSON object on line \(line.number)")
       }
       records.append(record)
     }
     return records
+  }
+
+  /// The runtime's checkpoint of the ledger bytes it last appended to, kept beside the ledger in
+  /// the private run root. The coordinator binds only the ledger's path, inode and first record,
+  /// and an in-place truncation or rewrite keeps all three, so every later reservation and
+  /// dispatch requires the ledger to still begin with these bytes.
+  static func ledgerHeadURL(_ ledgerPath: URL) -> URL {
+    ledgerPath.deletingLastPathComponent().appendingPathComponent(
+      ledgerPath.lastPathComponent + ".head.json")
+  }
+
+  static func ledgerHeadErrors(
+    _ ledgerData: Data, records: [[String: Any]], ledgerPath: URL, runRoot: URL,
+    binding: [String: Any]
+  ) -> [String] {
+    let head = ledgerHeadURL(ledgerPath)
+    var info = stat()
+    guard lstat(head.path, &info) == 0 else {
+      let absent = errno == ENOENT
+      // Before its first append the runtime has recorded nothing, and the ledger holds none of
+      // the records only the runtime writes.
+      let runtimeRecord = records.contains {
+        ["grant_reservation", "grant_dispatch"].contains($0["record_type"] as? String ?? "")
+      }
+      return absent && !runtimeRecord
+        ? [] : ["coordination_required: ledger head checkpoint is missing or unreadable"]
+    }
+    guard let document = try? loadStablePrivateJSON(head, root: runRoot) as? [String: Any],
+      Set(document.keys) == [
+        "schema_version", "ledger_identity_sha256", "ledger_approval_sha256", "byte_count",
+        "prefix_sha256",
+      ], document["schema_version"] as? String == "1.0.0",
+      same(document["ledger_identity_sha256"], binding["ledger_identity_sha256"]),
+      same(document["ledger_approval_sha256"], binding["ledger_approval_sha256"]),
+      let count = jsonInt(document["byte_count"]), count > 0
+    else {
+      return ["coordination_required: ledger head checkpoint is invalid or not this ledger's"]
+    }
+    guard count <= ledgerData.count,
+      document["prefix_sha256"] as? String == "sha256:"
+        + HarnessRuntime.sha256(ledgerData.prefix(count))
+    else {
+      return ["coordination_required: ledger was truncated or rewritten below its recorded head"]
+    }
+    return []
+  }
+
+  /// Records the current ledger bytes as its head when they still begin with `prefix`. Runtime
+  /// writers call it before and after each append, so a failure after the append leaves the
+  /// previous head, which the appended ledger still satisfies.
+  static func advanceLedgerHead(
+    ledgerPath: URL, runRoot: URL, binding: [String: Any], prefix: Data
+  ) throws {
+    let current = try Data(contentsOf: ledgerPath)
+    guard current.starts(with: prefix) else {
+      throw VerificationError.invalid("ledger changed below the runtime's append")
+    }
+    let head = ledgerHeadURL(ledgerPath)
+    guard
+      head.deletingLastPathComponent().resolvingSymlinksInPath()
+        == runRoot.resolvingSymlinksInPath()
+    else { throw VerificationError.invalid("ledger head must be directly under the run root") }
+    try HarnessRuntime.atomicWriteJSON(
+      [
+        "schema_version": "1.0.0",
+        "ledger_identity_sha256": binding["ledger_identity_sha256"] ?? NSNull(),
+        "ledger_approval_sha256": binding["ledger_approval_sha256"] ?? NSNull(),
+        "byte_count": current.count, "prefix_sha256": "sha256:" + HarnessRuntime.sha256(current),
+      ], to: head)
   }
 
   /// A JSONL record ends at a 0x0A byte and nowhere else. U+2028, U+2029 and U+0085 are legal
@@ -148,6 +221,10 @@ extension Authorization {
       guard let sequence = jsonInt(record["sequence"]), sequence > previousSequence else {
         errors.append("ledger sequence must strictly increase at line \(line)")
         continue
+      }
+      // Each record is one above the last, from 1, so a removed record leaves a visible gap.
+      if sequence != previousSequence + 1 {
+        errors.append("ledger sequence skips a record before line \(line)")
       }
       previousSequence = sequence
       let recorded = try? HarnessRuntime.parseTimestamp(text(record["recorded_at"]))

@@ -236,7 +236,7 @@ final class AuthorizationRobustnessTests: XCTestCase {
   ) throws -> ReservedRun {
     let root = try GateRunSupport.temporaryDirectory(for: self)
     let action = "github.issue.update"
-    let envelope = try GateRunSupport.approvedEnvelope()
+    let envelope = approvalWindow(of: try GateRunSupport.approvedEnvelope(), containing: Date())
     let runID = envelope["run_id"] as! String
     let digest = Authorization.authorizationHash(envelope)
     let repository = envelope["repository"] as! [String: Any]

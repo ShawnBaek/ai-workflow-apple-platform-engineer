@@ -157,8 +157,11 @@ The health check must not:
 - install, update, enable, disable, or uninstall a CLI, skill, plugin, MCP, Xcode
   component, runtime, package, or Local LLM model;
 - edit Codex, Claude, Xcode AgentPlugin, project, signing, or GitHub settings;
-- start a build, test, device inventory, install, or launch merely to prove
-  an MCP connection;
+- build, test, install, or launch an app, or create or boot a Simulator device;
+  cite the owning skill's evidence instead, as the
+  [runtime layers](references/health-matrix.md#coresimulator-and-runtime-layers)
+  describe;
+- run a destination inventory merely to prove an MCP connection;
 - broaden OAuth scopes, switch cached accounts, create credentials, or reveal a
   token/profile/private key;
 - terminate providers/services, reboot, erase devices, delete runtimes, clear
