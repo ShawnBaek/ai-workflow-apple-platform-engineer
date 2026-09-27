@@ -19,10 +19,10 @@ private func fixture(_ body: String) -> [String: String] {
     """
     {"capabilityRouting": [
       {"id": "parity", "owner": "golden-testing", "referencedFrom": ["bridge", "generic-testing"]}
-    ]}
+    ], "ruleConsistency": []}
     """)
   texts["skills/golden-testing/SKILL.md"] = "# Golden testing"
-  texts["skills/bridge/SKILL.md"] = "Route parity work to golden-testing."
+  texts["skills/bridge/SKILL.md"] = "Route parity work to `golden-testing`."
   texts["skills/generic-testing/SKILL.md"] = "Plan and run tests."
 
   let errors = SkillRoutingValidation.validate(texts: texts)
@@ -31,7 +31,7 @@ private func fixture(_ body: String) -> [String: String] {
 
   // A reference in any document of the skill, not only its entry point, counts.
   texts["skills/generic-testing/references/evidence.md"] =
-    "For Figma-contract parity use golden-testing."
+    "For Figma-contract parity use `golden-testing`."
   #expect(SkillRoutingValidation.validate(texts: texts).isEmpty)
 }
 
@@ -40,7 +40,7 @@ private func fixture(_ body: String) -> [String: String] {
     """
     {"capabilityRouting": [
       {"id": "parity", "owner": "absent-owner", "referencedFrom": ["absent-source"]}
-    ]}
+    ], "ruleConsistency": []}
     """)
   texts["skills/other/SKILL.md"] = "# Other"
   let errors = SkillRoutingValidation.validate(texts: texts).sorted()
@@ -52,7 +52,7 @@ private func fixture(_ body: String) -> [String: String] {
 @Test func ruleConsistencyRequiresTheCarveOutWhereverTheRuleIsStated() {
   var texts = fixture(
     """
-    {"ruleConsistency": [
+    {"capabilityRouting": [], "ruleConsistency": [
       {"id": "color", "statesRule": "semantic colors?",
        "requiresQualifier": "design leaves the color open",
        "appliesTo": ["bridge", "ui"]}
@@ -72,13 +72,14 @@ private func fixture(_ body: String) -> [String: String] {
 
 @Test func ruleConsistencyReportsMalformedCasesInsteadOfPassingSilently() {
   let missingFields = SkillRoutingValidation.validate(
-    texts: fixture(#"{"ruleConsistency": [{"id": "x", "statesRule": "a"}]}"#))
+    texts: fixture(
+      #"{"capabilityRouting": [], "ruleConsistency": [{"id": "x", "statesRule": "a"}]}"#))
   #expect(missingFields.count == 1)
   #expect(missingFields[0].contains("Invalid rule case"))
 
   var texts = fixture(
     """
-    {"ruleConsistency": [
+    {"capabilityRouting": [], "ruleConsistency": [
       {"id": "x", "statesRule": "([", "requiresQualifier": "b", "appliesTo": ["s"]}
     ]}
     """)
