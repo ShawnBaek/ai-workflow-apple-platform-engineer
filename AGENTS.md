@@ -61,7 +61,8 @@ and issue triage through a verified, reviewable fix.
 Codex-only, Claude-only, and Codex-plus-Claude are supported. At most one agent
 may hold a repository-writer lease. Reviewers receive an immutable diff bundle;
 local LLMs may retrieve, rerank, or cluster logs but may not write or approve.
-Choose model capability from the assigned work, not the agent's title. A
+Choose model capability from the assigned work, not the agent's title, as the
+[model policy](skills/agent-harness/references/cost-and-usage.md) describes. A
 reviewer can exercise a frozen build with separately scoped runtime ownership;
 findings need code, reproduction, or applicable references, followed by author
 assessment and verification. Follow `skills/code-review/SKILL.md`.

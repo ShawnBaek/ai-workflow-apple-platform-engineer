@@ -13,7 +13,9 @@ template, webhook, and possible-cost requirements are accepted.
 ## 1. Prepare the private configuration
 
 1. Copy [channel-config.json](../templates/channel-config.json) to a private path
-   outside the repository, such as `~/.config/ios-experts/delivery-report.json`.
+   outside the repository, such as
+   `~/.config/apple-platform-engineer/delivery-report.json`. An existing private
+   file at another path keeps working; the path is only an example.
 2. Restrict that file to the current user (`chmod 600 <private-config>`). Store
    only aliases such as `owner`, `keychain.telegram.owner`, or
    `shortcuts.delivery-report-owner-text`.

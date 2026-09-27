@@ -25,7 +25,9 @@ For open design choices in a new screen or substantial redesign, follow
 [design discovery](../agent-harness/references/design-discovery.md): ask which
 competitor/reference experience matters and what the user likes/dislikes, then
 ask about missing style preferences. Reuse the shared brief and research only
-references that can inform this feature; precise fixes skip this intake.
+references that can inform this feature. Precise fixes skip this intake, and a
+new screen in an app with an established style follows that style unless a
+choice it leaves open would change the result.
 
 ### When the developer has a Figma file
 
@@ -66,7 +68,7 @@ Avoid speculative rebuild loops by reasoning through layout, contrast, Dynamic T
 
 When the developer asks for a screen or component:
 
-1. **Resolve the task and design direction.** Read the target and acceptance criteria. For a new screen without an accepted design direction, ask the missing reference-app/likes-dislikes and preferred-style questions from [design discovery](../agent-harness/references/design-discovery.md) in the next response, before selecting its presentation. Reuse supplied answers, including "no reference" or "you choose"; precise fixes skip this step's design questions. Inspect the project while awaiting an answer. Resolve only platform ambiguity that changes the result; do not expand to an iOS+iPad+Mac matrix by default.
+1. **Resolve the task and design direction.** Read the target and acceptance criteria. For a new screen in an app with no established style or accepted design direction, ask the missing reference-app/likes-dislikes and preferred-style questions from [design discovery](../agent-harness/references/design-discovery.md) in the next response, before selecting its presentation. When the app already has an established style, follow it and state that assumption. Reuse supplied answers, including "no reference" or "you choose"; precise fixes skip this step's design questions. Inspect the project while awaiting an answer. Resolve only platform ambiguity that changes the result; do not expand to an iOS+iPad+Mac matrix by default.
 2. **Pick the navigation container.** `NavigationStack` for iPhone-only flows; `NavigationSplitView` for anything that includes iPad or Mac; `NavigationStack` again for Watch.
 3. **Sketch in words first** (3–5 lines). Confirm structure only if it's ambiguous; otherwise proceed.
 4. **Name the exact SF Symbols.** Verify them against the selected SDK/toolchain and installed SF Symbols catalog. Prefer filled variants for primary actions, outline for secondary.

@@ -31,6 +31,7 @@ reason. Do not present required future proof as an already observed result.
 
 ## Handoff and sync
 - Current status: [existing mapped board status]
+- Target version, for an App Store Todo card: [confirmed marketing version, Pending confirmation, or Not provided]
 - Board-visible title: [readiness status] [TestFlight version (build)] [outcome, in English]
 - Next owner and readiness condition: [configured workflow]
 - Blockers: [reason or None]

@@ -18,10 +18,16 @@ Combine missing questions into the existing intake round:
    editorial or dense/professional. Which brand colors, typography, information
    density or motion preferences should we preserve or avoid?
 
-For a new screen with no accepted design direction, ask these missing questions
-in the next response before choosing the presentation. Omitted preferences are
-not the same as "no preference" or permission to choose on the user's behalf.
-Independent project inspection can continue while the answer is pending.
+For a new screen in an app with no established visual style or accepted design
+direction, ask these missing questions in the next response before choosing the
+presentation. Omitted preferences are not the same as "no preference" or
+permission to choose on the user's behalf. Independent project inspection can
+continue while the answer is pending.
+
+When the app already has an established style, such as existing screens, a
+design system or a brand guide, a new screen follows it: state that assumption
+and proceed. Ask only about a choice that style does not settle and that would
+change the result, such as a reference for an unfamiliar flow.
 
 Ask only for missing information that affects the work. An explicit "no
 reference", "keep our existing style" or "you choose" is an answer. When the

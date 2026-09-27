@@ -11,13 +11,16 @@ For product behavior and architecture use: accepted spec or decision record;
 source at the frozen repository commit; commit-pinned dependency source; then
 approved project analysis. For Apple API and toolchain truth use: live Apple
 documentation/release notes for the selected Xcode/SDK; one Apple-authored skill
-exposure; commit-pinned Apple sample code; iOS-experts guidance; then external
-material. Do not let a generic current API page override how the accepted
-product contract or repository is actually structured.
+exposure; commit-pinned Apple sample code; this collection's guidance; then
+external material. In `contracts/capabilities.json` this collection's tier keeps
+its former-name identifier `ios_experts`, a stable policy value rather than a
+different source. Do not let a generic current API page override how the
+accepted product contract or repository is actually structured.
 
 Use exact file/commit lookup for repository, spec, and decision data before
-semantic retrieval. A decision node must be `proposed`, `accepted`, or
-`superseded`; newer prose does not silently replace an accepted decision.
+semantic retrieval. A decision node carries its record's status as defined in
+[architecture decisions](architecture-decisions.md#keep-authority-and-ownership-clear);
+newer prose does not silently replace an accepted decision.
 
 ## Corpus policy
 

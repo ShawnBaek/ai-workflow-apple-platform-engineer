@@ -79,6 +79,23 @@ repository confirmation required by global policy remains a separate exact
 ledger approval for the first commit/push; one-shot authorization cannot erase
 that gate.
 
+## Dispatch an external write
+
+Every granted action uses its own single-use reservation from `authorize`, such
+as a commit, push, Issue, PR, comment, Project update, evidence publication,
+checks wait, or TestFlight upload, distribution, processing wait or readback. Run
+`apple-verify verify-reservation` for it immediately before the tool call, with
+nothing in between: no research, rendering or other action. Dispatch must match
+the reserved request and re-read the selected repository or Spec Kit state; an
+Apple action runs the same private, digest-pinned ASC probe again. The call must
+start within 60 seconds of the claim, sooner when the authority or lease expires
+first, and its `external_write` must be recorded before that deadline (see
+[the note below the table](#ledger-records-you-append)).
+
+A crash after reservation is ambiguous and burns that reservation. Read the
+target back and start a fresh authorization instead of retrying.
+[Coordinator setup](coordinator-setup.md#normal-use) has the exact commands.
+
 ## Ledger records you append
 
 The runtime writes three record types: `initialize-run` writes the
