@@ -21,9 +21,14 @@ The first shows the Xcode that `xcrun` tools and the bridge use by default. The
 second lists running GUI Xcode apps. The third reports whether Xcode's headless
 MCP service is running and which workspaces it has open. When the user's GUI
 Xcode is a different app, or the headless service answers without the user's
-project, the bridge is not bound to the user's window: ask for the container
-path instead. Pinning the bridge to that Xcode with `MCP_XCODE_PID=<pid>`
-changes the bridge configuration, so it needs approval.
+project, the bridge is not bound to the user's window: report the bridge as
+unbound and ask for the container path instead. Binding the bridge to that
+Xcode means giving the bridge that installation's `DEVELOPER_DIR` (Claude Code:
+a local-scope entry; Codex: start Codex with it), as the
+[provider preflight](../../xcodebuild/references/xcode-mcp-provider-preflight.md#bind-the-bridge-to-the-selected-xcode)
+describes. That changes the bridge configuration, so it needs approval. Do not
+set `MCP_XCODE_PID`: with Xcode 27.2 beta, a bridge given the running Xcode's
+process ID never answered `tools/list`.
 
 ## Classify the workspaces
 
