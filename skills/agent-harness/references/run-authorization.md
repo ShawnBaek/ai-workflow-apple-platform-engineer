@@ -25,9 +25,17 @@ their target from its create grant), PR
 creation binds a safe base and the approved head with `draft: false`, waits
 equal the approved time/retry bounds, and distribution/read-back names only the
 authorized internal group. A commit descriptor's `paths` is the approved path
-scope, not a file list: each entry lies within `allowed_paths` and uses the same
-prefix rule. The commit request must name exactly the live reviewed staged set,
-in any order, and every staged path must fall within that scope.
+scope, not a file list: each entry lies within `allowed_paths`. The commit
+request must name exactly the live reviewed staged set, in any order, and every
+staged path must fall within that scope.
+
+One allowed-path rule applies everywhere a path is checked: against the
+authorization's `allowed_paths`, an active lease's `allowed_paths`, a commit
+descriptor's path scope and a patch manifest. A path is admitted when it is
+repository-relative (not empty, not starting with `/`, no `..` component) and
+equals an allowed entry or lies below it, with `/` trimmed from the entry's ends
+first. So `dir` and `dir/` each admit `dir` and `dir/file`, but not `dir-evil`,
+`../dir`, `/dir` or `dir/../x`, and an empty list admits nothing.
 
 The envelope is also bounded in time and effort. Its approval window,
 `expires_at` minus `issued_at`, is at most 24 hours. Its `limits` allow at most

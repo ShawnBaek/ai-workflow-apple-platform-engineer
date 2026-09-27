@@ -25,6 +25,12 @@ extension Authorization {
     !value.isEmpty && !value.hasPrefix("/")
       && !value.split(separator: "/", omittingEmptySubsequences: false).contains("..")
   }
+  /// The one allowed-path rule for authorization `allowed_paths`, lease `allowed_paths`, commit
+  /// descriptor path scopes and patch manifests. A path is admitted when it is a safe
+  /// repository-relative path that equals an allowed entry or lies below it, with `/` trimmed from
+  /// both ends of the entry first: `dir`, `dir/` and `dir//` each admit `dir` and `dir/file`, but
+  /// never `dir-evil`, `../dir`, `/dir`, `dir/../x` or an empty path, and an entry that trims to
+  /// nothing admits nothing.
   static func pathAllowed(_ path: String, _ allowed: [String]) -> Bool {
     safeRelativePath(path)
       && allowed.contains {

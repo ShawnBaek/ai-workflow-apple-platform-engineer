@@ -133,7 +133,7 @@ extension Authorization {
     if paths.isEmpty || Set(paths).count != paths.count {
       errors.append("action request must bind at least one changed or affected path")
     }
-    if paths.contains(where: { !exactPathAllowed($0, envelope["allowed_paths"] as? [String] ?? []) }
+    if paths.contains(where: { !pathAllowed($0, envelope["allowed_paths"] as? [String] ?? []) }
     ) {
       errors.append("requested path is outside authorization")
     }
@@ -225,7 +225,7 @@ extension Authorization {
       if lease?["approval_id"] as? String != envelope["authorization_id"] as? String {
         errors.append("action lease is not bound to this run authorization")
       }
-      if paths.contains(where: { !exactPathAllowed($0, lease?["allowed_paths"] as? [String] ?? []) }
+      if paths.contains(where: { !pathAllowed($0, lease?["allowed_paths"] as? [String] ?? []) }
       ) {
         errors.append("requested path is outside the active lease allowance")
       }
@@ -332,13 +332,13 @@ extension Authorization {
     return live >= approved
   }
 
-  // The commit descriptor is fixed before implementation, so its paths are an approved scope with
-  // allowed_paths prefix semantics; the request names the live staged set within that scope.
+  // The commit descriptor is fixed before implementation, so its paths are an approved scope
+  // matched by the shared `pathAllowed` rule; the request names the live staged set within it.
   static func commitPathErrors(paths: [String], scope: [String], stagedPaths: [String]?)
     -> [String]
   {
     var errors: [String] = []
-    if paths.contains(where: { !exactPathAllowed($0, scope) }) {
+    if paths.contains(where: { !pathAllowed($0, scope) }) {
       errors.append("git.commit path is outside the structured operation descriptor path scope")
     }
     guard let stagedPaths, !paths.isEmpty, Set(paths).count == paths.count,
@@ -566,15 +566,5 @@ extension Authorization {
       errors.append("TestFlight archive evidence must be fresh after pr_ready")
     }
     return errors
-  }
-
-  /// Unlike the shared `pathAllowed`, an allowed entry matches the path itself only exactly as
-  /// written (`dir/` still admits `dir/file`, but not `dir`).
-  private static func exactPathAllowed(_ path: String, _ allowed: [String]) -> Bool {
-    safeRelativePath(path)
-      && allowed.contains {
-        path == $0
-          || path.hasPrefix($0.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/")
-      }
   }
 }
