@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:ios-experts:schema:capabilities:1.0.0",
+  "$comment": "Shape only. capabilities.json is the one place capability values are declared; the Swift runtime pins them with CapabilityPolicy.reviewedSHA256, and Swift that implements a declared value changes with it.",
   "type": "object",
   "required": [
     "schema_version",
@@ -28,24 +29,8 @@
       "type": "object",
       "required": ["codex", "claude", "collaborative"],
       "properties": {
-        "codex": {
-          "type": "object",
-          "required": ["writer_candidates", "max_active_writers"],
-          "properties": {
-            "writer_candidates": {"const": ["codex"]},
-            "max_active_writers": {"const": 1}
-          },
-          "additionalProperties": false
-        },
-        "claude": {
-          "type": "object",
-          "required": ["writer_candidates", "max_active_writers"],
-          "properties": {
-            "writer_candidates": {"const": ["claude"]},
-            "max_active_writers": {"const": 1}
-          },
-          "additionalProperties": false
-        },
+        "codex": {"$ref": "#/$defs/single_writer_mode"},
+        "claude": {"$ref": "#/$defs/single_writer_mode"},
         "collaborative": {
           "type": "object",
           "required": [
@@ -56,16 +41,16 @@
             "transfer_policy"
           ],
           "properties": {
-            "writer_candidates": {"const": ["codex", "claude"]},
-            "max_active_writers": {"const": 1},
-            "review_requires_immutable_patch": {"const": true},
+            "writer_candidates": {"$ref": "#/$defs/names"},
+            "max_active_writers": {"$ref": "#/$defs/positive_integer"},
+            "review_requires_immutable_patch": {"type": "boolean"},
             "writer_selection": {
               "type": "object",
               "required": ["required_before_claim", "authority", "reviewer_must_differ"],
               "properties": {
-                "required_before_claim": {"const": true},
-                "authority": {"const": "explicit_user_or_accepted_plan"},
-                "reviewer_must_differ": {"const": true}
+                "required_before_claim": {"type": "boolean"},
+                "authority": {"$ref": "#/$defs/name"},
+                "reviewer_must_differ": {"type": "boolean"}
               },
               "additionalProperties": false
             },
@@ -78,10 +63,10 @@
                 "fresh_capability_snapshot_required"
               ],
               "properties": {
-                "release_before_acquire": {"const": true},
-                "revoke_previous_writer_capabilities": {"const": true},
-                "matching_state_hash_required": {"const": true},
-                "fresh_capability_snapshot_required": {"const": true}
+                "release_before_acquire": {"type": "boolean"},
+                "revoke_previous_writer_capabilities": {"type": "boolean"},
+                "matching_state_hash_required": {"type": "boolean"},
+                "fresh_capability_snapshot_required": {"type": "boolean"}
               },
               "additionalProperties": false
             }
@@ -91,13 +76,13 @@
       },
       "additionalProperties": false
     },
-    "platforms": {"const": ["ios", "ipados", "watchos", "macos"]},
+    "platforms": {"$ref": "#/$defs/names"},
     "local_llm": {
       "type": "object",
       "required": ["allowed_roles", "forbidden_roles"],
       "properties": {
-        "allowed_roles": {"const": ["retrieve", "rerank", "extract_entities", "cluster_logs"]},
-        "forbidden_roles": {"const": ["writer", "approver", "reviewer_of_record"]}
+        "allowed_roles": {"$ref": "#/$defs/names"},
+        "forbidden_roles": {"$ref": "#/$defs/names"}
       },
       "additionalProperties": false
     },
@@ -112,350 +97,292 @@
         "rollback_required"
       ],
       "properties": {
-        "record_in_ledger": {"const": true},
-        "current_run_feedback_is_authoritative": {"const": true},
-        "silent_durable_policy_mutation": {"const": false},
-        "durable_promotion_requires": {
-          "const": "explicit_human_approval_or_repeated_evidence"
-        },
-        "local_llm_role": {"const": "cluster_and_propose_only"},
-        "rollback_required": {"const": true}
+        "record_in_ledger": {"type": "boolean"},
+        "current_run_feedback_is_authoritative": {"type": "boolean"},
+        "silent_durable_policy_mutation": {"type": "boolean"},
+        "durable_promotion_requires": {"$ref": "#/$defs/name"},
+        "local_llm_role": {"$ref": "#/$defs/name"},
+        "rollback_required": {"type": "boolean"}
       },
       "additionalProperties": false
     },
-    "authority_order": {
-      "const": [
-        "system_and_current_user",
-        "hard_account_and_repository_guards",
-        "accepted_spec_and_decisions",
-        "repository_defaults"
-      ]
-    },
+    "authority_order": {"$ref": "#/$defs/names"},
     "knowledge_orders": {
       "type": "object",
       "required": ["product_truth", "apple_api_truth"],
       "properties": {
-        "product_truth": {
-          "const": [
-            "accepted_spec_and_decisions",
-            "repository_source_at_frozen_head",
-            "commit_pinned_dependency_source",
-            "approved_project_analysis"
-          ]
-        },
-        "apple_api_truth": {
-          "const": [
-            "live_apple_documentation_for_selected_toolchain",
-            "one_apple_authored_skill_exposure",
-            "commit_pinned_apple_sample",
-            "ios_experts",
-            "external_retrieved_material"
-          ]
-        }
+        "product_truth": {"$ref": "#/$defs/names"},
+        "apple_api_truth": {"$ref": "#/$defs/names"}
       },
       "additionalProperties": false
     },
-    "execution_order": {
-      "const": [
-        "xcode_official_tools",
-        "apple_supported_external_agent_bridge",
-        "host_apple_cli",
-        "explicit_third_party_fallback"
-      ]
-    },
+    "execution_order": {"$ref": "#/$defs/names"},
     "delivery_profiles": {
-      "const": {
-        "pr_ready": {
-          "terminal": "pr_ready",
-          "continuation": null
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["terminal", "continuation"],
+        "properties": {
+          "terminal": {"$ref": "#/$defs/name"},
+          "continuation": {"type": ["string", "null"], "minLength": 1}
         },
-        "testflight_uploaded": {
-          "terminal": "testflight_uploaded",
-          "continuation": "testflight-workflow.json"
-        },
-        "testflight_distributed": {
-          "terminal": "testflight_distributed",
-          "continuation": "testflight-workflow.json"
-        },
-        "local_verified": {
-          "continuation": "local-workflow.json",
-          "terminal": "local_verified"
-        }
+        "additionalProperties": false
       }
     },
     "health_policy": {
-      "const": {
-        "statuses": ["healthy", "degraded", "blocked", "not_applicable"],
-        "required_profile_before_writes": true,
-        "read_only_observation": true,
-        "repair_or_install": false,
-        "account_or_scope_expansion": false,
-        "separate_app_and_infrastructure_results": true
-      }
-    },
-    "spec_kit_policy": {
-      "const": {
-        "pinned_release": "v1.0.1",
-        "artifact_hash_binding": true,
-        "feature_directory_and_git_branch_mapping_is_explicit": true,
-        "workflow_checkpoint_separate_from_authorization_hash": true,
-        "workflow_logs_are_subordinate_to_harness_ledger": true,
-        "managed_workflow_definitions_change_via_supported_overlays_only": true
-      }
-    },
-    "companion_upstream_policy": {
-      "const": {
-        "mode": "reference-only",
-        "public_metadata_read_only": true,
-        "execute_or_vendor": false,
-        "drift_action": "create_or_update_review_issue",
-        "auto_merge": false
-      }
-    },
-    "xcode_mcp_provider_policy": {
-      "const": {
-        "state_dimensions": [
-          "installation",
-          "registration",
-          "current_task_exposure",
-          "read_only_connectivity",
-          "exact_workspace_binding"
-        ],
-        "record_install_provenance": [
-          "config_scope",
-          "configured_command_and_args",
-          "resolved_executable",
-          "package_manager_owner",
-          "resolved_version"
-        ],
-        "same_codex_host_clients_share_configuration": true,
-        "provider_injection_layers": [
-          "official_codex_mcpbridge",
-          "direct_codex_mcp",
-          "codex_plugin_mcp",
-          "xcode_agent_plugin"
-        ],
-        "capability_results": [
-          "workspace_discovery",
-          "interaction_session",
-          "workspace_bound_run",
-          "hierarchy_touch_capture",
-          "direct_apple_cli"
-        ],
-        "read_only_probe_timeout_seconds": 30,
-        "max_unchanged_read_only_retries": 1,
-        "official_external_agent_route_first": true,
-        "configuration_mutation_requires_explicit_approval": true,
-        "max_active_simulator_capable_providers_during_incident": 1,
-        "verification_order": [
-          "configured_and_enabled",
-          "fresh_client_or_task_exposes_tools",
-          "read_only_workspace_response",
-          "exact_workspace_identifier_selected"
-        ],
-        "forbidden_security_mode": "blanket_unsafe_allow_all_agents",
-        "forbidden_automatic_actions": [
-          "provider_install_update_uninstall_or_config_mutation",
-          "provider_process_force_termination",
-          "build_or_destination_inventory_as_connectivity_probe"
-        ]
-      }
-    },
-    "resource_scopes": {
-      "const": [
-        "source_checkout_writer",
-        "xcode_project_mutation",
-        "build_tuple",
-        "simulator_or_device",
-        "coresimulator_runtime_registry",
-        "macos_gui_session",
-        "signing_or_app_store_connect",
-        "github_external_mutation"
-      ]
-    },
-    "resource_key_fields": {
       "type": "object",
       "required": [
-        "source_checkout_writer",
-        "xcode_project_mutation",
-        "build_tuple",
-        "simulator_or_device",
-        "coresimulator_runtime_registry",
-        "macos_gui_session",
-        "signing_or_app_store_connect",
-        "github_external_mutation"
+        "statuses",
+        "required_profile_before_writes",
+        "read_only_observation",
+        "repair_or_install",
+        "account_or_scope_expansion",
+        "separate_app_and_infrastructure_results"
       ],
       "properties": {
-        "source_checkout_writer": {"const": ["identity_version", "repository_fingerprint"]},
-        "xcode_project_mutation": {"const": ["repository_fingerprint", "container_path"]},
-        "build_tuple": {
-          "const": ["repository_fingerprint", "container_path", "xcode_build", "sdk", "scheme", "configuration", "architecture", "package_fingerprint", "cache_paths", "cache_roles", "output_paths", "output_roles", "package_resolution_mode"]
-        },
-        "simulator_or_device": {"const": ["coordinator_instance_id", "udids"]},
-        "coresimulator_runtime_registry": {"const": ["coordinator_instance_id", "registry_scope"]},
-        "macos_gui_session": {"const": ["coordinator_instance_id", "session_scope"]},
-        "signing_or_app_store_connect": {"const": ["account_guard", "app_or_bundle_scope"]},
-        "github_external_mutation": {"const": ["repository_fingerprint", "remote_repository"]}
+        "statuses": {"$ref": "#/$defs/names"},
+        "required_profile_before_writes": {"type": "boolean"},
+        "read_only_observation": {"type": "boolean"},
+        "repair_or_install": {"type": "boolean"},
+        "account_or_scope_expansion": {"type": "boolean"},
+        "separate_app_and_infrastructure_results": {"type": "boolean"}
       },
       "additionalProperties": false
     },
+    "spec_kit_policy": {
+      "type": "object",
+      "required": [
+        "pinned_release",
+        "artifact_hash_binding",
+        "feature_directory_and_git_branch_mapping_is_explicit",
+        "workflow_checkpoint_separate_from_authorization_hash",
+        "workflow_logs_are_subordinate_to_harness_ledger",
+        "managed_workflow_definitions_change_via_supported_overlays_only"
+      ],
+      "properties": {
+        "pinned_release": {"$ref": "#/$defs/name"},
+        "artifact_hash_binding": {"type": "boolean"},
+        "feature_directory_and_git_branch_mapping_is_explicit": {"type": "boolean"},
+        "workflow_checkpoint_separate_from_authorization_hash": {"type": "boolean"},
+        "workflow_logs_are_subordinate_to_harness_ledger": {"type": "boolean"},
+        "managed_workflow_definitions_change_via_supported_overlays_only": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "companion_upstream_policy": {
+      "type": "object",
+      "required": [
+        "mode",
+        "public_metadata_read_only",
+        "execute_or_vendor",
+        "drift_action",
+        "auto_merge"
+      ],
+      "properties": {
+        "mode": {"$ref": "#/$defs/name"},
+        "public_metadata_read_only": {"type": "boolean"},
+        "execute_or_vendor": {"type": "boolean"},
+        "drift_action": {"$ref": "#/$defs/name"},
+        "auto_merge": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "xcode_mcp_provider_policy": {
+      "type": "object",
+      "required": [
+        "state_dimensions",
+        "record_install_provenance",
+        "same_codex_host_clients_share_configuration",
+        "provider_injection_layers",
+        "capability_results",
+        "read_only_probe_timeout_seconds",
+        "max_unchanged_read_only_retries",
+        "official_external_agent_route_first",
+        "configuration_mutation_requires_explicit_approval",
+        "max_active_simulator_capable_providers_during_incident",
+        "verification_order",
+        "forbidden_security_mode",
+        "forbidden_automatic_actions"
+      ],
+      "properties": {
+        "state_dimensions": {"$ref": "#/$defs/names"},
+        "record_install_provenance": {"$ref": "#/$defs/names"},
+        "same_codex_host_clients_share_configuration": {"type": "boolean"},
+        "provider_injection_layers": {"$ref": "#/$defs/names"},
+        "capability_results": {"$ref": "#/$defs/names"},
+        "read_only_probe_timeout_seconds": {"$ref": "#/$defs/positive_integer"},
+        "max_unchanged_read_only_retries": {"$ref": "#/$defs/count"},
+        "official_external_agent_route_first": {"type": "boolean"},
+        "configuration_mutation_requires_explicit_approval": {"type": "boolean"},
+        "max_active_simulator_capable_providers_during_incident": {"$ref": "#/$defs/count"},
+        "verification_order": {"$ref": "#/$defs/names"},
+        "forbidden_security_mode": {"$ref": "#/$defs/name"},
+        "forbidden_automatic_actions": {"$ref": "#/$defs/names"}
+      },
+      "additionalProperties": false
+    },
+    "resource_scopes": {"$ref": "#/$defs/names"},
+    "resource_key_fields": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/names"}
+    },
     "resource_overlap_policy": {
-      "const": {
-        "source_checkout_writer": {
-          "identity_version": "github_remote_v2",
-          "identity": "normalized_repository_fingerprint",
-          "conflict_when": "repository_fingerprint_equal",
-          "canonical_root_role": "exact_authorization_target_excluded_from_writer_identity",
-          "cross_resource_conflict": "xcode_project_or_build_same_repository_fingerprint",
-          "same_owner_nested_exception": "source_with_xcode_or_build_only"
-        },
-        "xcode_project_mutation": {
-          "identity_fields": ["repository_fingerprint", "container_path"],
-          "container_path_normalization": "canonical_absolute_path",
-          "conflict_when": "repository_fingerprint_or_canonical_container_path_equal",
-          "cross_resource_conflict": "source_or_build_same_repository_fingerprint"
-        },
-        "simulator_or_device": {
-          "identity_fields": ["coordinator_instance_id", "udids"],
-          "host_identity_source": "coordinator_instance_id",
-          "udids_normalization": "sorted_unique_nonempty",
-          "conflict_when": "same_host_and_udid_intersection_nonempty",
-          "evidence_only_fields": ["platform", "run_id", "bundle_id"]
-        },
-        "build_tuple": {
-          "identity_fields": ["repository_fingerprint", "container_path", "xcode_build", "sdk", "scheme", "configuration", "architecture", "package_fingerprint", "cache_paths", "cache_roles", "output_paths", "output_roles", "package_resolution_mode"],
-          "cache_paths_normalization": "canonical_absolute_sorted_unique_nonempty",
-          "required_cache_roles": ["derived_data", "source_packages", "repository_checkouts", "artifacts", "package_cache"],
-          "cache_role_policy": "cache_paths_equal_unique_role_values",
-          "output_role_policy": "declared_xcode_result_archive_export_and_diagnostic_paths",
-          "package_resolution_modes": ["none", "swiftpm_lockfile", "xcode_project_packages"],
-          "resolution_mutation_requires": "same_owner_source_writer_and_xcode_project_lease_when_applicable",
-          "conflict_when": "canonical_cache_or_output_path_tree_overlap_or_same_repository_when_either_resolves_packages",
-          "path_alias_policy": "samefile_then_unicode_casefolded_tree_overlap",
-          "cross_resource_conflict": "source_or_xcode_same_repository_fingerprint"
-        },
-        "coresimulator_runtime_registry": {
-          "identity_fields": ["coordinator_instance_id", "registry_scope"],
-          "conflict_when": "same_host_conflicts_with_every_device_lease"
-        },
-        "macos_gui_session": {
-          "identity_fields": ["coordinator_instance_id", "session_scope"],
-          "session_scope": "foreground_ui",
-          "conflict_when": "same_host_foreground_ui_session"
-        },
-        "signing_or_app_store_connect": {
-          "identity_fields": ["account_guard", "app_or_bundle_scope"],
-          "conflict_when": "exact_account_and_app_scope_equal"
-        },
-        "github_external_mutation": {
-          "identity_fields": ["repository_fingerprint", "remote_repository"],
-          "remote_normalization": "lowercase_owner_repository_without_dot_git",
-          "conflict_when": "repository_fingerprint_or_remote_equal"
-        }
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": {"anyOf": [{"$ref": "#/$defs/name"}, {"$ref": "#/$defs/names"}]}
       }
     },
     "cross_run_coordination_policy": {
-      "const": {
-        "required_for": "every_mutating_resource_acquire",
-        "coordinator_scope": "configured_host_shared_file",
-        "atomic_acquire_required": true,
-        "execution_environment_supplies_state_path": true,
-        "live_receipt_verification_before_reservation": true,
-        "live_receipt_verification_before_dispatch": true,
-        "max_ttl_seconds": 3600,
+      "type": "object",
+      "required": [
+        "required_for",
+        "coordinator_scope",
+        "atomic_acquire_required",
+        "execution_environment_supplies_state_path",
+        "live_receipt_verification_before_reservation",
+        "live_receipt_verification_before_dispatch",
+        "max_ttl_seconds",
+        "trusted_binding",
+        "receipt_binding_fields",
+        "registry_is_lock",
+        "per_run_ledger_is_lock",
+        "bootstrap",
+        "unavailable_outcome",
+        "lease_expiry",
+        "forbidden_automatic_actions"
+      ],
+      "properties": {
+        "required_for": {"$ref": "#/$defs/name"},
+        "coordinator_scope": {"$ref": "#/$defs/name"},
+        "atomic_acquire_required": {"type": "boolean"},
+        "execution_environment_supplies_state_path": {"type": "boolean"},
+        "live_receipt_verification_before_reservation": {"type": "boolean"},
+        "live_receipt_verification_before_dispatch": {"type": "boolean"},
+        "max_ttl_seconds": {"$ref": "#/$defs/positive_integer"},
         "trusted_binding": {
-          "source": "private_harness",
-          "required_fields": ["runtime_kind", "runtime_contract", "state_path", "coordinator_instance_id", "executable_sha256", "source_bundle_sha256"],
-          "same_binding_for_all_clients": true
+          "type": "object",
+          "required": ["source", "required_fields", "same_binding_for_all_clients"],
+          "properties": {
+            "source": {"$ref": "#/$defs/name"},
+            "required_fields": {"$ref": "#/$defs/names"},
+            "same_binding_for_all_clients": {"type": "boolean"}
+          },
+          "additionalProperties": false
         },
-        "receipt_binding_fields": [
-          "coordinator_instance_id",
-          "receipt_id",
-          "lease_id",
-          "owner_run_id",
-          "owner_actor",
-          "resource",
-          "resource_key",
-          "descriptor_sha256",
-          "fencing_token",
-          "acquired_at",
-          "expires_at"
-        ],
-        "registry_is_lock": false,
-        "per_run_ledger_is_lock": false,
+        "receipt_binding_fields": {"$ref": "#/$defs/names"},
+        "registry_is_lock": {"type": "boolean"},
+        "per_run_ledger_is_lock": {"type": "boolean"},
         "bootstrap": {
-          "legacy_leases_quiesced_confirmation_required": true,
-          "automatic_migration": false
+          "type": "object",
+          "required": ["legacy_leases_quiesced_confirmation_required", "automatic_migration"],
+          "properties": {
+            "legacy_leases_quiesced_confirmation_required": {"type": "boolean"},
+            "automatic_migration": {"type": "boolean"}
+          },
+          "additionalProperties": false
         },
         "unavailable_outcome": {
-          "graph_state": "blocked",
-          "reason_code": "coordination_required"
+          "type": "object",
+          "required": ["graph_state", "reason_code"],
+          "properties": {
+            "graph_state": {"$ref": "#/$defs/name"},
+            "reason_code": {"$ref": "#/$defs/name"}
+          },
+          "additionalProperties": false
         },
         "lease_expiry": {
-          "silent_takeover": false,
-          "recovery_record_required": true,
-          "recovery_requires": [
-            "previous_receipt_and_fencing_token",
-            "independent_observer_run",
-            "owner_confirmed_dead",
-            "owner_tool_children_confirmed_dead",
-            "dirty_state_clean_digest",
-            "live_resource_revalidation_digest"
-          ]
+          "type": "object",
+          "required": ["silent_takeover", "recovery_record_required", "recovery_requires"],
+          "properties": {
+            "silent_takeover": {"type": "boolean"},
+            "recovery_record_required": {"type": "boolean"},
+            "recovery_requires": {"$ref": "#/$defs/names"}
+          },
+          "additionalProperties": false
         },
-        "forbidden_automatic_actions": [
-          "create_daemon",
-          "create_database",
-          "create_or_switch_worktree"
-        ]
-      }
+        "forbidden_automatic_actions": {"$ref": "#/$defs/names"}
+      },
+      "additionalProperties": false
     },
     "runtime_registry_policy": {
-      "const": {
-        "failure_class": "coresimulator_runtime_disk_registration",
-        "normalized_signatures": ["unable to get a dev_t for store <store-id>"],
-        "minimum_repeat_observations": 2,
-        "supporting_enumeration_gap_seconds": 30,
-        "supporting_evidence_not_causal_proof": [
-          "simdiskimaged_process_continuity",
-          "mixed_build_or_image_kind_inventory",
-          "large_runtime_count",
-          "low_free_storage"
-        ],
-        "restart_resets_processes_not_persisted_registry": true,
-        "max_active_simulator_tool_providers_during_diagnosis": 1,
-        "max_new_bounded_discovery_probes": 1,
-        "recovery_resource": "coresimulator_runtime_registry",
-        "conflicts_with": ["simulator_or_device"],
-        "mutation_requires_matching_approval": true,
-        "mutating_approval_binding": [
-          "approval_id",
-          "resource_key",
-          "allowed_action",
-          "runtime_identifier"
-        ],
-        "mutating_approval_single_use": true,
-        "privileged_diagnostics_require_explicit_approval": true,
-        "release_note_precedent_is_not_defect_equivalence": true,
-        "verification_order": [
-          "one_bounded_runtime_inventory",
-          "release_runtime_registry_lease",
-          "acquire_control_destination_lease",
-          "one_designated_control_destination"
-        ],
+      "type": "object",
+      "required": [
+        "failure_class",
+        "normalized_signatures",
+        "minimum_repeat_observations",
+        "supporting_enumeration_gap_seconds",
+        "supporting_evidence_not_causal_proof",
+        "restart_resets_processes_not_persisted_registry",
+        "max_active_simulator_tool_providers_during_diagnosis",
+        "max_new_bounded_discovery_probes",
+        "recovery_resource",
+        "conflicts_with",
+        "mutation_requires_matching_approval",
+        "mutating_approval_binding",
+        "mutating_approval_single_use",
+        "privileged_diagnostics_require_explicit_approval",
+        "release_note_precedent_is_not_defect_equivalence",
+        "verification_order",
+        "verification_repetitions",
+        "toolchain_comparison",
+        "forbidden_automatic_actions"
+      ],
+      "properties": {
+        "failure_class": {"$ref": "#/$defs/name"},
+        "normalized_signatures": {"$ref": "#/$defs/names"},
+        "minimum_repeat_observations": {"$ref": "#/$defs/positive_integer"},
+        "supporting_enumeration_gap_seconds": {"$ref": "#/$defs/positive_integer"},
+        "supporting_evidence_not_causal_proof": {"$ref": "#/$defs/names"},
+        "restart_resets_processes_not_persisted_registry": {"type": "boolean"},
+        "max_active_simulator_tool_providers_during_diagnosis": {"$ref": "#/$defs/count"},
+        "max_new_bounded_discovery_probes": {"$ref": "#/$defs/count"},
+        "recovery_resource": {"$ref": "#/$defs/name"},
+        "conflicts_with": {"$ref": "#/$defs/names"},
+        "mutation_requires_matching_approval": {"type": "boolean"},
+        "mutating_approval_binding": {"$ref": "#/$defs/names"},
+        "mutating_approval_single_use": {"type": "boolean"},
+        "privileged_diagnostics_require_explicit_approval": {"type": "boolean"},
+        "release_note_precedent_is_not_defect_equivalence": {"type": "boolean"},
+        "verification_order": {"$ref": "#/$defs/names"},
         "verification_repetitions": {
-          "default": 1,
-          "stability_acceptance": 3
+          "type": "object",
+          "required": ["default", "stability_acceptance"],
+          "properties": {
+            "default": {"$ref": "#/$defs/positive_integer"},
+            "stability_acceptance": {"$ref": "#/$defs/positive_integer"}
+          },
+          "additionalProperties": false
         },
-        "toolchain_comparison": "sequential_one_provider_fixed_non_toolchain_inputs_record_runtime_confounders",
-        "forbidden_automatic_actions": [
-          "direct_registry_runtime_or_mount_mutation",
-          "daemon_or_service_force_termination",
-          "global_device_or_runtime_removal",
-          "derived_data_deletion"
-        ]
-      }
+        "toolchain_comparison": {"$ref": "#/$defs/name"},
+        "forbidden_automatic_actions": {"$ref": "#/$defs/names"}
+      },
+      "additionalProperties": false
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "name": {"type": "string", "minLength": 1},
+    "names": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/name"}
+    },
+    "count": {"type": "integer", "minimum": 0},
+    "positive_integer": {"type": "integer", "minimum": 1},
+    "single_writer_mode": {
+      "type": "object",
+      "required": ["writer_candidates", "max_active_writers"],
+      "properties": {
+        "writer_candidates": {"$ref": "#/$defs/names"},
+        "max_active_writers": {"$ref": "#/$defs/positive_integer"}
+      },
+      "additionalProperties": false
+    }
+  }
 }

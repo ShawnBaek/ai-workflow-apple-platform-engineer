@@ -727,14 +727,26 @@ final class HealthAndContractTests: XCTestCase {
     ]
     try HarnessRuntime.atomicWriteJSON(
       schema, to: contracts.appendingPathComponent("companion-upstream.schema.json"))
+    // Full Git object IDs and a reference-only integration, as the shared provenance rules
+    // require.
+    let commit = String(repeating: "1", count: 40)
+    let tree = String(repeating: "2", count: 40)
+    let head = String(repeating: "3", count: 40)
+    let blobA = String(repeating: "a", count: 40)
+    let blobB = String(repeating: "b", count: 40)
     let manifest: [String: Any] = [
       "upstream": [
-        "repository": "apple/Icon-Composer", "reviewed_revision": "commit-1",
-        "reviewed_tree": "tree-1", "default_branch": "main",
+        "repository": "apple/Icon-Composer", "visibility": "public", "reviewed_revision": commit,
+        "reviewed_tree": tree, "default_branch": "main",
       ],
+      "integration": [
+        "mode": "reference-only", "execute_upstream": false, "auto_merge": false,
+        "vendored_files": [String](), "consumer_repository": "example/consumer",
+      ],
+      "license": ["status": "absent"],
       "sources": [
-        ["path": "Sources/A.swift", "blob_sha": "blob-a"],
-        ["path": "Sources/B.swift", "blob_sha": "blob-b"],
+        ["path": "Sources/A.swift", "blob_sha": blobA],
+        ["path": "Sources/B.swift", "blob_sha": blobB],
       ],
     ]
     try HarnessRuntime.atomicWriteJSON(
@@ -744,14 +756,14 @@ final class HealthAndContractTests: XCTestCase {
         stdout: #"{"private":false,"visibility":"public","default_branch":"main"}"#, stderr: "",
         exitCode: 0, timedOut: false, truncated: false),
       .init(
-        stdout: #"{"sha":"commit-1","commit":{"tree":{"sha":"tree-1"}}}"#, stderr: "", exitCode: 0,
-        timedOut: false, truncated: false),
+        stdout: #"{"sha":"\#(commit)","commit":{"tree":{"sha":"\#(tree)"}}}"#, stderr: "",
+        exitCode: 0, timedOut: false, truncated: false),
       .init(
         stdout:
-          #"{"tree":[{"path":"Sources/A.swift","type":"blob","sha":"blob-a"},{"path":"Sources/B.swift","type":"blob","sha":"blob-b"}]}"#,
+          #"{"truncated":false,"tree":[{"path":"Sources/A.swift","type":"blob","sha":"\#(blobA)"},{"path":"Sources/B.swift","type":"blob","sha":"\#(blobB)"}]}"#,
         stderr: "", exitCode: 0, timedOut: false, truncated: false),
       .init(
-        stdout: #"{"sha":"head-2"}"#, stderr: "", exitCode: 0, timedOut: false, truncated: false),
+        stdout: #"{"sha":"\#(head)"}"#, stderr: "", exitCode: 0, timedOut: false, truncated: false),
     ])
     let harness: [String: Any] = [
       "selected_writer": "codex",

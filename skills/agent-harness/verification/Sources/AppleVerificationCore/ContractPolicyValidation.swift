@@ -1,120 +1,13 @@
 import Foundation
 
 extension ContractValidation {
-  // Canonical hashes bind every nested field of the four high-risk capability policies.
-  static let runtimePolicySHA = "41a5e98efbafcccb388c9e53ffd469f495432ccd532979050f74c44be05a1b5b"
-  static let xcodePolicySHA = "e2e4c0787219c2cf2ba67e84bba2c1b057b32eb90dbfa78687cb2509f47f2db9"
-  static let overlapPolicySHA = "62de7d812e5e0d24e7298f63dc6b74b2a908abdb6fab2d39dd5d70a07d8889cd"
-  static let coordinationPolicySHA =
-    "5fb7367c942c7853cf557144afefbf7d69ff425512e58703a94135ee718cf4cb"
-
+  /// Why `capabilities` is not the reviewed policy this runtime honors. Its shape is checked
+  /// against capabilities.schema.json with the other contract pairs; `CapabilityPolicy` explains
+  /// the digest and the runtime loader applies the same rules.
   public static func validateCapabilities(_ capabilities: [String: Any]) -> [String] {
-    var errors: [String] = []
-    if capabilities["resource_scopes"] as? [String] != resources {
-      errors.append("capability resource scopes drifted")
-    }
-    let exactSections: [String: Any] = [
-      "authority_order": [
-        "system_and_current_user", "hard_account_and_repository_guards",
-        "accepted_spec_and_decisions", "repository_defaults",
-      ],
-      "execution_order": [
-        "xcode_official_tools", "apple_supported_external_agent_bridge", "host_apple_cli",
-        "explicit_third_party_fallback",
-      ],
-      "platforms": ["ios", "ipados", "watchos", "macos"],
-      "companion_upstream_policy": [
-        "auto_merge": false, "drift_action": "create_or_update_review_issue",
-        "execute_or_vendor": false, "mode": "reference-only", "public_metadata_read_only": true,
-      ],
-      "feedback_policy": [
-        "current_run_feedback_is_authoritative": true,
-        "durable_promotion_requires": "explicit_human_approval_or_repeated_evidence",
-        "local_llm_role": "cluster_and_propose_only", "record_in_ledger": true,
-        "rollback_required": true, "silent_durable_policy_mutation": false,
-      ],
-      "health_policy": [
-        "account_or_scope_expansion": false, "read_only_observation": true,
-        "repair_or_install": false, "required_profile_before_writes": true,
-        "separate_app_and_infrastructure_results": true,
-        "statuses": ["healthy", "degraded", "blocked", "not_applicable"],
-      ],
-      "knowledge_orders": [
-        "apple_api_truth": [
-          "live_apple_documentation_for_selected_toolchain", "one_apple_authored_skill_exposure",
-          "commit_pinned_apple_sample", "ios_experts", "external_retrieved_material",
-        ],
-        "product_truth": [
-          "accepted_spec_and_decisions", "repository_source_at_frozen_head",
-          "commit_pinned_dependency_source", "approved_project_analysis",
-        ],
-      ],
-      "local_llm": [
-        "allowed_roles": ["retrieve", "rerank", "extract_entities", "cluster_logs"],
-        "forbidden_roles": ["writer", "approver", "reviewer_of_record"],
-      ],
-      "spec_kit_policy": [
-        "artifact_hash_binding": true, "feature_directory_and_git_branch_mapping_is_explicit": true,
-        "managed_workflow_definitions_change_via_supported_overlays_only": true,
-        "pinned_release": "v1.0.1", "workflow_checkpoint_separate_from_authorization_hash": true,
-        "workflow_logs_are_subordinate_to_harness_ledger": true,
-      ],
-      "modes": [
-        "claude": ["max_active_writers": 1, "writer_candidates": ["claude"]],
-        "codex": ["max_active_writers": 1, "writer_candidates": ["codex"]],
-        "collaborative": [
-          "max_active_writers": 1, "review_requires_immutable_patch": true,
-          "transfer_policy": [
-            "fresh_capability_snapshot_required": true, "matching_state_hash_required": true,
-            "release_before_acquire": true, "revoke_previous_writer_capabilities": true,
-          ], "writer_candidates": ["codex", "claude"],
-          "writer_selection": [
-            "authority": "explicit_user_or_accepted_plan", "required_before_claim": true,
-            "reviewer_must_differ": true,
-          ],
-        ],
-      ],
-    ]
-    for (field, expected) in exactSections where !equal(capabilities[field], expected) {
-      errors.append("capability \(field) policy drifted")
-    }
-    let expected: [String: [String]] = [
-      "source_checkout_writer": ["identity_version", "repository_fingerprint"],
-      "xcode_project_mutation": ["repository_fingerprint", "container_path"],
-      "simulator_or_device": ["coordinator_instance_id", "udids"],
-      "coresimulator_runtime_registry": ["coordinator_instance_id", "registry_scope"],
-      "macos_gui_session": ["coordinator_instance_id", "session_scope"],
-      "signing_or_app_store_connect": ["account_guard", "app_or_bundle_scope"],
-      "github_external_mutation": ["repository_fingerprint", "remote_repository"],
-      "build_tuple": [
-        "repository_fingerprint", "container_path", "xcode_build", "sdk", "scheme", "configuration",
-        "architecture", "package_fingerprint", "cache_paths", "cache_roles", "output_paths",
-        "output_roles", "package_resolution_mode",
-      ],
-    ]
-    if !equal(capabilities["resource_key_fields"], expected) {
-      errors.append("capability resource key fields drifted")
-    }
-    for (field, digest, label) in [
-      ("runtime_registry_policy", runtimePolicySHA, "CoreSimulator runtime registry"),
-      ("xcode_mcp_provider_policy", xcodePolicySHA, "Xcode MCP provider"),
-      ("resource_overlap_policy", overlapPolicySHA, "resource overlap"),
-      ("cross_run_coordination_policy", coordinationPolicySHA, "cross-run coordination"),
-    ] where hash(capabilities[field]) != digest { errors.append("\(label) policy drifted") }
-    let profiles: [String: Any] = [
-      "local_verified": ["continuation": "local-workflow.json", "terminal": "local_verified"],
-      "pr_ready": ["continuation": NSNull(), "terminal": "pr_ready"],
-      "testflight_uploaded": [
-        "continuation": "testflight-workflow.json", "terminal": "testflight_uploaded",
-      ],
-      "testflight_distributed": [
-        "continuation": "testflight-workflow.json", "terminal": "testflight_distributed",
-      ],
-    ]
-    if !equal(capabilities["delivery_profiles"], profiles) {
-      errors.append("delivery profile workflow bindings drifted")
-    }
-    return Array(Set(errors)).sorted()
+    Array(
+      Set(CapabilityPolicy.errors(capabilities, reviewedSHA256: CapabilityPolicy.reviewedSHA256))
+    ).sorted()
   }
 
   public static func validatePendingAuthorization(_ pending: [String: Any]) -> [String] {

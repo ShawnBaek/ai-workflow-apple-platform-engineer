@@ -1015,50 +1015,31 @@ public enum HealthEvaluation {
         schemaURL, maximumBytes: 1_048_576, requireSingleLink: false),
       JSONSchemaValidator.errors(instance: manifest, schema: schema, path: "$", root: nil).isEmpty,
       let upstream = manifest["upstream"] as? [String: Any],
-      let sources = manifest["sources"] as? [[String: Any]],
       let repository = upstream["repository"] as? String, !repository.isEmpty,
       let reviewed = upstream["reviewed_revision"] as? String, !reviewed.isEmpty,
-      let reviewedTree = upstream["reviewed_tree"] as? String, !reviewedTree.isEmpty,
-      let branch = upstream["default_branch"] as? String, !branch.isEmpty
+      let reviewedTree = upstream["reviewed_tree"] as? String, !reviewedTree.isEmpty
     else { throw ProbeError.invalid }
-    func gh(_ route: String) throws -> [String: Any] {
-      try jsonObject(
-        successful(
-          runner.run(
-            executable: "gh", arguments: ["api", route], directory: nil, environment: nil,
-            timeout: 15, maxOutputBytes: 1_048_576)
-        ).stdout)
-    }
-    let metadata = try gh("repos/\(repository)")
-    let commit = try gh("repos/\(repository)/commits/\(reviewed)")
-    let tree = try gh("repos/\(repository)/git/trees/\(reviewedTree)?recursive=1")
-    let head = try gh("repos/\(repository)/commits/\(branch)")
-    var blobs: [String: String] = [:]
-    for item in tree["tree"] as? [[String: Any]] ?? [] where item["type"] as? String == "blob" {
-      guard let path = item["path"] as? String, let digest = item["sha"] as? String,
-        blobs[path] == nil
-      else { throw ProbeError.invalid }
-      blobs[path] = digest
-    }
-    let sourcesMatch =
-      !sources.isEmpty
-      && sources.allSatisfy { source in
-        guard let path = source["path"] as? String, let digest = source["blob_sha"] as? String
-        else { return false }
-        return blobs[path] == digest
+    var material: [String: Any] = [
+      "repository": repository, "reviewed_revision": reviewed, "reviewed_tree": reviewedTree,
+    ]
+    do {
+      // The watcher judges provenance with these same rules through its own transport; only
+      // the schema check above is health's alone.
+      material["observed_head"] = try CompanionProvenance.verify(manifest) { route in
+        try jsonObject(
+          successful(
+            runner.run(
+              executable: "gh", arguments: ["api", route], directory: nil, environment: nil,
+              timeout: 15, maxOutputBytes: CompanionProvenance.maxResponseBytes)
+          ).stdout)
       }
-    let commitTree =
-      ((commit["commit"] as? [String: Any])?["tree"] as? [String: Any])?["sha"] as? String
-    let valid =
-      metadata["private"] as? Bool == false && metadata["visibility"] as? String == "public"
-      && metadata["default_branch"] as? String == branch && commit["sha"] as? String == reviewed
-      && commitTree == reviewedTree && (head["sha"] as? String)?.isEmpty == false && sourcesMatch
-    return .init(
-      passed: valid,
-      material: [
-        "repository": repository, "reviewed_revision": reviewed, "reviewed_tree": reviewedTree,
-        "observed_head": head["sha"] ?? NSNull(), "sources_match": sourcesMatch,
-      ])
+      material["sources_match"] = true
+      return .init(passed: true, material: material)
+    } catch let failure as VerificationError {
+      // The manifest or an upstream answer failed provenance. A failed read propagates as before.
+      material["provenance_failure"] = failure.description
+      return .init(passed: false, material: material)
+    }
   }
 
   private static func validateCoordinator(_ observation: Any?, errors: inout Set<String>) {

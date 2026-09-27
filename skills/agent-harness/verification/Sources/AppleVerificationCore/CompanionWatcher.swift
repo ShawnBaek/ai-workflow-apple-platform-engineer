@@ -4,17 +4,20 @@ public protocol CompanionGitHubClient {
   func request(method: String, path: String, body: [String: Any]?) throws -> Any
 }
 
-/// Reference-only provenance tracking; never fetches or executes upstream source.
-public enum CompanionWatcher {
-  private static let markerPrefix = "<!-- ios-experts-companion-upstream:"
-  /// The login GitHub records for an issue created with a workflow's `GITHUB_TOKEN`.
-  private static let issueAuthor = "github-actions[bot]"
-  public static func loadManifest(_ url: URL) throws -> [String: Any] {
-    let manifest = try HarnessRuntime.object(url)
-    try validateManifest(manifest)
-    return manifest
-  }
-  private static func validateManifest(_ manifest: [String: Any]) throws {
+/// Provenance of a reference-only companion upstream. The weekly watcher and the
+/// `companion_upstream.provenance` health check both judge a manifest and its upstream with
+/// these rules, each through its own GitHub transport. The health check first also validates the
+/// installed manifest against its sibling `companion-upstream.schema.json`, which also pins the
+/// upstream repository, default branch, consumer and drift action. The watcher does not read
+/// that schema; the repository validator enforces it on the checked-in manifest.
+enum CompanionProvenance {
+  /// Bound for one GitHub API response. GitHub truncates a recursive tree beyond 100,000 entries
+  /// or 7 MB and says so in `truncated`, so this admits every complete tree; completeness is
+  /// judged by that flag, never by whatever size happened to fit.
+  static let maxResponseBytes = 8 * 1_024 * 1_024
+
+  /// Throws unless the manifest records public, reference-only provenance with exact revisions.
+  static func validateManifest(_ manifest: [String: Any]) throws {
     guard let upstream = manifest["upstream"] as? [String: Any],
       upstream["visibility"] as? String == "public",
       let repository = upstream["repository"] as? String, validRepository(repository),
@@ -35,37 +38,21 @@ public enum CompanionWatcher {
       )
     }
   }
-  public static func compare(_ manifest: [String: Any], observedRevision: String) throws -> [String:
-    Any]
-  {
+
+  /// Reads the upstream through `get`, a GET of a `repos/...` API path, and returns its default
+  /// branch HEAD. Before each next request it proves that the repository is public with the
+  /// recorded default branch, that the reviewed commit has the reviewed tree, and that the tree
+  /// is complete, lists every path once and holds each recorded source as exactly one matching
+  /// blob; HEAD must be a full commit SHA. A failed check throws `VerificationError`; an error
+  /// from `get` propagates unchanged.
+  static func verify(_ manifest: [String: Any], get: (String) throws -> Any) throws -> String {
     try validateManifest(manifest)
-    guard validSHA(observedRevision), let upstream = manifest["upstream"] as? [String: Any],
-      let reviewed = upstream["reviewed_revision"] as? String,
-      let repository = upstream["repository"] as? String
-    else {
-      throw VerificationError.invalid("Companion comparison requires exact commit identities")
-    }
-    let changed = reviewed != observedRevision
-    return [
-      "repository": repository, "reviewed_revision": reviewed,
-      "observed_revision": observedRevision, "changed": changed,
-      "action": changed ? "create_or_update_review_issue" : "none",
-      "copy_or_execute_upstream": false, "auto_merge": false,
-    ]
-  }
-  public static func reconcileIssue(
-    _ manifest: [String: Any], targetRepository: String, client: any CompanionGitHubClient
-  ) throws -> [String: Any] {
-    try validateManifest(manifest)
-    guard let upstream = manifest["upstream"] as? [String: Any],
-      let repository = upstream["repository"] as? String, validRepository(repository),
-      let integration = manifest["integration"] as? [String: Any],
-      targetRepository == integration["consumer_repository"] as? String,
-      validRepository(targetRepository)
-    else { throw VerificationError.invalid("Issue target does not match pinned consumer") }
+    let upstream = manifest["upstream"] as! [String: Any]
+    let repository = upstream["repository"] as! String
     func object(_ path: String) throws -> [String: Any] {
-      guard let value = try client.request(method: "GET", path: path, body: nil) as? [String: Any]
-      else { throw VerificationError.invalid("GitHub response must be an object") }
+      guard let value = try get(path) as? [String: Any] else {
+        throw VerificationError.invalid("GitHub response must be an object")
+      }
       return value
     }
     let metadata = try object("repos/\(repository)")
@@ -100,6 +87,63 @@ public enum CompanionWatcher {
     guard let observed = current["sha"] as? String, validSHA(observed) else {
       throw VerificationError.invalid("Upstream HEAD did not resolve to a full SHA")
     }
+    return observed
+  }
+
+  static func validRepository(_ value: String) -> Bool {
+    value.range(
+      of: #"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression)
+      != nil
+  }
+  static func validSHA(_ raw: Any?) -> Bool {
+    (raw as? String)?.range(of: #"^[0-9a-f]{40}$"#, options: .regularExpression) != nil
+  }
+}
+
+/// Reference-only provenance tracking; never fetches or executes upstream source.
+public enum CompanionWatcher {
+  private static let markerPrefix = "<!-- ios-experts-companion-upstream:"
+  /// The login GitHub records for an issue created with a workflow's `GITHUB_TOKEN`.
+  private static let issueAuthor = "github-actions[bot]"
+  public static func loadManifest(_ url: URL) throws -> [String: Any] {
+    let manifest = try HarnessRuntime.object(url)
+    try CompanionProvenance.validateManifest(manifest)
+    return manifest
+  }
+  public static func compare(_ manifest: [String: Any], observedRevision: String) throws -> [String:
+    Any]
+  {
+    try CompanionProvenance.validateManifest(manifest)
+    guard CompanionProvenance.validSHA(observedRevision),
+      let upstream = manifest["upstream"] as? [String: Any],
+      let reviewed = upstream["reviewed_revision"] as? String,
+      let repository = upstream["repository"] as? String
+    else {
+      throw VerificationError.invalid("Companion comparison requires exact commit identities")
+    }
+    let changed = reviewed != observedRevision
+    return [
+      "repository": repository, "reviewed_revision": reviewed,
+      "observed_revision": observedRevision, "changed": changed,
+      "action": changed ? "create_or_update_review_issue" : "none",
+      "copy_or_execute_upstream": false, "auto_merge": false,
+    ]
+  }
+  public static func reconcileIssue(
+    _ manifest: [String: Any], targetRepository: String, client: any CompanionGitHubClient
+  ) throws -> [String: Any] {
+    try CompanionProvenance.validateManifest(manifest)
+    guard let upstream = manifest["upstream"] as? [String: Any],
+      let repository = upstream["repository"] as? String,
+      let integration = manifest["integration"] as? [String: Any],
+      targetRepository == integration["consumer_repository"] as? String,
+      CompanionProvenance.validRepository(targetRepository)
+    else { throw VerificationError.invalid("Issue target does not match pinned consumer") }
+    let observed = try CompanionProvenance.verify(manifest) { path in
+      try client.request(method: "GET", path: path, body: nil)
+    }
+    let reviewed = upstream["reviewed_revision"] as! String
+    let branch = upstream["default_branch"] as! String
     var result = try compare(manifest, observedRevision: observed)
     guard result["changed"] as? Bool == true else {
       result["issue_action"] = "none"
@@ -207,14 +251,6 @@ public enum CompanionWatcher {
     print()
     return 0
   }
-  private static func validRepository(_ value: String) -> Bool {
-    value.range(
-      of: #"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression)
-      != nil
-  }
-  private static func validSHA(_ raw: Any?) -> Bool {
-    (raw as? String)?.range(of: #"^[0-9a-f]{40}$"#, options: .regularExpression) != nil
-  }
 }
 
 public struct GitHubCLICompanionClient: CompanionGitHubClient {
@@ -244,7 +280,7 @@ public struct GitHubCLICompanionClient: CompanionGitHubClient {
     }
     let result = try HarnessRuntime.run(
       executable: "gh", arguments: args, environment: environment, timeout: 20,
-      maxOutputBytes: 8 * 1_024 * 1_024)
+      maxOutputBytes: CompanionProvenance.maxResponseBytes)
     guard result.exitCode == 0, !result.timedOut, !result.truncated else {
       throw VerificationError.invalid(
         "GitHub companion request failed or returned incomplete data; inspect remote state before retrying a mutation"

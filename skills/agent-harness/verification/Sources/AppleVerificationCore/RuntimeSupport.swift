@@ -6,9 +6,18 @@ import Foundation
 public struct RuntimeContext {
   public let repositoryRoot: URL
   public let harnessRoot: URL
+  /// The capability policy digest this runtime accepts. Only tests pass another one, to stand in
+  /// for a reviewed change to `CapabilityPolicy.reviewedSHA256`.
+  let reviewedCapabilitySHA256: String
   public init(repositoryRoot: URL, harnessRoot: URL) {
+    self.init(
+      repositoryRoot: repositoryRoot, harnessRoot: harnessRoot,
+      reviewedCapabilitySHA256: CapabilityPolicy.reviewedSHA256)
+  }
+  init(repositoryRoot: URL, harnessRoot: URL, reviewedCapabilitySHA256: String) {
     self.repositoryRoot = repositoryRoot
     self.harnessRoot = harnessRoot
+    self.reviewedCapabilitySHA256 = reviewedCapabilitySHA256
   }
 }
 
