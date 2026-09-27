@@ -48,12 +48,19 @@ Git, and give a token only to the step that uses it through `env`. Upload,
 TestFlight distribution, App Store submission, certificate changes, Project
 updates, and branch/ruleset changes are separate gated external mutations.
 
+A job that signs or uploads follows the
+[signed TestFlight upload](workflow-templates.md#signed-testflight-upload)
+template: protected-environment secrets, owner-only key files in `$RUNNER_TEMP`,
+a temporary keychain, a provisioning profile installed at a recorded path, and
+an always-run step that removes exactly that material.
+
 Remember that pushes made with the repository `GITHUB_TOKEN` generally do not
 recursively trigger another workflow. Do not silently swap in a broader token.
 
 ## Disk policy
 
-Every job should clean only paths it created and can name exactly. Ephemeral
+Every job should clean only paths it created and can name exactly, and must
+remove the temporary keychain, key and profile files it created. Ephemeral
 hosted runners normally need no user-library cleanup. Long-lived runners use a
 read-only `xcode-storage` audit, retention budgets, and itemized approval.
 Never blanket-delete DerivedData, Simulator state/runtimes, SwiftPM caches,
