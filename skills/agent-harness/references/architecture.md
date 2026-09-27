@@ -140,7 +140,9 @@ its expiry.
 Each run authority also binds one `run_ledger` canonical path, device/inode
 identity, and initial approval digest. Reservation and dispatch use only the
 locked descriptor, compare pathname identity before and after fsync, and reject
-copied, hard-linked, renamed, or replaced ledgers.
+copied, hard-linked, renamed, or replaced ledgers. They also keep a head
+checkpoint of the ledger bytes they last appended to, and reject a ledger
+truncated or rewritten below it in place.
 Verify the private-harness state-path/instance/executable/source-bundle binding
 and the same live, unexpired coordinator receipt immediately before reserving a
 protected write, then reverify the unconsumed reservation immediately adjacent

@@ -31,6 +31,14 @@ public enum Authorization {
   ]
   public static let minimumDispatchWindow: TimeInterval = 30
   public static let maximumDispatchWindow: TimeInterval = 60
+  /// The longest approval window (`expires_at - issued_at`) one run authorization may carry.
+  public static let maximumAuthorizationLifetime: TimeInterval = 24 * 60 * 60
+  /// Inclusive bounds of each authorization limit; the approved schema declares the same values.
+  public static let limitBounds: [String: ClosedRange<Int>] = [
+    "max_implementation_attempts": 1...10, "max_review_cycles": 1...10,
+    "max_transient_retries": 0...10, "active_wall_minutes": 1...1_440,
+    "async_wait_minutes": 1...1_440,
+  ]
   public static let runtimeContract = "apple-verification-core.authorization.v1"
 
   private static let topLevelFields: Set<String> = [
@@ -425,27 +433,24 @@ public enum Authorization {
       errors.append("authorization allowed paths must be safe repository-relative paths")
     }
     let limits = envelope["limits"] as? [String: Any]
-    let minimums = [
-      "max_implementation_attempts": 1, "max_review_cycles": 1, "max_transient_retries": 0,
-      "active_wall_minutes": 1, "async_wait_minutes": 1,
-    ]
     errors += objectShape(
-      limits, required: Set(minimums.keys), allowed: Set(minimums.keys), label: "limits")
+      limits, required: Set(limitBounds.keys), allowed: Set(limitBounds.keys), label: "limits")
     if limits == nil
-      || minimums.contains(where: {
-        int(limits?[$0.key]) == nil || int(limits?[$0.key])! < $0.value
+      || limitBounds.contains(where: { key, bounds in
+        int(limits?[key]).map { !bounds.contains($0) } ?? true
       })
     {
       errors.append("authorization attempt and time limits are invalid")
     }
     if let issued = try? HarnessRuntime.parseTimestamp(string(envelope["issued_at"])),
-      let expires = try? HarnessRuntime.parseTimestamp(string(envelope["expires_at"])),
-      expires <= issued
+      let expires = try? HarnessRuntime.parseTimestamp(string(envelope["expires_at"]))
     {
-      errors.append("authorization expiry must be after issuance")
-    } else if (try? HarnessRuntime.parseTimestamp(string(envelope["issued_at"]))) == nil
-      || (try? HarnessRuntime.parseTimestamp(string(envelope["expires_at"]))) == nil
-    {
+      if expires <= issued {
+        errors.append("authorization expiry must be after issuance")
+      } else if expires.timeIntervalSince(issued) > maximumAuthorizationLifetime {
+        errors.append("authorization expiry exceeds the 24-hour maximum approval window")
+      }
+    } else {
       errors.append("authorization issue or expiry time is invalid or lacks timezone")
     }
     let github = envelope["github"] as? [String: Any]

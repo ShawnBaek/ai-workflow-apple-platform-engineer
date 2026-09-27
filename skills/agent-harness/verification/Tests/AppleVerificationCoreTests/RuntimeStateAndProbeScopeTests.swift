@@ -264,6 +264,7 @@ final class RuntimeStateAndProbeScopeTests: XCTestCase {
       "contracts/schemas/run-authorization.schema.json")
     envelope["$schema"] = schema.absoluteString
     envelope["contract_schema_sha256"] = "sha256:" + (try HarnessRuntime.sha256File(schema))
+    envelope = approvalWindow(of: envelope, containing: Date())
     envelope["run_id"] = "probe-run"
     envelope["resource_plan"] = [
       [

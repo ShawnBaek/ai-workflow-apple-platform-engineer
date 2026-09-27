@@ -108,7 +108,8 @@ a regular non-symlink file directly under that run root. Set that exact future
 path as `run_ledger` in the run-specific private harness. Initialization binds
 the canonical pathname, device/inode identity, and first approval record into
 the coordinator. A second filename, copied ledger, hard link, or replaced inode
-cannot authorize the run.
+cannot authorize the run. The runtime keeps its ledger head checkpoint,
+`<ledger>.head.json`, beside the ledger; leave it in place.
 
 The private Apple observation executable is a no-argument read-only adapter. It
 must first compare the active App Store Connect profile/account/team with the
