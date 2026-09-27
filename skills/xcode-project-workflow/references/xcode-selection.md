@@ -56,6 +56,12 @@ A candidate counts as a full Xcode only when both reads succeed and
      path without a version, such as `/Applications/Xcode.app` or
      `/Applications/Xcode-beta.app`, or a CI variable whose value you cannot
      resolve, is not a pin.
+   - Compatibility-floor lane: a CI job that the repository's own documentation
+     names as a compatibility-floor lane keeps proving the oldest Xcode the
+     project supports. Its versioned path is a minimum, not a pin: it narrows
+     the candidates to that version or later, like "Xcode 26.4 or later" above.
+     The exception covers only the jobs the documentation names; any other
+     versioned CI path is still a pin.
    - These are not pins: `swift-tools-version`; the project's `objectVersion`,
      `LastUpgradeCheck`, or compatibility version; Xcode Cloud workflow
      settings, which govern only that cloud lane; and the Mac's current

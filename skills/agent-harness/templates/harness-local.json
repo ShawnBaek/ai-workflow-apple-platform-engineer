@@ -13,7 +13,7 @@
     ]
   },
   "apple_observation_probe" : null,
-  "authoritative_root" : "<absolute-path>",
+  "authoritative_root" : "/absolute/path/to/app-repository",
   "authorization_runtime" : {
     "executable_path" : "/absolute/path/to/apple-verify",
     "executable_sha256" : "sha256:0000000000000000000000000000000000000000000000000000000000000000",
@@ -41,7 +41,7 @@
   "platforms" : [
     "ios"
   ],
-  "private_policy_overlay" : "<local-untracked-path>",
+  "private_policy_overlay" : "/absolute/private/run/policy.json",
   "resource_coordinator" : {
     "coordinator_instance_id" : "00000000-0000-4000-8000-000000000000",
     "executable_sha256" : "sha256:0000000000000000000000000000000000000000000000000000000000000000",
@@ -51,7 +51,7 @@
     "state_path" : "/absolute/private/runtime/resource-coordinator.json"
   },
   "reviewer" : null,
-  "run_authorization" : "<local-untracked-path>",
+  "run_authorization" : "/absolute/private/run/authorization.json",
   "run_ledger" : "/absolute/private/run/ledger.jsonl",
   "runtime_probe_scope" : null,
   "schema_version" : "1.0.0",

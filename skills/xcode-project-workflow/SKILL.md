@@ -74,7 +74,8 @@ Simulator, or Xcode MCP operation. Apply the first rule that fits:
 2. otherwise use a project pin found in the authoritative repository:
    `.xcode-version`, a documented Xcode requirement, or a CI workflow or
    project script that sets `DEVELOPER_DIR` to a specific Xcode version (a
-   path without a version is not a pin);
+   path without a version is not a pin, and a CI job the repository documents
+   as a compatibility-floor lane sets only a minimum);
 3. otherwise use the newest installed full Xcode: the highest version, betas
    included. When a beta and a release report the same version, break the tie
    by Apple's release status (release, then release candidate, then beta),

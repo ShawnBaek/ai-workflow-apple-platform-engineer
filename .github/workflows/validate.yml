@@ -9,22 +9,43 @@ permissions:
   contents: read
 
 concurrency:
-  group: verification-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to a pull request supersedes its running check. Every push to main keeps its own
+  # group (the run ID), so a quick second merge neither cancels nor replaces the first one's run.
+  group: verification-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:
     runs-on: macos-15
     timeout-minutes: 15
+    env:
+      # The repository's compatibility-floor lane (docs/verification.md): CI sets Xcode 16.4, the
+      # macos-15 default this job has used so far, rather than floating on the image default, and
+      # local runs treat it as a minimum (Xcode 16.4 or later), not a pin. Move it only with a
+      # reviewed change, choosing from the image's published Xcode list.
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      XCODE_BUILD: 16F6
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Verify the pinned Xcode and record the toolchain
+        run: |
+          set -euo pipefail
+          actual="$(xcodebuild -version | awk '/^Build version/ { print $3 }')"
+          if [ "$actual" != "$XCODE_BUILD" ]; then
+            echo "::error::DEVELOPER_DIR selects Xcode build $actual, not $XCODE_BUILD"
+            exit 1
+          fi
+          xcodebuild -version
+          swift --version
+      # A dedicated hosted runner: SwiftPM's default of one job per CPU is already bounded, so the
+      # -j 1 throttle that protects shared developer machines is not repeated here.
       - name: Run Swift regression tests
-        run: swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+        run: swift test --package-path skills/agent-harness/verification
       - name: Validate repository contracts and documentation
         run: |
-          APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1 --show-bin-path)"
+          APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification --show-bin-path)"
           "$APE_BIN_DIR/apple-verify" repository --root .
 
   swift-format-and-compile:

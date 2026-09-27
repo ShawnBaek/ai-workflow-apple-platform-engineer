@@ -61,76 +61,90 @@ public enum ContractValidation {
   }
   static let cleanupTriggers = ["blocked", "failed_terminal", "cancelled", "success_terminal"]
 
+  /// Every shipped template and contract instance with the schema it must satisfy. A template or
+  /// schema missing here fails `validateContractFiles`, so a new one cannot ship unchecked.
+  static let schemaPairs: [(instance: String, schema: String)] = [
+    (
+      "skills/agent-harness/contracts/capabilities.json",
+      "skills/agent-harness/contracts/schemas/capabilities.schema.json"
+    ),
+    (
+      "skills/agent-harness/contracts/workflow.json",
+      "skills/agent-harness/contracts/schemas/workflow.schema.json"
+    ),
+    (
+      "skills/agent-harness/contracts/local-workflow.json",
+      "skills/agent-harness/contracts/schemas/local-workflow.schema.json"
+    ),
+    (
+      "skills/agent-harness/contracts/testflight-workflow.json",
+      "skills/agent-harness/contracts/schemas/testflight-workflow.schema.json"
+    ),
+    (
+      "skills/agent-harness/templates/project-registry.local.example.json",
+      "skills/agent-harness/contracts/schemas/project-registry.schema.json"
+    ),
+    (
+      "skills/agent-harness/templates/completion-report.json",
+      "skills/agent-harness/contracts/schemas/completion-report.schema.json"
+    ),
+    (
+      "skills/agent-harness/templates/run-authorization.json",
+      "skills/agent-harness/contracts/schemas/run-authorization.pending.schema.json"
+    ),
+    (
+      "skills/agent-harness/templates/run-authorization-local.json",
+      "skills/agent-harness/contracts/schemas/run-authorization.pending.schema.json"
+    ),
+    (
+      "tests/fixtures/run-authorization-approved.json",
+      "skills/agent-harness/contracts/schemas/run-authorization.schema.json"
+    ),
+    (
+      "skills/agent-harness/templates/private-policy-overlay.json",
+      "skills/agent-harness/contracts/schemas/private-policy-overlay.schema.json"
+    ),
+    (
+      "tests/fixtures/private-policy-overlay-approved.json",
+      "skills/agent-harness/contracts/schemas/private-policy-overlay.schema.json"
+    ),
+    (
+      "skills/agent-harness/templates/harness.json",
+      "skills/agent-harness/contracts/schemas/harness.schema.json"
+    ),
+    (
+      "skills/agent-harness/templates/harness-local.json",
+      "skills/agent-harness/contracts/schemas/harness.schema.json"
+    ),
+    (
+      "skills/apple-development-health/templates/health-observations.json",
+      "skills/apple-development-health/contracts/health-report.schema.json"
+    ),
+    (
+      "skills/icon-composer/contracts/companion-upstream.json",
+      "skills/icon-composer/contracts/companion-upstream.schema.json"
+    ),
+    (
+      "skills/delivery-report/templates/channel-config.json",
+      "skills/delivery-report/contracts/channel-config.schema.json"
+    ),
+    (
+      "tests/fixtures/delivery-authorization-approved.json",
+      "skills/delivery-report/contracts/delivery-authorization.schema.json"
+    ),
+  ]
+  /// Schemas that validate records outside `schemaPairs`: the example ledger's JSON Lines.
+  static let schemasValidatedElsewhere: Set<String> = [
+    "skills/agent-harness/contracts/schemas/ledger-record.schema.json"
+  ]
+
   public static func validateRepository(context: RuntimeContext) -> [String] {
     let root = context.repositoryRoot.standardizedFileURL
     let harness = context.harnessRoot.standardizedFileURL
-    let skills = root.appendingPathComponent("skills")
     let contracts = harness.appendingPathComponent("contracts")
     let schemas = contracts.appendingPathComponent("schemas")
-    var errors: [String] = []
-    for directory in [
-      contracts, skills.appendingPathComponent("delivery-report/contracts"),
-      skills.appendingPathComponent("icon-composer/contracts"),
-    ] { errors += validateJSONFiles(in: directory, relativeTo: root) }
-    let pairs = [
-      (
-        "skills/agent-harness/contracts/capabilities.json",
-        "skills/agent-harness/contracts/schemas/capabilities.schema.json"
-      ),
-      (
-        "skills/agent-harness/contracts/workflow.json",
-        "skills/agent-harness/contracts/schemas/workflow.schema.json"
-      ),
-      (
-        "skills/agent-harness/contracts/local-workflow.json",
-        "skills/agent-harness/contracts/schemas/local-workflow.schema.json"
-      ),
-      (
-        "skills/agent-harness/contracts/testflight-workflow.json",
-        "skills/agent-harness/contracts/schemas/testflight-workflow.schema.json"
-      ),
-      (
-        "skills/agent-harness/templates/project-registry.local.example.json",
-        "skills/agent-harness/contracts/schemas/project-registry.schema.json"
-      ),
-      (
-        "skills/agent-harness/templates/completion-report.json",
-        "skills/agent-harness/contracts/schemas/completion-report.schema.json"
-      ),
-      (
-        "skills/agent-harness/templates/run-authorization.json",
-        "skills/agent-harness/contracts/schemas/run-authorization.pending.schema.json"
-      ),
-      (
-        "tests/fixtures/run-authorization-approved.json",
-        "skills/agent-harness/contracts/schemas/run-authorization.schema.json"
-      ),
-      (
-        "tests/fixtures/private-policy-overlay-approved.json",
-        "skills/agent-harness/contracts/schemas/private-policy-overlay.schema.json"
-      ),
-      (
-        "skills/agent-harness/templates/harness.json",
-        "skills/agent-harness/contracts/schemas/harness.schema.json"
-      ),
-      (
-        "skills/agent-harness/templates/harness-local.json",
-        "skills/agent-harness/contracts/schemas/harness.schema.json"
-      ),
-      (
-        "skills/apple-development-health/templates/health-observations.json",
-        "skills/apple-development-health/contracts/health-report.schema.json"
-      ),
-      (
-        "skills/icon-composer/contracts/companion-upstream.json",
-        "skills/icon-composer/contracts/companion-upstream.schema.json"
-      ),
-      (
-        "skills/delivery-report/templates/channel-config.json",
-        "skills/delivery-report/contracts/channel-config.schema.json"
-      ),
-    ]
-    for (instance, schema) in pairs {
+    var errors = validateContractFiles(root: root)
+    for (instance, schema) in schemaPairs {
       errors += validatePair(root: root, instancePath: instance, schemaPath: schema)
     }
     if let value = object(root, "skills/agent-harness/contracts/capabilities.json", errors: &errors)
@@ -160,11 +174,7 @@ public enum ContractValidation {
     {
       errors += validateDeliveryChannelConfig(value)
     }
-    if let value = object(
-      root, "skills/agent-harness/templates/run-authorization.json", errors: &errors)
-    {
-      errors += validatePendingAuthorization(value)
-    }
+    errors += validateRunAuthorizationTemplates(root: root)
     if let value = object(root, "tests/fixtures/run-authorization-approved.json", errors: &errors) {
       errors += validateApprovedAuthorization(
         value, schemaURL: schemas.appendingPathComponent("run-authorization.schema.json"),
@@ -196,6 +206,36 @@ public enum ContractValidation {
       path: contracts.appendingPathComponent("example-ledger.jsonl"),
       schemaPath: schemas.appendingPathComponent("ledger-record.schema.json"), context: context)
     return Array(Set(errors)).sorted()
+  }
+
+  /// Each pending run-authorization template keeps its own delivery target: the documented PR
+  /// template stays on pr_ready, and the local one targets local_verified with the requirements
+  /// of the local harness template.
+  static func validateRunAuthorizationTemplates(root: URL) -> [String] {
+    var errors: [String] = []
+    if let value = object(
+      root, "skills/agent-harness/templates/run-authorization.json", errors: &errors)
+    {
+      errors += validatePendingAuthorization(value)
+      if value["delivery_target"] as? String != "pr_ready" {
+        errors.append("PR run authorization template must target pr_ready")
+      }
+    }
+    if let value = object(
+      root, "skills/agent-harness/templates/run-authorization-local.json", errors: &errors),
+      let harness = object(
+        root, "skills/agent-harness/templates/harness-local.json", errors: &errors)
+    {
+      errors += validatePendingAuthorization(value)
+      if value["delivery_target"] as? String != "local_verified" {
+        errors.append("local run authorization template must target local_verified")
+      }
+      // The runtime refuses an authorization whose local requirements differ from its harness.
+      if !equal(value["local_requirements"], harness["local_requirements"]) {
+        errors.append("local run authorization and harness templates bind different requirements")
+      }
+    }
+    return errors
   }
 
   public static func validateDAG(_ nodes: [[String: Any]]) -> [String] {
@@ -408,21 +448,144 @@ public enum ContractValidation {
       }
     } catch { return ["cannot validate \(instancePath) against \(schemaPath): \(error)"] }
   }
-  static func validateJSONFiles(in directory: URL, relativeTo root: URL) -> [String] {
-    guard
-      let enumerator = FileManager.default.enumerator(
-        at: directory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-    else { return ["contract directory is unavailable: \(directory.path)"] }
+  /// Checks every `skills/*/contracts` and `skills/*/templates` file, not a hand-kept list: each
+  /// contract directory parses, each template and contract instance has a `schemaPairs` entry
+  /// that agrees with its own relative `$schema`, each schema validates something, and every
+  /// digest field keeps its one spelling.
+  static func validateContractFiles(
+    root: URL, pairs: [(instance: String, schema: String)] = schemaPairs,
+    schemasValidatedElsewhere: Set<String> = schemasValidatedElsewhere
+  ) -> [String] {
+    let manager = FileManager.default
     var errors: [String] = []
-    for case let file as URL in enumerator where file.pathExtension == "json" {
+    var instances: [String] = []
+    var schemaFiles: [String] = []
+    let skills =
+      (try? manager.contentsOfDirectory(atPath: root.appendingPathComponent("skills").path))
+      ?? []
+    for skill in skills.sorted() {
+      for folder in ["contracts", "templates"] {
+        let base = "skills/\(skill)/\(folder)"
+        let directory = root.appendingPathComponent(base)
+        var isDirectory: ObjCBool = false
+        guard manager.fileExists(atPath: directory.path, isDirectory: &isDirectory),
+          isDirectory.boolValue
+        else { continue }
+        if folder == "contracts" { errors += validateJSONFiles(root: root, directory: base) }
+        for file in (manager.subpaths(atPath: directory.path) ?? []).sorted()
+        where file.hasSuffix(".json") {
+          let path = "\(base)/\(file)"
+          if path.hasSuffix(".schema.json") {
+            schemaFiles.append(path)
+          } else {
+            instances.append(path)
+          }
+        }
+      }
+    }
+    let paired = Set(pairs.map(\.instance))
+    for path in instances where !paired.contains(path) {
+      errors.append("contract instance is not validated against a schema: \(path)")
+    }
+    let used = Set(pairs.map(\.schema)).union(schemasValidatedElsewhere)
+    for path in schemaFiles where !used.contains(path) {
+      errors.append("contract schema validates no shipped instance or fixture: \(path)")
+    }
+    for (instance, schema) in pairs {
+      guard
+        let declared = (try? HarnessRuntime.object(root.appendingPathComponent(instance)))?[
+          "$schema"] as? String, !declared.contains("://")
+      else { continue }
+      let resolved = root.appendingPathComponent(instance).deletingLastPathComponent()
+        .appendingPathComponent(declared).standardizedFileURL
+      if resolved != root.appendingPathComponent(schema).standardizedFileURL {
+        errors.append("\(instance) declares $schema \(declared) but is validated against \(schema)")
+      }
+    }
+    return errors + validateDigestSpelling(root: root, schemas: schemaFiles)
+  }
+
+  /// Digest fields take `sha256:<64 lowercase hex>`. These older fields keep bare lowercase hex
+  /// because persisted ledgers, approvals and reports already carry that spelling; a new digest
+  /// field takes the prefix.
+  static let bareHexDigestFields: [String: Set<String>] = [
+    "skills/agent-harness/contracts/schemas/completion-report.schema.json": ["sha256"],
+    "skills/agent-harness/contracts/schemas/ledger-record.schema.json": [
+      "apple_observation_sha256", "apple_observation_state_sha256", "artifact_hashes",
+      "artifact_sha256", "constraint_sha256", "snapshot_sha256", "spec_checkpoint_sha256",
+    ],
+    "skills/agent-harness/contracts/schemas/run-authorization.schema.json": [
+      "artifact_hashes", "constraint_sha256", "snapshot_sha256",
+    ],
+    "skills/delivery-report/contracts/delivery-authorization.schema.json": [
+      "report_sha256", "sha256", "whatsapp_request_sha256",
+    ],
+  ]
+
+  static func validateDigestSpelling(
+    root: URL, schemas: [String], bareHex: [String: Set<String>] = bareHexDigestFields
+  ) -> [String] {
+    let prefixed = "^sha256:[0-9a-f]{64}$"
+    let bare = "^[0-9a-f]{64}$"
+    var errors: [String] = []
+    var observedBare: [String: Set<String>] = [:]
+    for path in schemas {
+      guard let schema = try? HarnessRuntime.loadJSON(root.appendingPathComponent(path)) else {
+        continue
+      }
+      func visit(_ node: Any, field: String) {
+        if let list = node as? [Any] {
+          for item in list { visit(item, field: field) }
+          return
+        }
+        guard let object = node as? [String: Any] else { return }
+        if let pattern = object["pattern"] as? String, pattern.contains("{64}") {
+          if pattern == bare {
+            observedBare[path, default: []].insert(field)
+            if bareHex[path]?.contains(field) != true {
+              errors.append("digest field \(field) in \(path) must use the sha256: prefix")
+            }
+          } else if pattern != prefixed {
+            errors.append("digest field \(field) in \(path) has a non-canonical pattern \(pattern)")
+          }
+        }
+        for (key, value) in object {
+          if key == "properties", let properties = value as? [String: Any] {
+            for (name, child) in properties { visit(child, field: name) }
+          } else {
+            visit(value, field: field)
+          }
+        }
+      }
+      visit(schema, field: "")
+    }
+    for (path, fields) in bareHex where schemas.contains(path) {
+      for field in fields.subtracting(observedBare[path] ?? []) {
+        errors.append("bare-hex digest exception is stale: \(field) in \(path)")
+      }
+    }
+    return errors
+  }
+
+  /// Each JSON file under the repository-relative `directory` must be a regular non-symlink file
+  /// that parses. Files are named relative to the repository however its root is spelled.
+  static func validateJSONFiles(root: URL, directory: String) -> [String] {
+    let base = root.appendingPathComponent(directory)
+    guard let files = FileManager.default.subpaths(atPath: base.path) else {
+      return ["contract directory is unavailable: \(directory)"]
+    }
+    var errors: [String] = []
+    for file in files.sorted() where file.hasSuffix(".json") {
+      let url = base.appendingPathComponent(file)
+      let name = "\(directory)/\(file)"
       do {
-        let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true else {
-          errors.append("contract JSON must be a regular non-symlink file: \(relative(file,root))")
+          errors.append("contract JSON must be a regular non-symlink file: \(name)")
           continue
         }
-        _ = try HarnessRuntime.loadJSON(file)
-      } catch { errors.append("invalid JSON \(relative(file,root)): \(error)") }
+        _ = try HarnessRuntime.loadJSON(url)
+      } catch { errors.append("invalid JSON \(name): \(error)") }
     }
     return errors
   }
@@ -492,9 +655,5 @@ public enum ContractValidation {
   static func safeRelative(_ value: String) -> Bool {
     !value.isEmpty && !value.hasPrefix("/")
       && !value.split(separator: "/", omittingEmptySubsequences: false).contains("..")
-  }
-  static func relative(_ file: URL, _ root: URL) -> String {
-    file.path.hasPrefix(root.path + "/")
-      ? String(file.path.dropFirst(root.path.count + 1)) : file.path
   }
 }

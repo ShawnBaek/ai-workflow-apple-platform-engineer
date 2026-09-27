@@ -59,41 +59,51 @@ private func goldenRGB(_ url: URL) throws -> (width: Int, pixels: [[UInt8]]) {
   return (image.width, pixels)
 }
 
-private func goldenRun(_ script: String, _ arguments: [String], root: URL) throws -> ProcessResult {
-  try HarnessRuntime.run(
-    executable: "/usr/bin/swift",
-    arguments: [
-      goldenRoot().appendingPathComponent("skills/figma-golden-testing/scripts/\(script)").path
-    ] + arguments, directory: root, timeout: 30)
+/// Compiles a golden script once for the calling test with the active toolchain's `swiftc`
+/// (`xcrun` honors `DEVELOPER_DIR`) and returns a runner for the binary. Run through the
+/// `/usr/bin/swift` interpreter, every invocation recompiled the script within its own 30-second
+/// budget while the other suites ran in parallel; the compile now gets a generous bound of its
+/// own and each run only executes the script, still from an unrelated working directory.
+private func goldenScript(_ script: String, root: URL) throws -> ([String]) throws -> ProcessResult
+{
+  let source = goldenRoot().appendingPathComponent("skills/figma-golden-testing/scripts/\(script)")
+  let binary = root.appendingPathComponent(source.deletingPathExtension().lastPathComponent)
+  let build = try HarnessRuntime.run(
+    executable: "/usr/bin/xcrun", arguments: ["swiftc", source.path, "-o", binary.path],
+    timeout: 600)
+  try #require(build.exitCode == 0, "\(script) did not compile: \(build.stderr)")
+  return { arguments in
+    try HarnessRuntime.run(
+      executable: binary.path, arguments: arguments, directory: root, timeout: 60)
+  }
 }
 
 @Test func goldenComparatorReportsAndEnforcesOnlyAnExplicitMinimum() throws {
   let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
   try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
   defer { try? FileManager.default.removeItem(at: root) }
+  let overlayDiff = try goldenScript("overlay_diff.swift", root: root)
   let reference = root.appendingPathComponent("reference.png")
   let same = root.appendingPathComponent("same.png")
   let different = root.appendingPathComponent("different.png")
   try goldenPNG(reference, color: (0, 0, 0))
   try goldenPNG(same, color: (0, 0, 0))
   try goldenPNG(different, color: (255, 255, 255))
-  let passed = try goldenRun(
-    "overlay_diff.swift",
+  let passed = try overlayDiff(
     [
       "--figma", reference.path, "--actual", same.path, "--out",
       root.appendingPathComponent("pass").path, "--minimum-match", "100",
-    ], root: root)
+    ])
   #expect(passed.exitCode == 0)
   #expect(
     try HarnessRuntime.object(root.appendingPathComponent("pass/metrics.json"))["status"] as? String
       == "passed")
   let mismatchOut = root.appendingPathComponent("fail")
-  let failed = try goldenRun(
-    "overlay_diff.swift",
+  let failed = try overlayDiff(
     [
       "--figma", reference.path, "--actual", different.path, "--out", mismatchOut.path,
       "--minimum-match", "100",
-    ], root: root)
+    ])
   #expect(failed.exitCode == 2)
   #expect(
     FileManager.default.fileExists(atPath: mismatchOut.appendingPathComponent("metrics.json").path))
@@ -105,29 +115,24 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
       FileManager.default.fileExists(atPath: mismatchOut.appendingPathComponent(artifact).path))
   }
   let reportOnlyOut = root.appendingPathComponent("report")
-  let reportOnly = try goldenRun(
-    "overlay_diff.swift",
-    ["--figma", reference.path, "--actual", different.path, "--out", reportOnlyOut.path], root: root
-  )
+  let reportOnly = try overlayDiff(
+    ["--figma", reference.path, "--actual", different.path, "--out", reportOnlyOut.path])
   #expect(reportOnly.exitCode == 0)
   #expect(
     try HarnessRuntime.object(reportOnlyOut.appendingPathComponent("metrics.json"))["status"]
       as? String == "not_evaluated")
-  let invalid = try goldenRun(
-    "overlay_diff.swift",
+  let invalid = try overlayDiff(
     [
       "--figma", reference.path, "--actual", same.path, "--out",
       root.appendingPathComponent("invalid").path, "--minimum-match", "nan",
-    ], root: root)
+    ])
   #expect(invalid.exitCode == 1)
   #expect(
-    try goldenRun(
-      "overlay_diff.swift",
+    try overlayDiff(
       [
         "--figma", reference.path, "--actual", same.path, "--out",
         root.appendingPathComponent("invalid-rgb").path, "--threshold", "bad",
-      ], root: root
-    ).exitCode == 1)
+      ]).exitCode == 1)
 }
 
 @Test func goldenDiffShowsSmallDeltasThatTheThresholdCounts() throws {
@@ -137,6 +142,7 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
   let reference = root.appendingPathComponent("reference.png")
   let actual = root.appendingPathComponent("actual.png")
   let output = root.appendingPathComponent("report")
+  let overlayDiff = try goldenScript("overlay_diff.swift", root: root)
   // An 8x8 gray frame: a 3x3 patch 20 per channel lighter (over threshold 16) and a
   // 2x2 patch 8 lighter (under it). Both deltas used to render black in diff.png.
   let failing = { (x: Int, y: Int) in (1...3).contains(x) && (1...3).contains(y) }
@@ -145,12 +151,11 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
   try goldenPNG(actual, width: 8, height: 8) { x, y in
     failing(x, y) ? (120, 120, 120) : tolerated(x, y) ? (108, 108, 108) : (100, 100, 100)
   }
-  let result = try goldenRun(
-    "overlay_diff.swift",
+  let result = try overlayDiff(
     [
       "--figma", reference.path, "--actual", actual.path, "--out", output.path,
       "--threshold", "16",
-    ], root: root)
+    ])
   #expect(result.exitCode == 0)
   let metrics = try HarnessRuntime.object(output.appendingPathComponent("metrics.json"))
   #expect(metrics["matchingPixels"] as? Int == 64 - 9)
@@ -182,6 +187,7 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
   let metrics = root.appendingPathComponent("metrics.json")
   let text = root.appendingPathComponent("text.json")
   let output = root.appendingPathComponent("rendered")
+  let renderReport = try goldenScript("render_report.swift", root: root)
   try JSONSerialization.data(withJSONObject: [
     "matchPercentage": 0, "threshold": 0, "matchingPixels": 0, "pixelCount": 1,
     "status": "not_evaluated",
@@ -190,9 +196,8 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
     "missing": [["field": "<field>", "figmaNodeId": "<node>", "expected": "<expected>"]],
     "extra": [], "changed": [], "matches": [],
   ]).write(to: text)
-  let rendered = try goldenRun(
-    "render_report.swift", ["--metrics", metrics.path, "--text", text.path, "--out", output.path],
-    root: root)
+  let rendered = try renderReport(
+    ["--metrics", metrics.path, "--text", text.path, "--out", output.path])
   #expect(rendered.exitCode == 0)
   let svg = try String(contentsOf: output.appendingPathComponent("metrics.svg"), encoding: .utf8)
   #expect(svg.contains("NOT EVALUATED"))
@@ -204,9 +209,8 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
   let example = goldenRoot().appendingPathComponent(
     "skills/figma-golden-testing/references/text-results.example.json")
   let exampleOutput = root.appendingPathComponent("example")
-  let exampleRun = try goldenRun(
-    "render_report.swift",
-    ["--metrics", metrics.path, "--text", example.path, "--out", exampleOutput.path], root: root)
+  let exampleRun = try renderReport(
+    ["--metrics", metrics.path, "--text", example.path, "--out", exampleOutput.path])
   #expect(exampleRun.exitCode == 0)
   let exampleSVG = try String(
     contentsOf: exampleOutput.appendingPathComponent("text-results.svg"), encoding: .utf8)
@@ -215,11 +219,9 @@ private func goldenRun(_ script: String, _ arguments: [String], root: URL) throw
   }
   try Data("{}".utf8).write(to: text)
   #expect(
-    try goldenRun(
-      "render_report.swift",
+    try renderReport(
       [
         "--metrics", metrics.path, "--text", text.path, "--out",
         root.appendingPathComponent("bad").path,
-      ], root: root
-    ).exitCode == 1)
+      ]).exitCode == 1)
 }

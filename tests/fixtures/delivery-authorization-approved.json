@@ -1,0 +1,28 @@
+{
+  "$schema": "../../skills/delivery-report/contracts/delivery-authorization.schema.json",
+  "schema_version": "1.0.0",
+  "decision": "approved",
+  "authorization_id": "delivery-authorization-example",
+  "run_id": "run-example",
+  "issued_at": "2026-01-01T00:00:00Z",
+  "expires_at": "2026-01-01T00:15:00Z",
+  "channel_id": "telegram.maintainer",
+  "channel_kind": "telegram",
+  "destination_ref": "private.maintainer-chat",
+  "report_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "media_allowlist": [
+    {
+      "kind": "screenshot",
+      "reference": "evidence/settings-screen.png",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "transport_ref": "bot-api.maintainer",
+  "idempotency_key": "delivery-example-1",
+  "single_use": true,
+  "whatsapp_mode": null,
+  "whatsapp_template_ref": null,
+  "whatsapp_template_language": null,
+  "whatsapp_request_sha256": null,
+  "cost_approval": "not_applicable"
+}

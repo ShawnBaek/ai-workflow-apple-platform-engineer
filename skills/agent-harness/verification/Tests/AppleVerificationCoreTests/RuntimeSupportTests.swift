@@ -38,13 +38,25 @@ import Testing
   #expect(result.exitCode == 0)
   #expect(result.stdout == "literal $(false); é")
   #expect(!result.timedOut)
+  // No assertion depends on how much a child writes before a deadline, which a loaded host
+  // decides. A child that writes 256 KiB, several times what a pipe buffers, and exits finishes
+  // only because the parent keeps draining past the cap: bounded output, and no timeout.
+  let bounded = try HarnessRuntime.run(
+    executable: "/bin/sh", arguments: ["-c", "/usr/bin/yes bounded | /usr/bin/head -c 262144"],
+    timeout: 60, maxOutputBytes: 1_024)
+  #expect(!bounded.timedOut)
+  #expect(bounded.exitCode == 0)
+  #expect(bounded.truncated)
+  #expect(bounded.stdout.utf8.count == 1_024)
+  #expect(bounded.stdout.hasPrefix("bounded\nbounded\n"))
+  // A child that never stops writing still reaches its deadline, and its output stays bounded.
   let noisy = try HarnessRuntime.run(
-    executable: "/usr/bin/yes", arguments: ["bounded"], timeout: 0.08, maxOutputBytes: 1_024)
+    executable: "/usr/bin/yes", arguments: ["bounded"], timeout: 0.2, maxOutputBytes: 1_024)
   #expect(noisy.timedOut)
-  #expect(noisy.truncated)
-  #expect(noisy.stdout.utf8.count == 1_024)
+  #expect(noisy.exitCode != 0)
+  #expect(noisy.stdout.utf8.count <= 1_024)
   let sleeping = try HarnessRuntime.run(
-    executable: "/bin/sh", arguments: ["-c", "sleep 5"], timeout: 0.08)
+    executable: "/bin/sh", arguments: ["-c", "sleep 60"], timeout: 0.08)
   #expect(sleeping.timedOut)
   #expect(sleeping.exitCode != 0)
 }

@@ -16,10 +16,10 @@
       "claude": null
     }
   },
-  "authoritative_root": "<absolute-path>",
-  "xcode_container": "<absolute-project-or-workspace-path>",
-  "private_policy_overlay": "<local-untracked-path>",
-  "run_authorization": "<local-untracked-path>",
+  "authoritative_root": "/absolute/path/to/app-repository",
+  "xcode_container": "/absolute/path/to/app-repository/App.xcodeproj",
+  "private_policy_overlay": "/absolute/private/run/policy.json",
+  "run_authorization": "/absolute/private/run/authorization.json",
   "run_ledger": "/absolute/private/run/ledger.jsonl",
   "resource_coordinator": {
     "state_path": "/absolute/private/runtime/resource-coordinator.json",

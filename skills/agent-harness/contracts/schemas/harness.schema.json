@@ -139,11 +139,11 @@
       },
       "additionalProperties": false
     },
-    "authoritative_root": {"type": "string", "minLength": 1},
-    "xcode_container": {"type": ["string", "null"], "minLength": 1},
-    "private_policy_overlay": {"type": "string", "minLength": 1},
-    "run_authorization": {"type": "string", "minLength": 1},
-    "run_ledger": {"type": "string", "minLength": 1},
+    "authoritative_root": {"type": "string", "minLength": 2, "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"},
+    "xcode_container": {"type": ["string", "null"], "minLength": 2, "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"},
+    "private_policy_overlay": {"type": "string", "minLength": 2, "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"},
+    "run_authorization": {"type": "string", "minLength": 2, "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"},
+    "run_ledger": {"type": "string", "minLength": 2, "pattern": "^/[^\\u0000-\\u001f\\u007f]*$"},
     "resource_coordinator": {
       "type": "object",
       "required": ["state_path", "coordinator_instance_id", "runtime_kind", "runtime_contract", "executable_sha256", "source_bundle_sha256"],
