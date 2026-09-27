@@ -22,6 +22,7 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 - [ADR 0002](docs/adr/0002-finalize-expired-quiescent-leases.md) is accepted. It shipped in 2.0.0-beta.10, whose entry below still calls it proposed.
 - `trello-pm-card-sync` resolves a target version only when the board tracks target versions or you ask for one, and asks for it together with the proposed card instead of holding back the rest of a normalization. For a new screen in an app with an established style, UI and Preview design discovery follows that style instead of asking the reference and style questions.
 - `apple-development-health` never builds, tests, installs, launches or boots a Simulator device; its runtime matrix cites those layers from the owning skills' evidence. The guarded runtime's documentation states that its authorization gate is agent-attested and when it is worth using, and `agent-harness` adds a worked local example.
+- The verifier's four largest sources are reorganized by responsibility into files under 1,000 lines: health evaluation, live observations, probe transports and the `health` command; the authorization envelope, grants and shared value checks; ledger reading and replay, lease records and workflow-node records; and authorize, reserve and repository-observation operations. Commands, JSON output, error messages and codes are unchanged. The source-bundle SHA-256 changes with the sources, so a private harness observes `runtime-identity` again after updating and rebinds as usual.
 
 ### Fixed
 
