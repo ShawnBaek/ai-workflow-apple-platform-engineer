@@ -27,8 +27,7 @@ func runtimeContext(repositoryRoot: String?) throws -> RuntimeContext {
   }
   // A build stays inside its installed skill. Resolve this location, never search
   // the user's home directory or silently select another installed copy.
-  var candidate = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
-    .resolvingSymlinksInPath().deletingLastPathComponent()
+  var candidate = try ResourceCoordinator.runningExecutableURL().deletingLastPathComponent()
   while candidate.path != "/" {
     if candidate.lastPathComponent == "agent-harness",
       FileManager.default.fileExists(
@@ -107,8 +106,7 @@ do {
     guard arguments.isEmpty else {
       throw VerificationError.invalid("runtime-identity takes no arguments")
     }
-    let executable = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
-      .resolvingSymlinksInPath()
+    let executable = try ResourceCoordinator.runningExecutableURL()
     let identity: [String: Any] = [
       "runtime_kind": "swift", "runtime_contract": "apple-verification-core.authorization.v1",
       "executable_path": executable.path,
