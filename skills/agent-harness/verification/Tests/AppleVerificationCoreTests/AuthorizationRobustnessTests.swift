@@ -6,21 +6,7 @@ import XCTest
 /// expired during slow probes, a health drop, or an Issue target outside the bound repository.
 /// The ledger must keep valid records readable and in time order.
 final class AuthorizationRobustnessTests: XCTestCase {
-  let repositoryRoot: URL = {
-    if let override = ProcessInfo.processInfo.environment["APPLE_VERIFICATION_REPOSITORY_ROOT"],
-      !override.isEmpty
-    {
-      return URL(fileURLWithPath: override).standardizedFileURL
-    }
-    var root = URL(fileURLWithPath: #filePath)
-    for _ in 0..<6 { root.deleteLastPathComponent() }
-    return root.standardizedFileURL
-  }()
-  var context: RuntimeContext {
-    RuntimeContext(
-      repositoryRoot: repositoryRoot,
-      harnessRoot: repositoryRoot.appendingPathComponent("skills/agent-harness"))
-  }
+  var context: RuntimeContext { GateRunSupport.context }
 
   func testTerminalStopBlocksALaterLeaseFromReservingAnAction() throws {
     let resumed = try reservedRun(stopBeforeLease: true)
@@ -52,8 +38,9 @@ final class AuthorizationRobustnessTests: XCTestCase {
     let result = dispatch(run, clock: clock) {
       clock.now.addTimeInterval(5)
       do {
-        try self.append(
-          run, "node", ["node_id": "mark_issue_in_review", "status": "pending"], at: aheadStamp)
+        try GateRunSupport.append(
+          "node", ["node_id": "mark_issue_in_review", "status": "pending"], to: run.ledger,
+          at: aheadStamp)
       } catch { XCTFail("\(error)") }
     }
     XCTAssertEqual(result.errors, [])
@@ -77,7 +64,7 @@ final class AuthorizationRobustnessTests: XCTestCase {
     func healthErrors(approved: String, live: String, profile: String = "pr_ready") throws
       -> [String]
     {
-      var envelope = try currentApprovedEnvelope()
+      var envelope = try GateRunSupport.approvedEnvelope()
       var authorized = envelope["health_attestation"] as! [String: Any]
       authorized["overall_status"] = approved
       envelope["health_attestation"] = authorized
@@ -105,7 +92,7 @@ final class AuthorizationRobustnessTests: XCTestCase {
   }
 
   func testLaterRepositoryRejectionRevokesTheConfirmationForItsScope() throws {
-    let envelope = try currentApprovedEnvelope()
+    let envelope = try GateRunSupport.approvedEnvelope()
     let repository = envelope["repository"] as! [String: Any]
     let scope = "\(repository["fingerprint"]!):\(repository["branch"]!):\(repository["remote"]!)"
     let grant = (envelope["action_grants"] as! [[String: Any]]).first {
@@ -116,7 +103,7 @@ final class AuthorizationRobustnessTests: XCTestCase {
     let currentContext = context
     func confirmationErrors(_ decisions: [(scope: String, decision: String)]) -> [String] {
       let records = decisions.enumerated().map { index, approval in
-        record(
+        GateRunSupport.record(
           index + 1, "approval",
           [
             "approval_id": "repository-\(index)", "kind": "repository", "actor": "user",
@@ -143,7 +130,7 @@ final class AuthorizationRobustnessTests: XCTestCase {
   }
 
   func testDirectIssueTargetsStayOnTheBoundIssueOrDeriveFromTheCreatedIssue() throws {
-    let bound = try currentApprovedEnvelope()
+    let bound = try GateRunSupport.approvedEnvelope()
     let original = bound["action_grants"] as! [[String: Any]]
     let key = original[0]["resource_key"]!
     let branch = (bound["repository"] as! [String: Any])["branch"] as! String
@@ -206,7 +193,8 @@ final class AuthorizationRobustnessTests: XCTestCase {
   }
 
   func testLedgerRecordsSplitOnlyOnLineFeedBytes() throws {
-    let ledger = try temporaryDirectory().appendingPathComponent("ledger.jsonl")
+    let ledger = try GateRunSupport.temporaryDirectory(for: self).appendingPathComponent(
+      "ledger.jsonl")
     // JSON permits these separators raw inside a string, and serializers do not escape them.
     let summary = "keep\u{2028}verification\u{2029}minimal\u{0085}and risk-derived"
     func line(_ sequence: Int) -> String {
@@ -246,9 +234,9 @@ final class AuthorizationRobustnessTests: XCTestCase {
   private func reservedRun(
     leaseSeconds: Int = 300, leaseStampOffset: TimeInterval = 0, stopBeforeLease: Bool = false
   ) throws -> ReservedRun {
-    let root = try temporaryDirectory().resolvingSymlinksInPath()
+    let root = try GateRunSupport.temporaryDirectory(for: self)
     let action = "github.issue.update"
-    let envelope = try currentApprovedEnvelope()
+    let envelope = try GateRunSupport.approvedEnvelope()
     let runID = envelope["run_id"] as! String
     let digest = Authorization.authorizationHash(envelope)
     let repository = envelope["repository"] as! [String: Any]
@@ -269,16 +257,10 @@ final class AuthorizationRobustnessTests: XCTestCase {
     try (HarnessRuntime.canonicalJSON(approval) + Data([0x0a])).write(to: ledger)
 
     _ = try ResourceCoordinator.bootstrap(statePath: state, legacyLeasesQuiesced: true)
-    var harness = try HarnessRuntime.object(
-      context.harnessRoot.appendingPathComponent("templates/harness-local.json"))
-    harness["authoritative_root"] = root.path
-    harness["private_policy_overlay"] = overlayURL.path
-    harness["run_authorization"] = authorizationURL.path
-    harness["run_ledger"] = ledger.path
-    harness["delivery_target"] = "pr_ready"
-    harness["health_profile"] = "pr_ready"
-    harness["github_tracking"] = ["issues": true, "project": NSNull()]
-    harness["local_requirements"] = NSNull()
+    let harness = GateRunSupport.prReadyHarness(
+      try HarnessRuntime.object(
+        context.harnessRoot.appendingPathComponent("templates/harness-local.json")),
+      checkout: root, policy: overlayURL, authorization: authorizationURL, ledger: ledger)
     try HarnessRuntime.atomicWriteJSON(harness, to: harnessURL)
     let trustedHarness = try ResourceCoordinator.loadTrustedHarness(
       harnessPath: harnessURL, context: context)
@@ -295,19 +277,12 @@ final class AuthorizationRobustnessTests: XCTestCase {
       statePath: state, resource: "github_external_mutation", descriptor: descriptor,
       ownerRunID: runID, ownerActor: "codex", ttlSeconds: leaseSeconds,
       now: start.addingTimeInterval(2), runAuthority: authority)
-    var sequence = 1
     func appendRecord(_ type: String, _ payload: [String: Any], at date: Date) throws {
-      sequence += 1
-      let line = record(sequence, type, payload, at: HarnessRuntime.timestamp(date), runID: runID)
-      try appendLine(line, to: ledger)
+      try GateRunSupport.append(type, payload, to: ledger, at: HarnessRuntime.timestamp(date))
     }
     try appendRecord(
-      "time_interval",
-      [
-        "authorization_hash": digest, "kind": "active",
-        "started_at": HarnessRuntime.timestamp(start),
-        "ended_at": HarnessRuntime.timestamp(start.addingTimeInterval(1)), "reason": "implement",
-      ], at: start.addingTimeInterval(1))
+      "time_interval", GateRunSupport.activeInterval(authorizationHash: digest, startingAt: start),
+      at: start.addingTimeInterval(1))
     if stopBeforeLease {
       try appendRecord(
         "stop", ["reason": "user cancelled the run", "outcome": "cancelled"],
@@ -315,16 +290,9 @@ final class AuthorizationRobustnessTests: XCTestCase {
     }
     try appendRecord(
       "lease",
-      [
-        "lease_id": receipt["lease_id"]!, "action": "acquire", "owner": "codex",
-        "resource": "github_external_mutation", "resource_key": receipt["resource_key"]!,
-        "resource_descriptor": descriptor, "coordinator_receipt": receipt,
-        "branch": repository["branch"]!, "base_sha": repository["base_sha"]!,
-        "pre_state_hash": "sha256:" + String(repeating: "0", count: 64),
-        "allowed_paths": ["Sources"], "allowed_actions": [action],
-        "approval_id": envelope["authorization_id"]!, "acquired_at": receipt["acquired_at"]!,
-        "expires_at": receipt["expires_at"]!,
-      ], at: Date().addingTimeInterval(leaseStampOffset))
+      try GateRunSupport.leaseAcquisition(
+        receipt: receipt, descriptor: descriptor, envelope: envelope, action: action),
+      at: Date().addingTimeInterval(leaseStampOffset))
 
     let health: [String: Any] = ["fixture": "live health report"]
     try HarnessRuntime.atomicWriteJSON(receipt, to: root.appendingPathComponent("receipt.json"))
@@ -344,9 +312,7 @@ final class AuthorizationRobustnessTests: XCTestCase {
       paths: ["Sources"], context: context)
     let request = try XCTUnwrap(
       try Authorization.loadStablePrivateJSON(requestURL, root: root) as? [String: Any])
-    var attestation = envelope["health_attestation"] as! [String: Any]
-    attestation["report_sha256"] = request["health_report_sha256"]!
-    attestation["observed_at"] = HarnessRuntime.timestamp()
+    let attestation = try GateRunSupport.liveAttestation(envelope: envelope, request: request)
     let reserved = Authorization.reserveBoundAction(
       ledgerPath: ledger, envelope: envelope, request: request, runRoot: root,
       policyOverlay: overlay, liveRepository: repository, liveSpecSnapshot: nil,
@@ -375,49 +341,5 @@ final class AuthorizationRobustnessTests: XCTestCase {
         probes()
         return ([], attestation ?? run.attestation)
       })
-  }
-
-  private func append(_ run: ReservedRun, _ type: String, _ payload: [String: Any], at: String)
-    throws
-  {
-    try HarnessRuntime.withFileLock(at: run.ledger) {
-      let records = try Authorization.loadLedger(run.ledger)
-      let sequence = (records.compactMap { $0["sequence"] as? Int }.max() ?? 0) + 1
-      let runID = records.first?["run_id"] as? String ?? ""
-      try appendLine(record(sequence, type, payload, at: at, runID: runID), to: run.ledger)
-    }
-  }
-
-  private func appendLine(_ record: [String: Any], to ledger: URL) throws {
-    let handle = try FileHandle(forWritingTo: ledger)
-    defer { try? handle.close() }
-    try handle.seekToEnd()
-    try handle.write(contentsOf: try HarnessRuntime.canonicalJSON(record) + Data([0x0a]))
-  }
-
-  private func record(
-    _ sequence: Int, _ type: String, _ payload: [String: Any], at: String, runID: String = "run"
-  ) -> [String: Any] {
-    [
-      "schema_version": "1.0.0", "run_id": runID, "sequence": sequence, "recorded_at": at,
-      "record_type": type, "payload": payload,
-    ]
-  }
-
-  private func currentApprovedEnvelope() throws -> [String: Any] {
-    var envelope = try HarnessRuntime.object(
-      repositoryRoot.appendingPathComponent("tests/fixtures/run-authorization-approved.json"))
-    let schema = repositoryRoot.appendingPathComponent(
-      "skills/agent-harness/contracts/schemas/run-authorization.schema.json")
-    envelope["$schema"] = schema.absoluteString
-    envelope["contract_schema_sha256"] = "sha256:" + (try HarnessRuntime.sha256File(schema))
-    return envelope
-  }
-
-  private func temporaryDirectory() throws -> URL {
-    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-    addTeardownBlock { try? FileManager.default.removeItem(at: url) }
-    return url
   }
 }

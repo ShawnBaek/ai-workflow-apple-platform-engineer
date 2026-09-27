@@ -25,16 +25,30 @@ extension ContractValidation {
     for field in [
       "run_id", "authorization_id", "actor", "selected_writer", "issued_at", "expires_at",
       "repository", "github", "apple", "health_attestation", "contract_schema_id",
-      "contract_schema_sha256", "spec_kit", "local_requirements",
+      "contract_schema_sha256", "spec_kit",
     ] where present(pending[field]) {
       errors.append(
         "run authorization template must not contain executable identity, authority, or time: \(field)"
       )
     }
-    if pending["delivery_target"] as? String != "pr_ready"
-      || pending["health_profile"] as? String != "pr_ready"
-    {
-      errors.append("run authorization template must retain the inert pr_ready profile")
+    // A PR template leaves local requirements out; a local template binds exactly the two
+    // accepted-plan flags that the runtime compares with its local harness.
+    switch (pending["delivery_target"] as? String, pending["health_profile"] as? String) {
+    case ("pr_ready", "pr_ready"):
+      if present(pending["local_requirements"]) {
+        errors.append("PR run authorization template cannot bind local requirements")
+      }
+    case ("local_verified", "local_verified"):
+      guard let requirements = pending["local_requirements"] as? [String: Any],
+        Set(requirements.keys) == ["review_required", "spec_kit_required"],
+        requirements.values.allSatisfy(HarnessRuntime.isBoolean)
+      else {
+        errors.append("local run authorization template must bind exact local requirements")
+        break
+      }
+    default:
+      errors.append(
+        "run authorization template must retain an inert pr_ready or local_verified profile")
     }
     let limits: [String: Any] = [
       "active_wall_minutes": 45, "async_wait_minutes": 45, "max_implementation_attempts": 3,
@@ -202,16 +216,17 @@ extension ContractValidation {
     if permissions != ["contents: read", "issues: write"] {
       errors.append("IconGen watcher permissions must remain contents read and issues write only")
     }
-    if captures(text, #"(?m)^\s*uses:\s*(\S+)"#) != [
-      "actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
-    ] {
-      errors.append("IconGen watcher may use only the pinned checkout action")
+    // The lock is which action runs beside the issue-write token (in either step spelling) and
+    // that it is pinned to a full commit; moving that commit is a reviewed workflow change alone.
+    let actions = captures(text, #"(?m)^\s*(?:-\s+)?uses:\s*(\S+)"#)
+    if actions.count != 1 || !matches(actions.first, #"^actions/checkout@[0-9a-f]{40}$"#) {
+      errors.append("IconGen watcher may use only actions/checkout pinned to a full commit SHA")
     }
     // By default actions/checkout stores the job's issue-write token in .git/config, where every
     // later step, including the Swift build, can read it. gh receives the token through env.
     if text.range(
       of:
-        #"(?m)^\s*uses:\s*actions/checkout@\S+[^\n]*\n\s+with:\n\s+persist-credentials: false\s*$"#,
+        #"(?m)^\s*(?:-\s+)?uses:\s*actions/checkout@\S+[^\n]*\n\s+with:\n\s+persist-credentials: false\s*$"#,
       options: .regularExpression) == nil
     {
       errors.append("IconGen watcher checkout must set persist-credentials: false")
@@ -222,8 +237,18 @@ extension ContractValidation {
     if captures(jobs, #"(?m)^  ([A-Za-z_][A-Za-z0-9_-]*):\s*$"#) != ["compare"] {
       errors.append("IconGen watcher must contain exactly one compare job")
     }
+    // The job runs on a named hosted macOS image, never macos-latest or a self-hosted label, and
+    // is bounded in time.
+    let runners = captures(jobs, #"(?m)^    runs-on:[ \t]*(.*?)[ \t]*$"#)
+    if runners.count != 1 || !matches(runners.first, #"^macos-[0-9]+$"#) {
+      errors.append("IconGen watcher must run on one named hosted macOS image")
+    }
+    let timeouts = captures(jobs, #"(?m)^    timeout-minutes:[ \t]*(.*?)[ \t]*$"#)
+    if timeouts.count != 1 || !(1...30).contains(Int(timeouts.first ?? "") ?? 0) {
+      errors.append("IconGen watcher job needs one timeout of at most 30 minutes")
+    }
     for required in [
-      "runs-on: macos-15", "timeout-minutes: 15", "\"$APE_BIN_DIR/apple-verify\" companion",
+      "\"$APE_BIN_DIR/apple-verify\" companion",
       "if: github.repository == 'ShawnBaek/ai-workflow-apple-platform-engineer'",
       "--show-bin-path",
       "--target-repository \"$GITHUB_REPOSITORY\"",

@@ -49,7 +49,7 @@ Custom verification and adapters should also use Swift. Existing external CLIs r
 
 ## Local outcomes
 
-A preview or local fix can select `local_verified`. Its authorization has no GitHub/Apple scope; a commit grant is optional and still requires the applicable explicit user approval. `local_requirements` binds whether review and Spec Kit are required by the accepted plan. Omitted review is recorded in acceptance evidence, not silently treated as passed. `runtime_ui` adds the actual build and destination checks when relevant.
+A preview or local fix can select `local_verified`. Its authorization, started from `templates/run-authorization-local.json`, has no GitHub/Apple scope; a commit grant is optional and still requires the applicable explicit user approval. `local_requirements` binds whether review and Spec Kit are required by the accepted plan, with the same values in the authorization and the harness. Omitted review is recorded in acceptance evidence, not silently treated as passed. `runtime_ui` adds the actual build and destination checks when relevant.
 
 The local template has `github_tracking.issues: false` and `project: null`;
 PR and TestFlight profiles still require issue tracking. Existing private

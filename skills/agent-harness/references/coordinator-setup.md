@@ -55,7 +55,7 @@ so the checked repository stays separate from the installed contracts.
      --output '<absolute-private-harness-path>'
    ```
 
-   Populate only the policy's approved GitHub owner and optional Apple guard when those scopes apply; use null for a local outcome. Fill
+   The policy template starts with both scopes null, which a local outcome keeps. For PR delivery set `github` to `{"owner": "<approved-owner>"}`, and add the Apple guard only for TestFlight. Fill
    every harness field, including absolute private paths, exact coordinator
    binding, selected client roots, profile/components, repository, and Xcode
    container when applicable. For a TestFlight run, also configure
@@ -132,7 +132,9 @@ policy, coordinator binding, client roots, repository, and container to their
 exact values. Re-run the skill-manifest observation after those fields are
 final; do not reuse another run's harness hash.
 
-Then run:
+Then run the commands below. For a local outcome, materialize
+`templates/run-authorization-local.json` in place of `templates/run-authorization.json`;
+its `local_requirements` must equal the harness's.
 
 ```sh
 "$APE" materialize \

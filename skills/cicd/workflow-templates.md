@@ -96,9 +96,12 @@ software list, and write both into the workflow file. Do not take the Xcode path
 from a repository variable: under `xcode-project-workflow`'s
 [selection rule](../xcode-project-workflow/references/xcode-selection.md#choose-by-precedence),
 a versioned `DEVELOPER_DIR` path in CI is the project's pin, so local agents
-use the same version, while an unresolvable variable is no pin. CI keeps that
-pin until a reviewed change moves it; it never floats to the image default or
-the newest installed Xcode. The build check fails fast when the path resolves to
+use the same version, while an unresolvable variable is no pin. The one
+exception is a job that the repository's documentation names as a
+compatibility-floor lane: it keeps proving the oldest supported Xcode, and
+local agents treat its version as a minimum instead. Either way, CI keeps its
+versioned path until a reviewed change moves it; it never floats to the image
+default or the newest installed Xcode. The build check fails fast when the path resolves to
 a different build. `DEVELOPER_DIR` changes nothing outside the job; do not run
 `xcode-select --switch` in a job that can reach a persistent runner.
 

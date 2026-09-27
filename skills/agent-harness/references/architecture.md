@@ -228,6 +228,14 @@ set and records to match the reviewed identity. An empty post-commit working-tre
 diff is therefore not mistaken for a different reviewed patch; any content,
 mode, symlink, deletion, or path change invalidates affected evidence.
 
+Contract digests are spelled `sha256:` followed by 64 lowercase hex digits. These
+older fields keep bare lowercase hex, because existing ledgers, approvals and
+reports carry that spelling: completion evidence and delivery media `sha256`,
+delivery `report_sha256` and `whatsapp_request_sha256`, TestFlight
+`artifact_sha256`, grant `constraint_sha256`, Spec Kit `snapshot_sha256`,
+`artifact_hashes` and `spec_checkpoint_sha256`, and the Apple observation digests.
+`apple-verify repository` rejects any other spelling and any new bare-hex field.
+
 ## Bounded attempts
 
 Admission contention (`resource_conflict` or `capacity_exceeded`) queues an

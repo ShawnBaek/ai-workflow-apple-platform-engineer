@@ -58,9 +58,11 @@ public enum SkillDescriptionBudget {
 
   /// Reads the frontmatter description as the listing shows it. A folded (`>`) or literal
   /// (`|`) block scalar is measured by its indented text, not by its one-character indicator
-  /// line, and a plain scalar includes its indented continuation lines.
+  /// line, and a plain scalar includes its indented continuation lines. A quoted scalar is
+  /// measured without its quotes, each escape as the one character it stands for. CRLF line
+  /// breaks read as one break, as YAML defines them, so such a file is not skipped unmeasured.
   private static func description(in text: String) -> String? {
-    let lines = text.components(separatedBy: "\n")
+    let lines = text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
     guard lines.first == "---", let end = lines.dropFirst().firstIndex(of: "---"),
       let start = lines[1..<end].firstIndex(where: { $0.hasPrefix("description:") })
     else { return nil }
@@ -74,8 +76,51 @@ public enum SkillDescriptionBudget {
     if let indicator = head.first, indicator == ">" || indicator == "|" {
       value = continuation.joined(separator: indicator == ">" ? " " : "\n")
     } else {
-      value = ([head] + continuation).filter { !$0.isEmpty }.joined(separator: " ")
+      let folded = ([head] + continuation).filter { !$0.isEmpty }.joined(separator: " ")
+      value = unquoted(folded) ?? folded
     }
     return value.isEmpty ? nil : value
+  }
+
+  /// The content of a single- or double-quoted flow scalar whose lines are already folded, or
+  /// nil when the value is not quoted or its quote never closes.
+  private static func unquoted(_ scalar: String) -> String? {
+    let characters = Array(scalar)
+    guard let quote = characters.first, quote == "\"" || quote == "'" else { return nil }
+    let named: [Character: Character] = [
+      "0": "\0", "a": "\u{07}", "b": "\u{08}", "t": "\t", "n": "\n", "v": "\u{0B}",
+      "f": "\u{0C}", "r": "\r", "e": "\u{1B}", "N": "\u{85}", "_": "\u{A0}", "L": "\u{2028}",
+      "P": "\u{2029}",
+    ]
+    let hexWidths: [Character: Int] = ["x": 2, "u": 4, "U": 8]
+    var result = ""
+    var index = 1
+    while index < characters.count {
+      let character = characters[index]
+      if character == quote {
+        // A single-quoted scalar writes its quote as two.
+        guard quote == "'", index + 1 < characters.count, characters[index + 1] == "'" else {
+          return result
+        }
+        result.append("'")
+        index += 2
+      } else if quote == "\"", character == "\\", index + 1 < characters.count {
+        let escape = characters[index + 1]
+        if let width = hexWidths[escape], index + 2 + width <= characters.count,
+          let code = UInt32(String(characters[(index + 2)..<(index + 2 + width)]), radix: 16),
+          let decoded = Unicode.Scalar(code)
+        {
+          result.unicodeScalars.append(decoded)
+          index += 2 + width
+        } else {
+          result.append(named[escape] ?? escape)
+          index += 2
+        }
+      } else {
+        result.append(character)
+        index += 1
+      }
+    }
+    return nil
   }
 }

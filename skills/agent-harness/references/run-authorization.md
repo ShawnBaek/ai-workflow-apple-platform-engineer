@@ -2,7 +2,12 @@
 
 Use `templates/run-authorization.json` when the user wants an approved task to
 continue through PR delivery, or an explicitly selected TestFlight target,
-without routine prompts at every green-path step.
+without routine prompts at every green-path step. For a `local_verified`
+outcome start from `templates/run-authorization-local.json`: it keeps GitHub and
+Apple scope null and binds the same `local_requirements` as
+`templates/harness-local.json`. Set both files' review and Spec Kit flags from the
+accepted plan; the runtime blocks an authorization whose requirements differ from
+its harness.
 
 The authorization is a finite capability envelope, not a general “yes.” Bind
 it to the exact repository fingerprint, canonical path, redacted remote, base
@@ -24,10 +29,11 @@ scope, not a file list: each entry lies within `allowed_paths` and uses the same
 prefix rule. The commit request must name exactly the live reviewed staged set,
 in any order, and every staged path must fall within that scope.
 
-## Three delivery targets
+## Delivery targets
 
 | Target | Terminal evidence |
 | --- | --- |
+| `local_verified` | every `contracts/local-workflow.json` node, current acceptance evidence, the review `local_requirements` asks for or the recorded reason it was omitted, and a matching Spec Kit checkpoint when required; no GitHub or Apple writes |
 | `pr_ready` | remote SHA, PR, published evidence, required checks, Issue/Project reconciliation or recorded partial failure |
 | `testflight_uploaded` | `pr_ready` plus verified archive hash, accepted upload, bounded processing terminal state, exact build read-back |
 | `testflight_distributed` | uploaded target plus distribution to only the named internal group IDs and membership/build read-back |

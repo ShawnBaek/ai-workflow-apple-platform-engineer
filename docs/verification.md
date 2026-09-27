@@ -9,7 +9,7 @@ integration gaps; it does not treat metadata checks as end-to-end proof.
 
 All bundled runtime helpers and their tests use Swift. The package has no third-party dependencies: Foundation, CryptoKit, SQLite, CoreGraphics, ImageIO, and CoreText provide the implementation. Xcode, `git`, `gh`, and selected Apple tools remain subprocess dependencies where the operation needs them. Custom Python helpers are not required.
 
-Requirements: macOS 13 or later, Swift 6, and full Xcode for the test libraries. Use the project's selected Xcode; a newer verifier toolchain does not raise the app's deployment target.
+Requirements: macOS 13 or later, Swift 6, and full Xcode 16.4 or later for the test libraries. Use the project's selected Xcode; a newer verifier toolchain does not raise the app's deployment target.
 
 ```sh
 swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
@@ -19,7 +19,7 @@ APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1
 
 The first command builds the executable and runs targeted regression tests. The second validates skill metadata, documentation links, JSON/schema pairs, workflow dependencies and lease intervals, terminal conditions, capability policies, fixtures, and the example ledger. It does not contact GitHub, boot Simulator, evaluate model quality, or measure an app's performance.
 
-CI runs the same checks on macOS. Keep worker counts bounded; do not add a second build just to repeat a passing result. Generated `.build` content is ignored and excluded from installed-source identity.
+CI runs the same checks on macOS. Its `validate` job sets Xcode 16.4 (build 16F6) on the `macos-15` image through `DEVELOPER_DIR`, fails when that path resolves to another build, and records `xcodebuild -version` and `swift --version`. The `validate` job is this repository's compatibility-floor lane under `xcode-project-workflow`'s [selection rule](../skills/xcode-project-workflow/references/xcode-selection.md#choose-by-precedence): it keeps proving the verifier on the oldest supported Xcode, so its path is a minimum rather than a pin, and local runs use Xcode 16.4 or later, the newest installed by default. Move it only with a reviewed change chosen from the image's [published Xcode list](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md). A pull request's newer push cancels its running check; every push to `main` runs to completion. On a developer machine keep worker counts bounded (the `-j 1 -Xswiftc -j1` above); the dedicated CI runner uses SwiftPM's default of one job per CPU. Do not add a second build just to repeat a passing result. Generated `.build` content is ignored and excluded from installed-source identity.
 
 ## Swift formatting and compilation
 
@@ -101,8 +101,9 @@ the installed skill root still supplies trusted schemas and source identity.
 
 The [open-source portability audit](evidence/open-source-portability.md) inventories
 all current skills and records synthetic consumer decision checks. Golden script
-regressions execute the real Swift scripts from an unrelated working directory;
-they do not require or validate a live Figma file or app capture.
+regressions compile the real Swift scripts with the selected toolchain and run them
+from an unrelated working directory; they do not require or validate a live Figma
+file or app capture.
 
 Choose checks by the observable failure they prevent. A layout change usually needs a relevant build and screenshot; add XCUITest only when a durable interaction regression warrants it. For animation, inspect a trimmed recording, interruption/reversal, and Reduce Motion; use Instruments or a device metric for performance claims.
 
