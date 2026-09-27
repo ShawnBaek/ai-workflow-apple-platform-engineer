@@ -41,6 +41,12 @@ from one reviewed source snapshot, preserving scope and rollback. Do not silentl
 mix current upstream with an unidentified old copy. Missing provenance does not
 block inventory or preparation.
 
+Apple's Xcode skills are not part of this collection. Inventory them from the
+selected Xcode's bundle and expose them as
+[Apple skill exposure](references/apple-skill-exposure.md) describes:
+`xcrun agent` is `mcpbridge run-agent` and runs only here, after the person
+approves the client, scope, folder and Xcode.
+
 ## Inventory, then perform authorized setup
 
 1. Inspect the selected tools using local lookup/version/help and the app's actual

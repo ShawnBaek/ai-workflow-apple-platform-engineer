@@ -93,7 +93,10 @@ wholesale:
 1. **Protect local-only entries.** Some entries may be real directories or links
    to other sources rather than into this bundle. Resolve each entry's target
    first and leave anything that does not point into the bundle untouched — a
-   `rm -rf` and relink destroys them.
+   `rm -rf` and relink destroys them. Links into an export of Apple's Xcode
+   skills are foreign too; report them as
+   [Apple skill exposure](apple-skill-exposure.md#apple-folders-are-foreign)
+   describes.
 2. **Prune stale links.** Remove bundle-managed links whose skill no longer
    exists in the new revision; otherwise a renamed or removed skill stays as a
    broken link that a client may still try to load.

@@ -159,8 +159,11 @@ Use the first available authorized route:
 3. host `xcodebuild`, `xcrun`, and related Apple CLI tools;
 4. an explicitly approved third-party adapter such as XcodeBuildMCP.
 
-Built-in and exported Apple skills are alternative exposures; do not load both
-for the same trigger. Record the selected tool/skill provider and version.
+Built-in and exported Apple skills are alternative exposures of one Xcode; load
+one, as [Apple skill exposure](../apple-platform-setup/references/apple-skill-exposure.md)
+describes. Never run `xcrun agent`, which is `mcpbridge run-agent`, to find or
+export skills during a build task. Record the selected tool/skill provider and
+version, with the Xcode build and an export's digest.
 When runtime discovery is stalled, inventory all Simulator-capable providers
 across open tasks and keep exactly one active for diagnosis, official-first.
 Do not compare providers concurrently against an already blocked global service.

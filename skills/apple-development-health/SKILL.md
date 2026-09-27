@@ -44,6 +44,7 @@ seconds, or 30 seconds for the runtime inventory. Do not retry in a loop.
 | MCP exposure and connectivity | Whether the current task's tool list includes the selected server (Xcode, Figma, Sketch, Trello, 1Password; plugin and connector servers appear only there), then at most one read-only call its owning skill names |
 | Simulator runtimes | `xcrun simctl list runtimes --json` within 30 seconds; add `xcrun simctl list devices available --json` only when the task needs a destination |
 | Installed skills | Each selected skill resolves once in the client's skill root, and its `../<skill>/` links resolve there, including `agent-harness` |
+| Apple's Xcode skills | The selected Xcode's bundled skill files and a recorded export's digest, read as the [inventory without exporting](../apple-platform-setup/references/apple-skill-exposure.md#inventory-without-exporting) describes. Never `xcrun agent`, which is `mcpbridge run-agent`, not even `--help` |
 
 Report each component with the same vocabulary:
 

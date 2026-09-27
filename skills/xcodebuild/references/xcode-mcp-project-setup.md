@@ -289,8 +289,10 @@ committed approval applies to everyone who trusts the project.
   `XcodeListWorkspaces` listed the open project. If you cannot bind the bridge
   with `DEVELOPER_DIR`, report it as unbound and use the host CLI tools with the
   selected `DEVELOPER_DIR` instead.
-- Never probe with `xcrun mcpbridge run-agent`. It launches Xcode and prints MCP
-  credentials.
+- Never probe with `xcrun mcpbridge run-agent` or `xcrun agent`, whose script
+  runs `mcpbridge run-agent`. It can launch Xcode and print MCP credentials.
+  Exporting Apple's Xcode skills with it is a separate setup step with its own
+  approval: see [Apple skill exposure](../../apple-platform-setup/references/apple-skill-exposure.md).
 
 ## Sources
 

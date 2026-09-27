@@ -23,6 +23,11 @@ and issue triage through a verified, reviewable fix.
   trigger and owner; otherwise update or route through the existing skill.
 - Prefer current Apple-authored Xcode skills, Documentation Search, and Xcode
   tools. Do not copy Apple skill bodies into this repository.
+- `xcrun agent` is Xcode's wrapper for `mcpbridge run-agent`. Never run it, or
+  any `run-agent` subcommand, `--help` included, to inspect Apple skills; read
+  the Xcode bundle's skill files with `ls`, `grep` or `cat`. Exposing Apple
+  skills to a client follows
+  [Apple skill exposure](skills/apple-platform-setup/references/apple-skill-exposure.md).
 - Work in the authoritative checkout. A Git worktree is explicit opt-in only.
 - Do not regenerate an open XcodeGen project without explicit approval.
 - Do not run Xcode or Simulator commands in a sandboxed process.
