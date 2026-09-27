@@ -222,22 +222,15 @@ final class ContractValidationTests: XCTestCase {
 
   func testCapabilityPoliciesRemainFullyBound() throws {
     let capabilities = try object("skills/agent-harness/contracts/capabilities.json")
-    let current = ContractValidation.validateCapabilities(capabilities)
-    let hashes = [
-      "runtime_registry_policy", "xcode_mcp_provider_policy", "resource_overlap_policy",
-      "cross_run_coordination_policy",
-    ].map { "\($0)=\(ContractValidation.hash(capabilities[$0]) ?? "nil")" }
-    XCTAssertFalse(
-      current.contains {
-        $0.contains("CoreSimulator") || $0.contains("Xcode MCP") || $0.contains("resource overlap")
-          || $0.contains("cross-run")
-      }, "\(current); \(hashes)")
+    XCTAssertEqual(ContractValidation.validateCapabilities(capabilities), [])
     var drifted = capabilities
     var varPolicy = capabilities["runtime_registry_policy"] as! [String: Any]
     varPolicy["minimum_repeat_observations"] = 1
     drifted["runtime_registry_policy"] = varPolicy
     XCTAssertTrue(
-      ContractValidation.validateCapabilities(drifted).contains { $0.contains("CoreSimulator") })
+      ContractValidation.validateCapabilities(drifted).contains {
+        $0.contains("not the reviewed policy")
+      })
   }
 
   func testTestFlightTransitionRequiresOrderedCompletedReadbackAndStableArtifact() {

@@ -630,12 +630,19 @@ public enum Authorization {
     guard let plan = envelope["resource_plan"] as? [[String: Any]] else {
       return ["authorization resource plan must be an array"]
     }
-    let resources: Set<String> = [
-      "source_checkout_writer", "xcode_project_mutation", "build_tuple", "simulator_or_device",
-      "coresimulator_runtime_registry", "macos_gui_session", "signing_or_app_store_connect",
-      "github_external_mutation",
-    ]
     var errors: [String] = []
+    // Plannable resources come from the installed capability policy; a policy that is missing,
+    // malformed or not the reviewed one admits no planned lease. That one error already rejects
+    // the plan, so `nil` skips the per-entry resource check that would repeat it.
+    var resources: Set<String>? = []
+    if !plan.isEmpty {
+      do {
+        resources = Set(try CapabilityPolicy.load(context: context).resourceScopes)
+      } catch {
+        errors.append(String(describing: error))
+        resources = nil
+      }
+    }
     var ids = Set<String>()
     var identities = Set<String>()
     var workflowNodes: [String: [String: Any]] = [:]
@@ -699,7 +706,7 @@ public enum Authorization {
       if id.isEmpty || !ids.insert(id).inserted {
         errors.append("authorization resource plan IDs must be unique and non-empty")
       }
-      if !resources.contains(resource) {
+      if let resources, !resources.contains(resource) {
         errors.append("authorization resource plan uses an unknown resource")
       }
       if !key.hasPrefix(resource + ":sha256:") || !identities.insert(resource + "\0" + key).inserted
