@@ -126,7 +126,11 @@ same `DEVELOPER_DIR` so that it checks the selected Xcode rather than the global
 one. Its `mcp.xcode` check also runs `xcrun mcpbridge` in that environment and
 only looks for `xcrun` and `mcpbridge` in the client's registration. A pass
 therefore does not prove that the registration itself sets `DEVELOPER_DIR`.
-Check the registration as the provider preflight below describes.
+Check the registration as the provider preflight below describes. The check
+reads the registration with each client's `mcp get` in the directory where you
+launch it, so launch it from the repository root to see a project registration.
+Its own `xcrun mcpbridge` run starts a bridge, and so does Claude Code's
+`mcp get` health check of an approved server; Xcode alerts about each one.
 
 The developer's authoritative window may run in a different installation. To
 check, list running copies with `ps -axo pid=,comm= | grep '/Contents/MacOS/Xcode$'`.
@@ -182,6 +186,11 @@ The following was checked on 2026-09-26:
 
 By default, `xcrun mcpbridge` connects to the Xcode that `xcode-select` selects.
 A registration that does not set the Xcode can therefore answer from an older,
-hidden Xcode while the developer works in a newer window. Bind the bridge and
-verify it with the
+hidden Xcode while the developer works in a newer window. Bind the bridge to
+the selected Xcode through `DEVELOPER_DIR`, never `MCP_XCODE_PID`, and verify it
+with the
 [provider preflight](../../xcodebuild/references/xcode-mcp-provider-preflight.md#bind-the-bridge-to-the-selected-xcode).
+If you cannot bind it, report the bridge as unbound. A committed project
+registration names no Xcode; each person binds it as
+[per-project registration](../../xcodebuild/references/xcode-mcp-project-setup.md)
+describes.
