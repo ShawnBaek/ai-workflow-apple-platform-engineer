@@ -50,6 +50,18 @@
         "apple-development-health"
       ],
       "why": "Skills said \"selected Xcode\" without defining how it is selected, so agents followed the global xcode-select. With an older Xcode selected globally and a newer beta open, the Xcode MCP bridge, registered without DEVELOPER_DIR, answered from a hidden instance of the older Xcode. The fix makes xcode-project-workflow own the rule. This case keeps each skill where such a request starts pointing at that owner."
+    },
+    {
+      "id": "xcode-mcp-preview-render",
+      "capability": "Render a specific #Preview or PreviewProvider through the Xcode MCP server's RenderPreview tool in the person's open Xcode: choose the definition, request destination, variant, localization and canvas-control overrides that an earlier call reported, record the rendered configuration and snapshot, and fix a failed render from its errors and diagnostics.",
+      "request": "Xcode is open with the Xcode MCP connected. Render the dark-mode and large-text previews of ProfileView and fix it if the preview fails.",
+      "owner": "xcode-preview-design",
+      "referencedFrom": [
+        "code-review",
+        "open-xcode-handoff",
+        "apple-platform-engineer"
+      ],
+      "why": "Maintainer report: xcode-preview-design, the preview owner, never named the Xcode MCP RenderPreview tool. It was mentioned only in the review checklist and the handoff verification step, which do not say how to choose the preview definition or overrides, check the rendered destination, or handle a failed render. This case keeps those starting skills pointing at the owner."
     }
   ],
   "ruleConsistency": [
@@ -342,6 +354,19 @@
         "app-versioning"
       ],
       "why": "version-boundaries.md told agents to ask whether extensions and an embedded watch app share the release train. Xcode's embedded-binary and WatchKit validation and Apple TN2420 require them to match the containing app."
+    },
+    {
+      "id": "render-preview-links-usage",
+      "rule": "A doc that names the Xcode MCP RenderPreview tool links the page that says how to choose the definition and overrides, check the rendered configuration, and handle a failed render.",
+      "statesRule": "RenderPreview",
+      "patternNote": "The qualifier is the page's file name, or its own title at the start of the page itself; link text alone does not satisfy it.",
+      "requiresQualifier": "xcode-mcp-render\\.md|^# Render previews through the Xcode MCP server",
+      "appliesTo": [
+        "code-review",
+        "open-xcode-handoff",
+        "xcode-preview-design"
+      ],
+      "why": "Maintainer report: RenderPreview was named in the review checklist and the handoff verification step without guidance on preview selection, overrides, destination checks or failed renders, and xcode-preview-design did not name it. Dropping the link from any doc that names the tool fails validation."
     }
   ]
 }
