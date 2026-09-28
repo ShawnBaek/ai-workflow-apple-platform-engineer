@@ -126,9 +126,13 @@ This policy overrides any execution adapter that suggests automatic generation.
 
 ## Apple official-first routing
 
-For the selected Xcode version, use one Apple-authored skill exposure (built-in
-inside Xcode or exported for the external agent) and Xcode's official tools when
-available. Use Apple's supported external-agent bridge for an outside agent.
+For the selected Xcode version, use one Apple-authored skill exposure and
+Xcode's official tools when available: inside Xcode its built-in skills, outside
+it one export that `apple-platform-setup` made with approval, never both, as
+[Apple skill exposure](../apple-platform-setup/references/apple-skill-exposure.md)
+describes. `xcrun agent` is `mcpbridge run-agent`: never run it here to find or
+export skills. When the agent has no Apple skill, use Documentation Search and
+Xcode's tools. Use Apple's supported external-agent bridge for an outside agent.
 Third-party build tooling is an explicit fallback, not a prerequisite.
 
 ## Stop conditions

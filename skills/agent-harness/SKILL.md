@@ -105,9 +105,11 @@ pre-authorized continuation. Merge and App Review remain excluded.
   fallback.
 
 Apple built-in and Apple-exported copies are alternative exposure paths. Do not
-activate both for the same trigger. Record the selected provider and version or
-export hash in evidence. API currency never overrides the accepted product
-contract or the repository's actual architecture.
+activate both for the same trigger. Record the selected provider with its Xcode
+build, and an export's digest, in evidence, as
+[Apple skill exposure](../apple-platform-setup/references/apple-skill-exposure.md)
+describes. API currency never overrides the accepted product contract or the
+repository's actual architecture.
 
 ## Collaboration modes
 

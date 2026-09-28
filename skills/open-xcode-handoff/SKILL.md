@@ -41,10 +41,13 @@ XcodeGen generation (`xcode-project-workflow`). Exact commands are in
    Xcode app path and version, repository top level, branch or detached HEAD,
    and HEAD SHA of the open checkout.
 
-Never probe with `xcrun mcpbridge run-agent`; it can launch Xcode and print
-credentials. Never `XcodeOpenWorkspace` the agent's workspace, never
-`XcodeCloseWorkspace` a window this task did not open, and never change MCP
-registration without approval; route that to `xcodebuild`'s provider preflight.
+Never probe with `xcrun mcpbridge run-agent` or `xcrun agent`, which runs it;
+it can launch Xcode and print credentials, and its only use is the approved
+[Apple skill exposure](../apple-platform-setup/references/apple-skill-exposure.md)
+in `apple-platform-setup`. Never `XcodeOpenWorkspace` the agent's workspace,
+never `XcodeCloseWorkspace` a window this task did not open, and never change
+MCP registration without approval; route that to `xcodebuild`'s provider
+preflight.
 
 ## 2. Prove the same repository and freeze the change set
 
