@@ -233,6 +233,18 @@
       "why": "code-connect.md taught a nonexistent @FigmaConnect(url, example:) attribute, .figma.swift files and swift run figma commands as the current workflow, and SKILL.md called the Figma.connect SwiftUI API current and sent detection to a nonexistent .codeconnect/ directory. Since CLI v2.0.0 a parser project can only migrate or unpublish. Fixed in the Code Connect rewrite; a skill doc that names the parser API must say it is legacy and needs migration."
     },
     {
+      "id": "small-change-review-round",
+      "rule": "A small change gets one focused independent review before a pull request; findings that are not blocking do not hold the verdict, so a second round follows only a blocking finding's fix.",
+      "statesRule": "verdict\\s+loop|review-cycle limit|bounded rounds",
+      "requiresQualifier": "one focused round",
+      "appliesTo": [
+        "apple-platform-engineer",
+        "code-review",
+        "git-workflow"
+      ],
+      "why": "A fresh-agent trace of a one-button restyle found the lead's review step, code-review's verdict loop and PR delivery's review step unconditional: local or pull request, small or shared, every change took an independent reviewer agent for up to two rounds, each fix rerunning format, lint and build. A skill that states the loop must also carry its small-change exception."
+    },
+    {
       "id": "simulator-reuse-before-create",
       "rule": "Text that gives a task separate, temporary or newly created Simulator devices must say to reuse an existing compatible device first or to delete the task-created device.",
       "statesRule": "separate Simulator devices|temporary (Simulator )?device|simctl (create|clone)",

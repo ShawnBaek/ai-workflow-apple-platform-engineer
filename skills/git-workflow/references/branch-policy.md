@@ -13,6 +13,10 @@ the verified remote default safely and create the branch from that revision
 in the same checkout. Do not branch from an unrelated current HEAD merely
 because it is checked out. Resolve existing changes as described below before
 updating or switching; verify the repository path, branch and base afterward.
+A local-only [small change](../../agent-harness/references/small-change-path.md)
+is edited in place on the current branch instead; it takes a branch this way
+only when it will be committed or delivered as a PR, and is never committed to
+the default branch directly.
 
 Branch-name selection is routine. It differs from a meaningful uncertainty
 about the base branch, an overlap with existing work, or whether the task is a
@@ -20,7 +24,9 @@ continuation of a PR. Resolve that uncertainty before creating or switching a
 branch; do not disguise it as a name-approval request.
 
 If staged, unstaged, or untracked changes already exist, inspect them read-only
-before checkout mutation. Report the assigned outcome and intended edit scope,
+before checkout mutation. An in-place small change lists those that do not
+touch its file and continues; the rest of this paragraph applies to those that
+do. Report the assigned outcome and intended edit scope,
 then list the changed paths, staged/unstaged/untracked state and actual content
 changes. Distinguish behavior/configuration changes from formatting or ordering
 only when the diff or a semantic comparison supports that conclusion. Explain

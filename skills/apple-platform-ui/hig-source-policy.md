@@ -50,7 +50,9 @@ For a non-obvious HIG decision, record:
 
 Use the focused `screenshot`, `device-interaction`, and
 `apple-platform-testing` skills for runtime evidence. A preview is useful design
-evidence but is not a replacement for the required app flow.
+evidence but is not a replacement for the required app flow; a
+[small change](../agent-harness/references/small-change-path.md) needs only its
+one render.
 
 ## Primary Apple entry points
 

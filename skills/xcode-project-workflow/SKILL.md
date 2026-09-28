@@ -138,8 +138,10 @@ Third-party build tooling is an explicit fallback, not a prerequisite.
 ## Stop conditions
 
 Stop without edits/builds when the root/container is unknown, the working tree
-has pre-existing changes whose explicitly approved handling is absent, the remote
-default or intended branch base is unresolved,
+has pre-existing changes whose explicitly approved handling is absent (for a
+local-only [small change](../agent-harness/references/small-change-path.md)
+edited in place, only changes to its file), the remote default or intended base
+of a branch the task creates is unresolved,
 the Apple account boundary is unverified for an account action, Git metadata is
 not writable from the current environment, a user-named or project-pinned Xcode
 is not installed, or XcodeGen requires new authority.

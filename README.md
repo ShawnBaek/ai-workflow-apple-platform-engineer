@@ -93,7 +93,7 @@ Review when needed -> fix -> recheck
 Local result or approved PRs
 ```
 
-Small fixes skip unrelated stages. [Multiple tasks](skills/agent-harness/references/collaboration.md#delegate-a-batch-of-tasks) use a bounded worker pool with explicit checkout, folder and permission boundaries. Independent research/review can overlap; same-repository writes and heavy jobs follow their resource limits. For approved PR delivery, split larger changes into focused or stacked PRs with relevant screenshots, recordings or JSON evidence.
+[Small changes](skills/agent-harness/references/small-change-path.md), such as one button style, skip unrelated stages. [Multiple tasks](skills/agent-harness/references/collaboration.md#delegate-a-batch-of-tasks) use a bounded worker pool with explicit checkout, folder and permission boundaries. Independent research/review can overlap; same-repository writes and heavy jobs follow their resource limits. For approved PR delivery, split larger changes into focused or stacked PRs with relevant screenshots, recordings or JSON evidence.
 
 ## Adapt it to your project
 

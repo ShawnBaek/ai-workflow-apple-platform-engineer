@@ -56,8 +56,10 @@ defaults from one run. This adapts
 ## Completion usage
 
 At task completion, emit `templates/completion-report.json` validated against
-`contracts/schemas/completion-report.schema.json`. Include PR links, checks,
-screenshot evidence, and only a trimmed video acceptance window; state omitted
+`contracts/schemas/completion-report.schema.json`; a
+[small change](small-change-path.md) reports in its short handoff instead.
+Include PR links, checks, screenshot evidence, and only a trimmed video
+acceptance window; state omitted
 checks and residual risk. Evidence paths/URLs are references, not proof unless
 their observed result and digest are recorded where available.
 

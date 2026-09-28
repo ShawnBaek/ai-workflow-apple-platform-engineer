@@ -18,8 +18,9 @@ this repository.
 
 Before implementation, establish the user's intended screen behavior and proof
 using [task intake](../agent-harness/references/task-intake.md). Reuse supplied
-answers and ask only about material ambiguity; a precise small change does not
-need a new specification or architecture layer.
+answers and ask only about material ambiguity; a precise
+[small change](../agent-harness/references/small-change-path.md) follows that
+path and needs no new specification or architecture layer.
 
 For open design choices in a new screen or substantial redesign, follow
 [design discovery](../agent-harness/references/design-discovery.md): ask which
@@ -77,7 +78,7 @@ When the developer asks for a screen or component:
    - `@Binding` → child mutates parent's value type.
    - `@Observable` (class) → shared across views.
    - `@Environment(...)` → cross-cut concerns (UseCase, color scheme, dynamic type size).
-6. **Write the full view in one pass.** Reuse the existing dependency seam and add the minimum risk-relevant Preview states. When `xcode-preview-design` delegated this node, use its selected matrix; on a direct UI request, derive the matrix from the current task risk. A new full screen commonly includes baseline, Dark, and large-text variants, but a small component may need fewer.
+6. **Write the full view in one pass.** Reuse the existing dependency seam and add the minimum risk-relevant Preview states. When `xcode-preview-design` delegated this node, use its selected matrix; on a direct UI request, derive the matrix from the current task risk. A new full screen commonly includes baseline, Dark, and large-text variants, but a small component may need fewer, and a small change renders only its affected Preview.
 7. **Self-review against the checklist below.** Then format and lint the changed Swift under [Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance), and use `xcode-project-workflow` and `xcodebuild` for the minimum required compile/runtime verification; make at most one evidence-driven correction before returning to the harness retry policy. If `xcode-preview-design` delegated this node, return to that existing caller instead of starting another routing cycle.
 
 If the developer is already in a build-tweak-build spiral, compare observed behavior with the requested result, form one hypothesis, and run one targeted verification.

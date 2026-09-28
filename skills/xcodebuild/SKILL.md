@@ -50,6 +50,16 @@ share a mutable Simulator or UI-interaction session by device name or `booted`.
 ## Choose and reuse a Simulator destination
 
 Simulator devices are persistent host state. Reuse one before creating one.
+This section applies to run, test and runtime checks. A compile-only build
+needs no device lease or boot: pass an existing compatible Simulator's id
+(`-destination 'platform=iOS Simulator,id=<udid>'`, found with one bounded
+`xcrun simctl list devices available` under step 1's short registry
+admission, released before the build). With `ONLY_ACTIVE_ARCH=YES`, the Debug
+default, that compiles only the device's architecture, and the build does not
+boot the device. A generic destination such as `generic/platform=iOS Simulator`
+compiles every Simulator architecture in `ARCHS`, even with
+`ONLY_ACTIVE_ARCH=YES` (about twice the compile work with the default arm64
+and x86_64); use it only when no compatible Simulator exists.
 
 1. Take one bounded, read-only inventory before selecting and keep it as the
    baseline for step 8: `xcrun simctl list --json devices available` for the
@@ -177,8 +187,10 @@ owned by `app-store-connect`. Neither route creates a GitHub PR: use
 
 ## Smallest useful operations
 
-- Compile question: build the affected scheme/configuration/destination only,
-  after changed Swift passes the format and lint steps of
+- Compile question: build only the affected scheme/configuration; for a
+  Simulator platform, use an existing compatible Simulator's id without booting
+  it (see the destination section), after changed Swift passes the format and
+  lint steps of
   [Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance).
 - Unit test question: run the affected target/case chosen by
   `apple-platform-testing`.

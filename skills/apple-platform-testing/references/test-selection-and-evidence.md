@@ -8,6 +8,7 @@
 | Local bug | one stable regression plus affected build | duplicate UI and integration coverage of the same assertion |
 | Pure logic | changed decisions and meaningful limits | broad randomized or snapshot suites without risk justification |
 | UI behavior | affected build, one critical flow, screenshot/video when requested | exhaustive device matrix unless layout/platform support changed |
+| Presentation only (behavior, accessibility semantics, Dynamic Type, Increase Contrast and size-class layout unchanged; no lowered contrast) on one screen or a component with few call sites | affected build, one Preview render or screenshot | critical flow, new UI tests, device matrix |
 | Persistence migration | representative prior data upgrade and clean install | every historic schema path without a supported-user risk |
 | Network boundary | success and one changed/material failure | live-network flake tests when a deterministic seam exists |
 
