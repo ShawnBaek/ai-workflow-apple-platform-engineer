@@ -1,6 +1,6 @@
 # Clarify what the user wants to build
 
-Start an assigned task by establishing the intended outcome before choosing architecture, delegating implementation, or splitting PRs. The lead and direct specialist entry points share this check. A small task needs only a brief understanding statement; it does not require the full harness or a separate specification document.
+Start an assigned task by establishing the intended outcome before choosing architecture, delegating implementation, or splitting PRs. The lead and direct specialist entry points share this check. A small task needs only a brief understanding statement; it does not require the full harness or a separate specification document. A [small change](small-change-path.md) then follows that path.
 
 ## Establish the outcome from available context
 

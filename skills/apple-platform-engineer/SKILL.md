@@ -20,6 +20,10 @@ The entry skill is `apple-platform-engineer`: use `$apple-platform-engineer` in
 Codex or `/apple-platform-engineer` in Claude Code. It replaces `native-app-lead`.
 A skill is guidance, not a permanent agent.
 
+For a [small change](../agent-harness/references/small-change-path.md), such as
+restyling one button, follow that path instead of the typical flow below; it
+names the gates that still apply and the triggers that return the work here.
+
 For several assigned tasks, follow [batch delegation](../agent-harness/references/collaboration.md#delegate-a-batch-of-tasks): establish dependencies, effective worker slots and [workspace boundaries](../agent-harness/references/task-workspaces.md), launch only ready independent work, queue the rest, and retain one repository writer. Report actual worker IDs and completed evidence rather than treating a task list as running agents.
 
 ## Understand the task first
@@ -118,7 +122,9 @@ before architecture and task breakdown. Routine work does not need a new ADR.
 6. Use `code-review` for an independent view of the frozen patch, assess findings
    against sources and behavior, and verify accepted fixes. Repeat its verdict
    loop until the reviewer approves the exact head; when the bounded rounds run
-   out first, escalate the open findings to the user instead of publishing.
+   out first, escalate the open findings to the user instead of publishing. A
+   small change gets one focused round before a PR, and none when it stays
+   local unless the person or project policy asks for review.
 7. Carry an authorized PR task through publication: prepare the template and
    proof, satisfy only missing gates, commit/push/create only the approved head
    (a later change needs re-review of the affected scope first), publish the
@@ -146,10 +152,11 @@ not make the source clear.
 Design the actual SwiftUI/UIKit presentation before new domain logic. Preserve
 the affected feature's storyboard/XIB, programmatic, or hybrid construction;
 load its real scene/nib for preview when appropriate. A small logic fix does not
-need a design phase. Compare the accepted preview or Figma state with the
-integrated app through `screenshot`'s comparison guidance; when the Figma node
-is the contract and a repeatable pixel/text report or snapshot test is wanted,
-use `figma-golden-testing`.
+need a design phase. On the standard path, compare the accepted preview or Figma
+state with the integrated app through `screenshot`'s comparison guidance; a
+[small change](../agent-harness/references/small-change-path.md) uses its one
+render instead. When the Figma node is the contract and a repeatable pixel/text
+report or snapshot test is wanted, use `figma-golden-testing`.
 
 UI mocks are preview fixtures only. Prefer a value fixture; add a narrow protocol
 mock only when the interaction requires one. Acceptance for an existing

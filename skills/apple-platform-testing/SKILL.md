@@ -13,6 +13,7 @@ Use this skill when selecting, implementing, or running tests for iOS, iPadOS, w
 - Bug fix: add one regression test that reproduces the defect when it is practical and stable.
 - Pure logic: cover changed branches and material boundary cases.
 - UI-visible behavior: build the affected target, exercise one critical flow, and capture requested visual evidence on the relevant platform.
+- Presentation-only change to one screen, or to one component with few call sites, that leaves behavior, accessibility semantics, Dynamic Type and Increase Contrast behavior, and size-class layout unchanged and lowers no contrast: build the affected target and render its Preview once, or capture one screenshot, instead of a critical flow. A widely shared style or component still needs the UI-visible behavior evidence.
 - Migration: cover a representative old-to-new store and a clean install; do not fabricate a full historical-migration matrix.
 - Network/integration: cover success plus a material handled failure when it changed.
 

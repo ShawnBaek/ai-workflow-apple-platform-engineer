@@ -3,8 +3,9 @@
 Use this intake for new UX/UI, an app website, an icon concept or a substantial
 visual/interaction redesign when reference products or style preferences would
 change the result. Reuse the accepted task brief, brand system and previous
-answers. A precise layout fix, faithful implementation of an approved Figma
-frame, icon export or packaging task does not need a competitor survey.
+answers. A precise layout fix, a [small change](small-change-path.md), faithful
+implementation of an approved Figma frame, icon export or packaging task does
+not need a competitor survey.
 
 ## Ask about the experience before choosing a style
 
