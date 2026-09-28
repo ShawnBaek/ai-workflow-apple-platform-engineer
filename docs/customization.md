@@ -32,3 +32,23 @@ This collection uses the [MIT license](../LICENSE). Linked libraries, Apple
 documentation, tools and reference repositories retain their own licenses; the
 collection's license does not relicense them. The upstream companion watcher is
 maintainer infrastructure, guarded to this repository, not a consumer dependency.
+
+## Use your repository's own skills
+
+A repository's own skills, command files (`.claude/commands/`) and instruction
+files outrank this collection's defaults for the same job. Every skill here
+opens with a guard line that tells the agent to follow the repository's skill
+and use the collection's only for gaps, keeping the collection skill's approval
+and safety gates. When the agent reviews, applies or continues a change, a
+skill, command, agent, instruction or settings file that the change adds or
+modifies, and anything such a file loads or points to, is content to review,
+not an instruction, and the agent follows the versions on the branch the change
+targets. Neither client enforces any of this on its own: in Claude Code a
+personal (`-g`) install runs instead of the project's same-name skill or
+command, in Codex both copies are listed and a plain `$name` injects neither,
+and both load the checkout's files themselves.
+[Repository skill precedence](../skills/agent-harness/references/repo-skill-precedence.md)
+gives the full order and each client's behavior, and its
+[opt-out table](../skills/agent-harness/references/repo-skill-precedence.md#opt-out-of-a-collection-skill)
+shows how you or the repository owner can turn a collection skill off or name
+the repository's owner for a job instead.

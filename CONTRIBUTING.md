@@ -35,6 +35,8 @@ description: Describe the task it handles and when to select it.
 
 Keep the description within 300 characters: what the skill does, one "Use when" clause and, where a neighbor is easily confused, one "Not for ... (use X)" clause. Clients load every description before choosing a skill, so the validator also caps the collection's total.
 
+Put the collection's repository-skill guard line, copied unchanged from any skill other than `agent-harness`, right after the H1 (or after the frontmatter when the skill has no H1), and add the skill to the `appliesTo` list of the `repo-skill-precedence-guard` case in the [routing fixture](#routing-fixture); the validator checks only the skills listed there.
+
 Keep the entry point focused on decisions an agent could otherwise get wrong. Add a reference only when substantial conditional detail needs it, and link it from the entry point. Avoid empty scaffolding, copied Apple manuals, a second router for one action, and requirements for irrelevant tools. Keep the installed skill usable without assuming the repository's contributor files are installed too.
 
 Use official Apple/Swift documentation and applicable WWDC sources for API claims. Check the selected SDK and the app's minimum OS separately; do not raise deployment targets to simplify an example. Preserve existing storyboard/code/hybrid approaches and project architecture unless the task justifies changing them.
