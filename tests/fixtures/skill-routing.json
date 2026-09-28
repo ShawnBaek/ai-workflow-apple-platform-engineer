@@ -54,6 +54,20 @@
   ],
   "ruleConsistency": [
     {
+      "id": "interruption-monitor-scope",
+      "rule": "A UI interruption monitor handles only alerts with unpredictable timing; an alert shown in direct response to a test action is an expected step, and permission prompts are kept out of unrelated tests through a seam or a pre-grant.",
+      "statesRule": "interruption\\s+monitor|addUIInterruptionMonitor",
+      "patternNote": "A doc that mentions an interruption monitor must also state its unpredictable-timing scope, so advice to answer every permission prompt with a monitor fails.",
+      "requiresQualifier": "unpredictable\\s+timing",
+      "appliesTo": [
+        "apple-platform-testing",
+        "code-review",
+        "screenshot",
+        "app-store-screenshots"
+      ],
+      "why": "Maintainer report: UI tests stalled on system permission prompts, apple-platform-testing had no guidance for them, and the common workaround, an interruption monitor that accepts every alert, hides prompts the product should not show. Apple's XCTestCase interruption-monitoring header documents the two facts the case relies on: a monitor runs when an alert blocks an interaction the test attempts, and an alert shown in direct response to a test action is an expected step to handle directly, not an interruption."
+    },
+    {
       "id": "newest-xcode-distribution",
       "rule": "The newest installed Xcode, betas included, is the default; an archive or upload that may reach the App Store uses an Xcode that App Store Connect accepts for it.",
       "statesRule": "newest installed",
