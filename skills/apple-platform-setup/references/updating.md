@@ -10,6 +10,41 @@ Preserve rollback and account for active consumers before activation. Zero lease
 alone does not establish quiescence. Keep active/historical run grants unchanged;
 fresh work needs fresh bindings. Do not require approval merely to wait.
 
+## Inventory before reconciling
+
+Before any update, removal or relink, run the read-only
+[installed skill inventory](../../apple-development-health/references/health-matrix.md#installed-skill-inventory)
+from the installed verifier, with `APE` set as in
+[Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier):
+
+```sh
+"$APE" skill-inventory --project '<repository>'
+```
+
+It covers both client roots, the deprecated `~/.codex/skills`, the project
+roots, Xcode's agent roots, the global Skills CLI lock and each project's
+`skills-lock.json`, and names each entry's ownership evidence. Build the
+reconcile plan from it:
+
+- Act only on entries the report attributes to the collection. `outdated`,
+  `retired`, `split`, owned `broken` and `staleLock` entries each map to an
+  exact command for the entry's installation method and scope (a
+  project-scope install is updated or removed from that project, without
+  `-g`), with a backup of anything removed. An `unlisted` entry needs the
+  user's confirmation before removal. An `unverified` one needs an inspection
+  of its `reason`: content that could not be compared, or a copy that no lock
+  attributes to a repository (made without the Skills CLI, or installed from
+  a local checkout, which the CLI records as a path or not at all). It changes
+  only after the user confirms it is this installation.
+- Never move, remove or overwrite a `foreignSameName`, `reserved`, `foreign` or
+  Apple entry, or a `broken` link with no ownership evidence; report it with its
+  owner's options instead. A `split` whose `occupiedBy` names a root is
+  reported, not installed over. A `duplicate` needs the user's choice of copy.
+- Show the whole plan and get one explicit approval before running it. Remove
+  with the Skills CLI only with an explicit `-a` for the affected clients.
+- Rerun the inventory afterward; a remaining finding is reported, not retried
+  in a loop.
+
 ## Skills CLI installations
 
 Inspect the CLI and installed names first:
@@ -102,7 +137,8 @@ wholesale:
    broken link that a client may still try to load.
 3. **Add new links.** A revision that introduces a skill contributes nothing
    until it is linked; the farm will silently stay at the old skill set.
-4. Confirm no broken links remain:
+4. Confirm no broken links remain in any client root: rerun the inventory, or
+   for one root:
 
    ```sh
    find "$HOME/.agents/skills" -maxdepth 1 -type l ! -exec test -e {} \; -print
@@ -132,11 +168,21 @@ Ask your agent:
 ## Verify the active result
 
 1. Check actual loaded paths and observable source revision/hash, not only the README
-   version label. Confirm one discoverable copy of each selected skill.
-2. When the selected setup uses the harness Swift runtime, build the changed executable once with the
-   selected full Xcode as in [Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
-   Keep executable, sources and contracts together. A documentation-only update
-   does not by itself justify a new build.
+   version label. Confirm one discoverable copy of each selected skill with the
+   inventory, run by the verifier built from the new revision: rebuild it first
+   as in [Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier),
+   because a verifier from the previous revision compares each entry with its
+   own older copy. It reports each one `current`, and no `outdated`,
+   `unverified`, `retired`, `unlisted`, `split`, `duplicate`, owned `broken` or
+   `staleLock` finding remains for the collection. A copy that no lock
+   attributes to a repository, such as one reinstalled from a local reviewed
+   checkout, stays `unverified` with a `reason` saying so; check that copy
+   against the source revision instead. A `CLAUDE_CONFIG_DIR` set only in
+   Claude Code's settings `env` is not in the shell's environment, so pass that
+   directory as `--claude-config-dir`.
+2. When the selected setup uses the harness Swift runtime, the executable
+   rebuilt in step 1 with the selected full Xcode is its changed executable.
+   Keep executable, sources and contracts together.
 3. If a private coordinator/runtime binding is configured, follow the explicit
    [runtime migration procedure](../../agent-harness/references/swift-verification.md)
    before resuming coordinated work. New hashes do not renew old approvals.

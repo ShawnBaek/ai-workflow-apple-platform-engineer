@@ -27,6 +27,7 @@ Explicit flags go before the subcommand. `--app-root <absolute-app-repository>` 
 | `resolve-project` | [Project resolution](project-registry.md) without guessing a checkout |
 | `materialize`, `initialize-run` | Private schema-bound files and append-only run identity |
 | `health` | [Live health evaluation](../../apple-development-health/SKILL.md) for a guarded profile |
+| `skill-inventory [--project <dir>] [--output <new-report.json>]` | [Read-only installed skill inventory](../../apple-development-health/references/health-matrix.md#installed-skill-inventory) against the lifecycle file; no harness |
 | `authorize`, `prepare-action`, `verify-reservation` | Exact action reservation, dispatch and readback contracts |
 | `spec-snapshot` | [Spec Kit snapshot](spec-kit-adapter.md) when selected |
 | `knowledge index\|query\|status` | [Optional local FTS retrieval](knowledge-and-rag.md) with freshness checks |

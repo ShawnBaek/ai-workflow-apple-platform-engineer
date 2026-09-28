@@ -29,8 +29,9 @@ use [standalone readiness](#standalone-readiness-no-harness) instead.
 ## Standalone readiness (no harness)
 
 Use this when the user asks whether the environment is ready for a task and no
-guarded profile is selected. It needs no `apple-verify`, harness, coordinator
-or `--harness` report, and follows the same no-repair boundary. Label the result
+guarded profile is selected. It needs no harness, coordinator or `--harness`
+report; only the optional installed-skill inventory runs an `apple-verify` that
+is already built. It follows the same no-repair boundary. Label the result
 standalone observations: it cannot satisfy a guarded profile's gate.
 
 Probe only the surfaces the stated task uses. Run each probe once under the
@@ -47,6 +48,7 @@ seconds, or 30 seconds for the runtime inventory. Do not retry in a loop.
 | Simulator runtimes | `xcrun simctl list runtimes --json` within 30 seconds; add `xcrun simctl list devices available --json` only when the task needs a destination |
 | Installed skills | Each selected skill resolves once in the client's skill root, and its `../<skill>/` links resolve there, including `agent-harness` |
 | Apple's Xcode skills | The selected Xcode's bundled skill files and a recorded export's digest, read as the [inventory without exporting](../apple-platform-setup/references/apple-skill-exposure.md#inventory-without-exporting) describes. Never `xcrun agent`, which is `mcpbridge run-agent`, not even `--help` |
+| Installed skill inventory | Only with a verifier already built: `APE` resolved earlier as in the [Swift setup](../agent-harness/references/swift-verification.md#build-and-locate-the-verifier), and `test -x "$APE"` passes. Then `"$APE" skill-inventory --project '<repository>'` once, within 30 seconds: it lists every Claude Code, Codex and Xcode agent skill root and the Skills CLI locks read-only, and classifies each entry against the collection's lifecycle file, as the [inventory](references/health-matrix.md#installed-skill-inventory) describes. Otherwise report the inventory as not run: building, and even `swift build --show-bin-path`, writes into the installed skill, so route it to `apple-platform-setup` or a task that allows building. Use it before an update or reconcile, or when skills look missing, stale or duplicated |
 
 Report each component with the same vocabulary:
 

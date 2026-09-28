@@ -27,6 +27,23 @@ npx skills list -g             # only lists CLI-tracked installations
 A skill root often mixes these, plus entries from other collections. Resolve each
 entry's target and leave anything outside this collection untouched.
 
+With `agent-harness` installed, its verifier lists every client root at once,
+read-only, before you reconcile anything: Claude Code, Codex (including the
+deprecated `~/.codex/skills`), the project's roots, Xcode's agent roots, and the
+Skills CLI's global lock and project `skills-lock.json`. It marks which entries
+are this collection's, and which are outdated, retired, split between clients,
+duplicated, broken, stale in a lock or carry a collection name without
+ownership evidence. Build it as in
+[Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier), then run:
+
+```sh
+"$APE" skill-inventory --project '<repository>'
+```
+
+Reconciling stays a separate, approved step that never touches another owner's
+entries; see the
+[installed skill inventory](../skills/apple-development-health/references/health-matrix.md#installed-skill-inventory).
+
 ## Confirm the update landed
 
 An update that silently did nothing looks identical to one that worked, so check
@@ -37,7 +54,16 @@ the result rather than the command's exit status:
 2. Compare the active copy against the source revision you intended; only
    ignored build artifacts should differ. Unexplained differences are local
    overrides that need a decision, not something to reapply by habit.
-3. Confirm every selected skill resolves and that no link is broken.
+3. Confirm every selected skill resolves and that no link is broken: rerun the
+   inventory with the verifier rebuilt from the new revision (one from the
+   previous revision compares with its own older copy). It reports each
+   selected skill `current`; check that no
+   `outdated`, `unverified`, `retired`, `unlisted`, `split`, `duplicate`, owned
+   `broken` or `staleLock` finding remains for the collection. A copy that no
+   lock attributes to a repository stays `unverified`, with a `reason` saying
+   so: one made without the Skills CLI, or installed from a local checkout,
+   which the CLI records as a path or not at all. Step 2's comparison covers
+   it.
 4. Refresh skill discovery, then run one representative task.
 
 With `apple-platform-setup` installed, ask:
@@ -52,7 +78,7 @@ That reference ships inside the setup skill and covers Skills CLI scope/copy
 behavior, linked checkouts, versioned bundles and runtime bindings.
 
 ```text
-Inspect the active copy and selected tools
+Inspect the active copy and selected tools; run the read-only inventory
                   |
 Stage the reviewed revision; retain rollback
                   |

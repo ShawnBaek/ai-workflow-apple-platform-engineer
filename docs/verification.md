@@ -92,6 +92,7 @@ the installed skill root still supplies trusted schemas and source identity.
 | `resolve-project` | [Project resolution](../skills/agent-harness/references/project-registry.md) without guessing a checkout |
 | `materialize`, `initialize-run` | Private schema-bound files and append-only run identity |
 | `health` | [Live health evaluation](../skills/apple-development-health/SKILL.md) for the selected profile |
+| `skill-inventory [--project <dir>] [--output <new-report.json>]` | [Read-only installed skill inventory](../skills/apple-development-health/references/health-matrix.md#installed-skill-inventory) against the lifecycle file; no harness |
 | `authorize`, `prepare-action`, `verify-reservation` | Exact action reservation, dispatch and readback contracts |
 | `spec-snapshot` | [Spec Kit snapshot](../skills/agent-harness/references/spec-kit-adapter.md) when selected |
 | `knowledge index\|query\|status` | [Optional local FTS retrieval](../skills/agent-harness/references/knowledge-and-rag.md) with freshness checks |
