@@ -26,6 +26,7 @@ public enum RepositoryValidation {
     let skills = root.appendingPathComponent("skills", isDirectory: true)
     var errors = [String]()
     var names = [String]()
+    var folderNames = [String]()
     var links = 0
     var texts = [String: String]()
     var digest = SHA256()
@@ -117,6 +118,7 @@ public enum RepositoryValidation {
     for folder in folders.sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
     where try folder.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true {
       let name = folder.lastPathComponent
+      folderNames.append(name)
       let path = "skills/\(name)/SKILL.md"
       guard let text = texts[path] else {
         errors.append("Missing skill entry point: \(path)")
@@ -156,6 +158,8 @@ public enum RepositoryValidation {
     errors += SkillRoutingValidation.validate(texts: texts)
     errors += SkillDescriptionBudget.validate(texts: texts)
     if includeContracts {
+      errors += SkillLifecycleValidation.validate(
+        root: root, skillFolders: folderNames, version: version)
       errors += ContractValidation.validateRepository(
         context: RuntimeContext(
           repositoryRoot: root, harnessRoot: root.appendingPathComponent("skills/agent-harness")))

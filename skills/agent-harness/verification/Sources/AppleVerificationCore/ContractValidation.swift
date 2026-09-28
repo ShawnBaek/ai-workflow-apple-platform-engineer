@@ -81,6 +81,10 @@ public enum ContractValidation {
       "skills/agent-harness/contracts/schemas/testflight-workflow.schema.json"
     ),
     (
+      "skills/agent-harness/lifecycle/skill-lifecycle.json",
+      "skills/agent-harness/lifecycle/skill-lifecycle.schema.json"
+    ),
+    (
       "skills/agent-harness/templates/project-registry.local.example.json",
       "skills/agent-harness/contracts/schemas/project-registry.schema.json"
     ),
@@ -448,10 +452,11 @@ public enum ContractValidation {
       }
     } catch { return ["cannot validate \(instancePath) against \(schemaPath): \(error)"] }
   }
-  /// Checks every `skills/*/contracts` and `skills/*/templates` file, not a hand-kept list: each
-  /// contract directory parses, each template and contract instance has a `schemaPairs` entry
-  /// that agrees with its own relative `$schema`, each schema validates something, and every
-  /// digest field keeps its one spelling.
+  /// Checks every `skills/*/contracts`, `skills/*/lifecycle` and `skills/*/templates` file, not a
+  /// hand-kept list: each contract and lifecycle directory parses, each instance has a
+  /// `schemaPairs` entry that agrees with its own relative `$schema`, each schema validates
+  /// something, and every digest field keeps its one spelling. `lifecycle` is separate from
+  /// `contracts` because the runtime's source-bundle digest covers `agent-harness/contracts`.
   static func validateContractFiles(
     root: URL, pairs: [(instance: String, schema: String)] = schemaPairs,
     schemasValidatedElsewhere: Set<String> = schemasValidatedElsewhere
@@ -464,14 +469,14 @@ public enum ContractValidation {
       (try? manager.contentsOfDirectory(atPath: root.appendingPathComponent("skills").path))
       ?? []
     for skill in skills.sorted() {
-      for folder in ["contracts", "templates"] {
+      for folder in ["contracts", "lifecycle", "templates"] {
         let base = "skills/\(skill)/\(folder)"
         let directory = root.appendingPathComponent(base)
         var isDirectory: ObjCBool = false
         guard manager.fileExists(atPath: directory.path, isDirectory: &isDirectory),
           isDirectory.boolValue
         else { continue }
-        if folder == "contracts" { errors += validateJSONFiles(root: root, directory: base) }
+        if folder != "templates" { errors += validateJSONFiles(root: root, directory: base) }
         for file in (manager.subpaths(atPath: directory.path) ?? []).sorted()
         where file.hasSuffix(".json") {
           let path = "\(base)/\(file)"

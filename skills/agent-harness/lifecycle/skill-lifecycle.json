@@ -1,0 +1,128 @@
+{
+  "$schema": "./skill-lifecycle.schema.json",
+  "schemaVersion": "1.0.0",
+  "version": "2.0.0-beta.11",
+  "source": "ShawnBaek/ai-workflow-apple-platform-engineer",
+  "legacySources": [
+    "ShawnBaek/iOS-experts"
+  ],
+  "current": [
+    "agent-harness",
+    "app-intents",
+    "app-store-connect",
+    "app-store-screenshots",
+    "app-versioning",
+    "app-website",
+    "apple-ads",
+    "apple-ai-evaluation",
+    "apple-data",
+    "apple-development-health",
+    "apple-foundation-models",
+    "apple-model-integration",
+    "apple-platform-engineer",
+    "apple-platform-performance",
+    "apple-platform-setup",
+    "apple-platform-testing",
+    "apple-platform-ui",
+    "cicd",
+    "code-review",
+    "commit-message",
+    "core-data",
+    "core-simulator-health",
+    "delivery-report",
+    "figma-bridge",
+    "figma-golden-testing",
+    "git-workflow",
+    "github-projects",
+    "icon-composer",
+    "onepassword-environments",
+    "open-xcode-handoff",
+    "release-qa-handoff",
+    "screenshot",
+    "sketch-design-from-codebase",
+    "skill-maintenance",
+    "storekit-sandbox-testing",
+    "swift-package-manager",
+    "trello-pm-card-sync",
+    "xcode-preview-design",
+    "xcode-project-workflow",
+    "xcode-storage",
+    "xcodebuild"
+  ],
+  "retired": [
+    {
+      "id": "native-app-lead",
+      "replacedBy": "apple-platform-engineer",
+      "since": "2.0.0-beta.10"
+    }
+  ],
+  "legacyClaudePlugins": {
+    "marketplace": "indie-native-app",
+    "plugins": [
+      "app-store-connect",
+      "app-website",
+      "apple-platform-performance",
+      "apple-platform-ui",
+      "cicd",
+      "commit-message",
+      "figma-bridge",
+      "screenshot",
+      "xcodebuild"
+    ]
+  },
+  "reservedNames": {
+    "appleSkills": [
+      "accessibility-dynamic-type-specialist",
+      "accessibility-sufficient-contrast-specialist",
+      "accessibility-voiceover-specialist",
+      "adopt-c-bounds-safety",
+      "app-intents-specialist",
+      "app-intents-whats-new-27",
+      "app-resizability",
+      "audit-xcode-security-settings",
+      "building-document-based-swiftui-applications",
+      "device-interaction",
+      "modernize-tests",
+      "swiftui-specialist",
+      "swiftui-whats-new-27",
+      "translation",
+      "translation-coordinator",
+      "uikit-app-modernization"
+    ],
+    "appleNamespace": "xcode-integration",
+    "clientBuiltins": {
+      "claudeCode": [
+        "batch",
+        "claude-api",
+        "code-review",
+        "dataviz",
+        "debug",
+        "design",
+        "design-sync",
+        "doctor",
+        "fewer-permission-prompts",
+        "loop",
+        "run",
+        "run-skill-generator",
+        "simplify",
+        "update-config",
+        "verify",
+        "workflow-authoring"
+      ],
+      "codex": [
+        "imagegen",
+        "openai-docs",
+        "plugin-creator",
+        "review-agent",
+        "skill-creator",
+        "skill-installer"
+      ]
+    },
+    "exceptions": [
+      {
+        "id": "code-review",
+        "reason": "Claude Code bundles a /code-review skill, and a personal or project skill with this name replaces it; only the bundled /review alias still runs Claude Code's review. Kept until an approved rename retires this ID and migrates callers and installations."
+      }
+    ]
+  }
+}
