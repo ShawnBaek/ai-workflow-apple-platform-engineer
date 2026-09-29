@@ -105,7 +105,7 @@
           "additionalProperties": false
         },
         "exceptions": {
-          "description": "Current skills that still take a reserved name, each with the reason, until a rename retires the ID.",
+          "description": "Current skills that take a reserved name on purpose, each with the reason it is kept.",
           "type": "array",
           "items": {
             "type": "object",

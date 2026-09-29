@@ -4,17 +4,17 @@ The runtime is one Swift package in `../verification`, exposed as `apple-verify`
 
 ## Build and locate the verifier
 
-Build from the installed `agent-harness` folder, then resolve the path. `--show-bin-path` only prints the output directory and does not build, so run the build command first:
+Build from the installed `agent-harness` folder, then resolve the path. To check an installation with `skill-inventory`, set `AGENT_HARNESS_ROOT` instead to the reviewed revision's `agent-harness` outside every skill root, as the [update procedure](../../apple-platform-setup/references/updating.md#inventory-before-reconciling) describes. `--show-bin-path` only prints the output directory and does not build, so run the build command first:
 
 ```sh
 AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
-swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1
-APE_BIN_DIR="$(swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
+xcrun swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1
+APE_BIN_DIR="$(xcrun swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
 APE="$APE_BIN_DIR/apple-verify"
 "$APE" --help
 ```
 
-Run these commands with `DEVELOPER_DIR` set to the Xcode that the [selection rule](../../xcode-project-workflow/references/xcode-selection.md) chooses. That is the newest installed full Xcode unless the user or project pins one, whatever `xcode-select -p` points to (it may be Command Line Tools or an older Xcode). An App Store archive follows the rule's distribution exception instead. Do not change the user's global toolchain. Keep the built executable in its skill directory so it can locate the matching contracts.
+Run these commands with `DEVELOPER_DIR` set to the Xcode that the [selection rule](../../xcode-project-workflow/references/xcode-selection.md) chooses. That is the newest installed full Xcode unless the user or project pins one, whatever `xcode-select -p` points to (it may be Command Line Tools or an older Xcode). Call `xcrun swift`, as above: `xcrun` resolves `swift` from that Xcode, while a bare `swift` comes from `PATH`, where a swiftly installation comes first and bypasses the selected Xcode. An App Store archive follows the rule's distribution exception instead. Do not change the user's global toolchain. Keep the built executable in its skill directory so it can locate the matching contracts.
 
 Use the same toolchain, configuration and build flags for the build and `--show-bin-path`; a guessed `.build/release` path may select an older executable. Check `--help` for `--app-root`, then observe `runtime-identity` before binding this executable in private setup. Reuse a verified matching binary rather than rebuilding for every task.
 

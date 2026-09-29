@@ -13,9 +13,16 @@ fresh work needs fresh bindings. Do not require approval merely to wait.
 ## Inventory before reconciling
 
 Before any update, removal or relink, run the read-only
-[installed skill inventory](../../apple-development-health/references/health-matrix.md#installed-skill-inventory)
-from the installed verifier, with `APE` set as in
-[Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier):
+[installed skill inventory](../../apple-development-health/references/health-matrix.md#installed-skill-inventory).
+It needs a verifier that has `skill-inventory`; released verifiers from before
+that command answer `Unknown command`. Build the verifier from the staged new
+revision, in a folder outside every skill root (a fresh clone, or the
+`git archive` export below), with `AGENT_HARNESS_ROOT` set to that copy's
+`skills/agent-harness` and `APE` set as in
+[Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
+A verifier built inside `~/.agents/skills` compares the copies beside it with
+themselves, so it cannot verify them independently and reports them
+`unverified`.
 
 ```sh
 "$APE" skill-inventory --project '<repository>'
@@ -34,13 +41,17 @@ reconcile plan from it:
   user's confirmation before removal. An `unverified` one needs an inspection
   of its `reason`: content that could not be compared, or a copy that no lock
   attributes to a repository (made without the Skills CLI, or installed from
-  a local checkout, which the CLI records as a path or not at all). It changes
-  only after the user confirms it is this installation.
+  a local checkout, which the CLI records in a project's `skills-lock.json` as
+  a path and in the global lock not at all). It changes only after the user
+  confirms it is this installation.
 - Never act on your own on an entry the report does not attribute to the
   collection. `reserved`, `foreign` and Apple entries, a `broken` link with no
   ownership evidence, Xcode's own folders (`__xcode`, the `xcode-integration`
-  plug-in) and `CodingAssistant/AgentPlugins` are reported with their owner's
-  options and left alone, except where the next bullet lets the person decide.
+  plug-in) and `CodingAssistant/AgentPlugins` are reported and left alone,
+  except where the next bullet lets the person decide. A `reserved` Apple
+  skill folder copied into a client root, or a link into an Apple export that
+  no record lists, has one way out:
+  [Retire an old export](apple-skill-exposure.md#retire-an-old-export).
   A `split` whose `occupiedBy` names a root is reported, not installed over.
 - A `duplicate` that is not an owned stale copy and whose copies include no
   `reserved` one, and a `foreignSameName` outside `CodingAssistant/AgentPlugins`,
@@ -71,43 +82,88 @@ reconcile plan from it:
 - Rerun the inventory afterward; a remaining finding is reported, not retried
   in a loop.
 
+## Skills CLI version
+
+This collection's commands pin Skills CLI 1.5.23, the version they were tested
+with: `npx skills@1.5.23`. It declares Node.js 22.20.0 or later
+(`npm view skills@1.5.23 engines`), so check `node --version` first. On an
+older Node, an unpinned `npx skills` silently resolves to 1.5.18, the newest
+release whose engines still accept it. Do not use 1.5.18: when GitHub
+rate-limits it, `update` prints `Failed to fetch tree` and then
+`All global skills are up to date`, and exits 0. In 1.5.23 a check that fails
+still ends with the same line after `Failed to check skills from …`, so read
+the whole output and never take that line or the exit status as proof. A
+later CLI is untested here; compare its `add --help` before using it.
+
 ## Skills CLI installations
 
-Inspect the CLI and installed names first:
+Record the installation from the lock and the roots, not from `list`:
 
 ```sh
-npx skills --version
-npx skills --help
-npx skills list -g
+npx skills@1.5.23 --version
+ls -la ~/.agents/skills "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+LOCK="${XDG_STATE_HOME:+$XDG_STATE_HOME/skills}"; LOCK="${LOCK:-$HOME/.agents}/.skill-lock.json"
+grep -A8 '"apple-platform-engineer"' "$LOCK"
 ```
 
-Use `list` without `-g` from your project for its local inventory. Record the
-selected clients, installed names, global/project scope and copy/link mode.
-Do not assume `update` preserves all four: inspected CLI 1.5.18 re-invokes `add`
-without the original agent or method options, so it can target other detected
-clients or change the installation layout. Use `update` only after verifying
-that your CLI preserves those dimensions.
+The global lock is `$XDG_STATE_HOME/skills/.skill-lock.json` when
+`XDG_STATE_HOME` is set, otherwise `~/.agents/.skill-lock.json`; a project
+install records in the project's `skills-lock.json`. It holds each skill's
+source, ref and folder hash, but not its clients. Take those from the roots:
 
-Otherwise stage and validate the intended source, retain the existing copy for
-rollback, then use an explicit targeted reinstall. For these three skills in a
-**global Codex copy** installation, using the reviewed source checkout:
+- **Both clients** (`-a claude-code codex`): real folders in
+  `~/.agents/skills`, which Codex reads, and a link to each in
+  `~/.claude/skills` for Claude Code. `--copy`, or choosing copy at the
+  prompt, gives each client its own real folders instead.
+- **Claude Code alone:** real folders copied into `~/.claude/skills`, and no
+  `~/.agents/skills` entry.
+- **Codex alone:** real folders in `~/.agents/skills`.
+
+Record the selected clients, installed names, global/project scope,
+copy/link mode, and the lock's source and ref. `npx skills list -g` is not a
+substitute: its `Agents` column names the clients the CLI detects on this
+machine (Codex only while `$CODEX_HOME`, `~/.codex` or `/etc/codex` exists),
+not the ones the install targeted; it never shows the ref; and it lists links
+it did not make, such as a bundle's, as `Source: local`.
+
+Do not use `update` (or `check`, which runs the same updater in 1.5.23) for
+this collection. It re-invokes `add` for each skill with the lock's source
+and ref and only `--skill <name> -g -y`, without the original `-a` or
+`--copy`, so it installs for every client it detects, in link mode: a Codex-only install gained Claude Code links and a
+Claude Code copy became links. It also keeps the lock's ref: a pinned install
+(`owner/repo#<ref>`) checks and reinstalls that same ref, so a bare `update`
+never moves past it.
+
+Instead, stage and validate the intended source, retain the existing copy for
+rollback, then rerun the original `add` with the same `-a` list, the same
+names and the reviewed revision as `owner/repo#<ref>`. For the starter set in
+a **global both-client** installation:
 
 ```sh
-npx skills@1.5.18 add '<absolute-reviewed-source-checkout>' -g \
-  --skill apple-platform-engineer agent-harness apple-platform-ui --agent codex --copy
+npx skills@1.5.23 add 'ShawnBaek/ai-workflow-apple-platform-engineer#<reviewed-tag>' -g -a claude-code codex \
+  --skill apple-platform-engineer agent-harness apple-platform-setup \
+  apple-development-health xcode-project-workflow xcodebuild core-simulator-health \
+  apple-platform-ui xcode-preview-design apple-platform-testing screenshot \
+  git-workflow code-review open-xcode-handoff
 ```
 
-For a project copy, omit `-g` and run from that project. Match the actual clients
-and names; include shared dependencies that need the same revision. Inspect the
-installation summary before confirming. This example is not a link migration:
-for existing symlinks, use the staged-bundle procedure below and account for all
-clients sharing the canonical target. The [Skills CLI reference](https://github.com/vercel-labs/skills#available-options)
-describes `add` options; check the selected CLI before use.
+This rewrites each lock entry with the new ref and hash. Name the reviewed
+revision by a tag or branch: the CLI clones with `git clone --branch`, which
+refuses a bare commit SHA (`Remote branch <sha> not found`). Omit `#<ref>` to
+take the default branch's current head and record no ref, after confirming
+that head is the reviewed commit. Keep `-a` and names to what is installed,
+always including `code-review`;
+add `--copy` for a copy install, omit `-g` and run from the project for a
+project install, and include shared dependencies that need the same
+revision. Inspect the installation summary before confirming. The
+[Skills CLI reference](https://github.com/vercel-labs/skills#available-options)
+describes `add` options.
 
-Do not use `npx skills check` as a read-only preview: in inspected CLI version
-1.5.18, `check` calls the same updater as `update`. A manually installed copy
-may be absent from CLI tracking, so an empty update result is not proof that
-your active copy is current.
+Do not reinstall from a local checkout path. The CLI records no global lock
+entry for a local source, so the old GitHub entry, with its old ref and hash,
+stays in place and no longer describes the copy; the inventory flags it. A
+manually installed copy may be absent from CLI tracking, so an empty update
+result is not proof that your active copy is current.
 
 ## Linked checkout or versioned bundle
 
@@ -115,12 +171,21 @@ your active copy is current.
   state, fetch the intended upstream, review the target commit and fast-forward
   its release branch when appropriate. Preserve local edits and branch policy;
   do not reset an active development branch just to update a skill.
-- **Copies or links into a versioned bundle:** stage the intended revision in a
-  new bundle using the existing installer. Include the supporting resources
-  needed by the installed skills. Validate it before switching the existing
-  skill links/copies, and keep the prior bundle for rollback. Do not run a generic
-  updater over custom links or rerun a one-off activation script without checking
-  whether it supports an already installed revision.
+- **Copies or links into a custom versioned bundle** (not the Skills CLI's own
+  links, which [rerun `add`](#skills-cli-installations)): export the intended
+  revision into a new, empty bundle folder, then validate it with a verifier
+  built from that revision (`APE` as in the inventory step above):
+
+  ```sh
+  mkdir '<new bundle>' && git -C '<reviewed checkout>' archive '<revision>' | tar -x -C '<new bundle>'
+  "$APE" repository --root '<new bundle>'
+  ```
+
+  Include the supporting resources needed by the installed skills. Validate
+  before switching the existing skill links/copies, and keep the prior bundle
+  for rollback. Do not run a generic updater over custom links or rerun a
+  one-off activation script without checking whether it supports an already
+  installed revision.
 
 ### Switching the active pointer without corrupting it
 
@@ -141,6 +206,10 @@ rm -f "$HOME/.agents/<name>-active"
 ln -s "$HOME/.agents/skill-bundles/<name>/<revision>" "$HOME/.agents/<name>-active"
 readlink "$HOME/.agents/<name>-active"   # must print the new revision
 ```
+
+Between `rm` and `ln` the pointer is missing for a few milliseconds. That is
+acceptable: a client that loads skills in that moment sees broken links until
+its next reload, and nothing is left half-written.
 
 If a previous attempt used `mv`, look for the stray link left inside the old
 bundle and delete it, so the rollback copy stays byte-identical to its revision.
@@ -195,19 +264,26 @@ Ask your agent:
 
 1. Check actual loaded paths and observable source revision/hash, not only the README
    version label. Confirm one discoverable copy of each selected skill with the
-   inventory, run by the verifier built from the new revision: rebuild it first
-   as in [Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier),
-   because a verifier from the previous revision compares each entry with its
-   own older copy. It reports each one `current`, and no `outdated`,
+   inventory, run by the verifier built from the reviewed revision outside
+   every skill root, as in [the inventory step](#inventory-before-reconciling),
+   or run with `--repository-root '<reviewed checkout>'` before the
+   subcommand. A verifier from the previous revision compares each entry with
+   its own older copy, and one built inside `~/.agents/skills` with the copies
+   beside it. It reports each one `current`, and no `outdated`,
    `unverified`, `retired`, `unlisted`, `split`, `duplicate`, owned `broken` or
    `staleLock` finding remains for the collection. A copy that no lock
-   attributes to a repository, such as one reinstalled from a local reviewed
-   checkout, stays `unverified` with a `reason` saying so; check that copy
-   against the source revision instead. A `CLAUDE_CONFIG_DIR` set only in
-   Claude Code's settings `env` is not in the shell's environment, so pass that
-   directory as `--claude-config-dir`.
-2. When the selected setup uses the harness Swift runtime, the executable
-   rebuilt in step 1 with the selected full Xcode is its changed executable.
+   attributes to a repository, such as one made without the Skills CLI, stays
+   `unverified` with a `reason` saying so; check that copy against the source
+   revision instead. A copy reinstalled from a local checkout path over an
+   earlier GitHub install keeps that install's lock entry, which the inventory
+   flags; reinstall it from `owner/repo#<ref>` as
+   [Skills CLI installations](#skills-cli-installations) describes. A
+   `CLAUDE_CONFIG_DIR` set only in Claude Code's settings `env` is not in the
+   shell's environment, so pass that directory as `--claude-config-dir`.
+2. When the selected setup uses the harness Swift runtime, rebuild its
+   executable in the installed `agent-harness` with the selected full Xcode, as
+   in [Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
+   That is its changed executable; the out-of-root inventory verifier is not.
    Keep executable, sources and contracts together.
 3. If a private coordinator/runtime binding is configured, follow the explicit
    [runtime migration procedure](../../agent-harness/references/swift-verification.md)

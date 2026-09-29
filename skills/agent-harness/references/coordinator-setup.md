@@ -11,8 +11,8 @@ must not depend on the caller's working directory:
 ```sh
 AGENT_HARNESS_ROOT='<absolute-installed-agent-harness>'
 # Build once; --show-bin-path below only prints the path and does not build.
-swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1
-APE_BIN_DIR="$(swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
+xcrun swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1
+APE_BIN_DIR="$(xcrun swift build --package-path "$AGENT_HARNESS_ROOT/verification" -c release --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
 APE="$APE_BIN_DIR/apple-verify"
 APP_ROOT='<absolute-authoritative-app-repository>'
 HARNESS_TEMPLATE="$AGENT_HARNESS_ROOT/templates/harness-local.json"

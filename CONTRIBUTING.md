@@ -41,7 +41,7 @@ Keep the entry point focused on decisions an agent could otherwise get wrong. Ad
 
 Use official Apple/Swift documentation and applicable WWDC sources for API claims. Check the selected SDK and the app's minimum OS separately; do not raise deployment targets to simplify an example. Preserve existing storyboard/code/hybrid approaches and project architecture unless the task justifies changing them.
 
-Add the skill to [the catalog](docs/skills.md), to `current` in the [skill lifecycle file](skills/agent-harness/lifecycle/skill-lifecycle.json) and to the relevant lead route. Add it to health requirements only if that selected workflow truly needs it; installing one skill must not require every optional integration. Pick a name that no other owner exposes to the same agents: the lifecycle file's `reservedNames` lists the skills Xcode ships to its agents, Xcode's `xcode-integration` plugin namespace, and the skills Claude Code and Codex bundle. A shipped collision stays only while a `reservedNames.exceptions` entry gives its reason, as `code-review` does until a rename.
+Add the skill to [the catalog](docs/skills.md), to `current` in the [skill lifecycle file](skills/agent-harness/lifecycle/skill-lifecycle.json) and to the relevant lead route. Add it to health requirements only if that selected workflow truly needs it; installing one skill must not require every optional integration. Pick a name that no other owner exposes to the same agents: the lifecycle file's `reservedNames` lists the skills Xcode ships to its agents, Xcode's `xcode-integration` plugin namespace, and the skills Claude Code and Codex bundle. A shipped collision stays only while a `reservedNames.exceptions` entry gives its reason, as `code-review` does for its intentional replacement of Claude Code's bundled `/code-review`.
 
 Keep existing skill IDs stable by default. An explicitly approved rename or retirement must update callers/templates and document installed-state migration. In the lifecycle file, move the old ID from `current` to `retired` with the skill that replaces it (`replacedBy`, or `null` for none) and the first release that ships without it (`since`). That is the upcoming release, not the current `VERSION`, because the release in `VERSION` still ships the skill. Never repurpose the retired ID. Update `VERSION`, the README version and the lifecycle file's `version` together only when preparing the agreed release. Keep the file out of `skills/agent-harness/contracts/`: private harnesses bind the source-bundle digest of that folder, so a file there whose `version` changes at every release would make every harness rebind at every release. `apple-verify repository` fails when `current` differs from the skill folders, a retired ID returns, a skill takes a reserved name without a recorded reason, or `version` differs from `VERSION`.
 
@@ -82,12 +82,12 @@ From this repository root, with macOS and a full Xcode Swift 6 toolchain:
 
 ```sh
 # Build only if the verifier is not already built for the current source/toolchain.
-swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1
-APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
+xcrun swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1
+APE_BIN_DIR="$(xcrun swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
 "$APE_BIN_DIR/apple-verify" repository --root .
 
 # For runtime/shared-contract changes; CI runs this suite too.
-swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+xcrun swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
 
 # After any Swift change: format (CI pins swift-format 604.0.0), then compile scripts.
 git ls-files -z '*.swift' | xargs -0 xcrun swift-format format --in-place

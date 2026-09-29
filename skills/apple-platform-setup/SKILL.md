@@ -123,7 +123,9 @@ into a repeated interview or publish machine/account inventories.
 Read the installed [update procedure](references/updating.md) for the actual
 installation method before choosing an updater or activation command.
 Preserve the original installation scope, local customizations and rollback copy.
-Stage and validate a complete new bundle first. Before activation or runtime
+A Skills CLI installation reruns its original `add` with the same `-a` list and
+the reviewed `owner/repo#<ref>`, never a bare `update`; a custom bundle is staged
+and validated as a complete new bundle first. Before activation or runtime
 rebinding, account for active consumers and leases; zero leases alone does not
 mean tasks no longer read the shared skill manifest. Leave active/historical
 authorizations untouched. New work gets fresh bindings and health observations;
