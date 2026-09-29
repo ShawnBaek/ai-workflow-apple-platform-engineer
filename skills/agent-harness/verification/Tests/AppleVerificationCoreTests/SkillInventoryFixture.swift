@@ -239,6 +239,18 @@ struct SkillInventoryFixture {
   }
 }
 
+/// The `unverified` reason of an entry compared with a reference inside the scanned root `root`:
+/// its own folder (`itself`) or another folder.
+func noIndependentReference(_ root: String, itself: Bool) -> String {
+  "no independent reference (not compared, not a fault): "
+    + (itself
+      ? "this is the verifier's own reference copy"
+      : "the verifier's reference copy is itself installed")
+    + " in scanned root \(root); to compare, run apple-verify --repository-root "
+    + "<reviewed checkout> skill-inventory, or build the verifier from the reviewed revision "
+    + "outside the skill roots"
+}
+
 /// The findings of one class in a report.
 func inventoryFindings(_ report: [String: Any], _ kind: String) -> [[String: Any]] {
   (report["findings"] as? [String: Any])?[kind] as? [[String: Any]] ?? []

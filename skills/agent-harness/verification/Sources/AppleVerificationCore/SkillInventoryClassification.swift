@@ -65,6 +65,20 @@ extension SkillInventory {
     /// from a path gets no entry. A path may be a checkout of this repository or of another, so it
     /// attributes the entry to no one.
     var local: Set<String> = []
+    /// What the lock recorded for each remote entry: the `ref` it was installed from, and its
+    /// `skillFolderHash` when that is a Git tree ID (see `gitTreeID`).
+    var records: [String: LockRecord] = [:]
+  }
+
+  /// A remote lock entry's recorded revision: the `ref` (branch, tag or commit) given after `#`
+  /// in the `add` source, and a `skillFolderHash` that is a Git tree ID. The Skills CLI records
+  /// the tree ID GitHub's Trees API gives the skill folder at that ref; when it fetched the files
+  /// another way it records a SHA-256 of its own over the clone, whose file order follows
+  /// JavaScript's locale-dependent `localeCompare`, so that form is kept out: the inventory cannot
+  /// reproduce it exactly.
+  struct LockRecord {
+    var ref: String?
+    var treeID: String?
   }
 
   /// Whether a lock `source` is a filesystem path rather than a repository or package.
@@ -88,9 +102,9 @@ extension SkillInventory {
     return value
   }
 
-  /// Reads a lock as a bounded regular file, read-only, and keeps only each entry's source and
-  /// whether that source is a local path. Anything else at that path (a link, a FIFO that would
-  /// block the open) is not opened.
+  /// Reads a lock as a bounded regular file, read-only, and keeps only each entry's source,
+  /// whether that source is a local path, and a remote entry's `ref` and tree ID. Anything else
+  /// at that path (a link, a FIFO that would block the open) is not opened.
   static func readLock(_ file: LockFile) -> Lock {
     let url = file.url
     var lock = Lock(id: file.id, path: url.path, label: file.label)
@@ -114,6 +128,10 @@ extension SkillInventory {
           lock.local.insert(name)
         } else {
           lock.sources[name] = normalizedSource(source)
+          let ref = (entry["ref"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+          let hash = (entry["skillFolderHash"] as? String)?.lowercased()
+          lock.records[name] = LockRecord(
+            ref: ref, treeID: hash.flatMap { isGitObjectID($0) ? $0 : nil })
         }
       }
       lock.status = "read"
@@ -218,6 +236,7 @@ extension SkillInventory {
     let scannedFolders: Set<String>
     private var hashes: [String: String] = [:]
     private var hashErrors: [String: String] = [:]
+    private var treeIDs: [String: String?] = [:]
     private var owned = Set<String>()
     private var copies: [String: [String: String]?] = [:]
     /// Folders of entries left unverified because the lock covering their root is unreadable.
@@ -311,6 +330,16 @@ extension SkillInventory {
 
     func hashError(_ physical: String) -> String? { hashErrors[physical] }
 
+    /// Whether a resolved skill folder still has the Git tree the lock `id` recorded for `name`:
+    /// `matches` or `differs`, or nil when that lock records no tree ID for it or the folder has
+    /// no reproducible tree (see `gitTreeID`).
+    func lockHash(_ name: String, lock id: String?, physical: String) -> String? {
+      guard let id, let recorded = locks[id]?.records[name]?.treeID else { return nil }
+      if treeIDs[physical] == nil { treeIDs[physical] = SkillInventory.gitTreeID(physical) }
+      guard let installed = treeIDs[physical] ?? nil else { return nil }
+      return installed == recorded ? "matches" : "differs"
+    }
+
     func classify(_ entry: Entry) -> Classified {
       // Xcode's own Apple skills; anything else in that folder (a manifest) is no skill.
       if entry.root.apple {
@@ -330,9 +359,15 @@ extension SkillInventory {
       }
       guard entry.isSkill else { return Classified(entry: entry, kind: "ignored") }
       // Apple's names, and the client builtins the collection does not use, are never ours.
+      // An Apple name in Xcode's imported plug-ins is a plug-in the person manages in Xcode;
+      // anywhere else, a folder or link an earlier export left.
       if lifecycle.appleNames.contains(name) {
         return Classified(
-          entry: entry, kind: "reserved", detail: ["reservedBy": "reservedNames.appleSkills"])
+          entry: entry, kind: "reserved",
+          detail: [
+            "reservedBy": "reservedNames.appleSkills",
+            "appleExposure": entry.root.plugins ? "plugin" : "export",
+          ])
       }
       if let field = lifecycle.clientBuiltins[name], !lifecycle.current.contains(name) {
         return Classified(entry: entry, kind: "reserved", detail: ["reservedBy": field])
@@ -359,6 +394,13 @@ extension SkillInventory {
         owned.insert(physical)
         var result = classifyOwned(entry, physical: physical, evidence: evidence)
         if let origin { result.detail["installedFrom"] = origin }
+        // What the lock recorded for a current skill it gives this repository, compared with the
+        // installed folder, whatever the reference.
+        if evidence.contains("lock"), lifecycle.current.contains(name),
+          let state = lockHash(name, lock: lock, physical: physical)
+        {
+          result.detail["lockHash"] = state
+        }
         return result
       }
       guard lifecycle.names(name) else { return Classified(entry: entry, kind: "foreign") }
@@ -422,6 +464,20 @@ extension SkillInventory {
       guard let copy = referencePath(entry.name) else {
         result = Classified(entry: entry, kind: "unverified", evidence: evidence)
         result.detail["reason"] = "no collection copy to compare"
+        return result
+      }
+      // A reference inside a scanned root is itself an installed copy, and an entry that
+      // resolves to it would be compared with itself: neither comparison is independent.
+      if let referenceRoot {
+        result = Classified(entry: entry, kind: "unverified", evidence: evidence)
+        result.detail["reason"] =
+          "no independent reference (not compared, not a fault): "
+          + (physical == copy
+            ? "this is the verifier's own reference copy"
+            : "the verifier's reference copy is itself installed")
+          + " in scanned root \(referenceRoot.id); to compare, run apple-verify "
+          + "--repository-root <reviewed checkout> skill-inventory, or build the verifier from the "
+          + "reviewed revision outside the skill roots"
         return result
       }
       if physical == copy { return Classified(entry: entry, kind: "current", evidence: evidence) }

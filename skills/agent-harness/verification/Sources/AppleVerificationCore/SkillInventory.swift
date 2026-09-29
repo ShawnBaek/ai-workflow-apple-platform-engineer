@@ -8,8 +8,8 @@ import Foundation
 /// project locks, and hashes a skill folder only where a classification needs its content. It
 /// never creates, modifies, deletes or changes the mode of anything it scans, and it opens no
 /// other file than the lifecycle file and `VERSION` of a copy of the collection an entry
-/// resolves into: no client configuration, authentication, history or session state, and no
-/// plugin manifest.
+/// resolves into and the files naming the reference checkout's `HEAD` commit: no client
+/// configuration, authentication, history or session state, and no plugin manifest.
 ///
 /// An entry belongs to the collection only when it resolves into the verifier's own `skills/`
 /// folder or the `skills/` folder of another copy of this collection outside the scanned roots
@@ -25,6 +25,11 @@ import Foundation
 /// Everything else is foreign: reported, never claimed. Content Xcode renders for its own
 /// agents is Apple's, and Apple and client builtin names the collection does not use are
 /// reserved, whatever the evidence.
+///
+/// Only a reference outside every scanned root makes an entry `current` or `outdated`: a
+/// reference inside one is itself an installed copy, so the entries it would decide are
+/// unverified. Separately, a lock entry's recorded Git tree is compared with the installed
+/// folder, which shows an installation replaced outside the Skills CLI.
 public enum SkillInventory {
   /// The homes the clients read, from explicit options first and then the variables the clients
   /// themselves honour: `HOME`, `CODEX_HOME` (else `~/.codex`), `CLAUDE_CONFIG_DIR` (else

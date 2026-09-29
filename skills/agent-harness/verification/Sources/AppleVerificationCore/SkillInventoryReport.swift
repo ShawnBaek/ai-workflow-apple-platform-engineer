@@ -13,9 +13,14 @@ extension SkillInventory {
       "apple-platform-setup update, after approval: reinstall the entry from the reviewed "
       + "revision with its original method and client.",
     "unverified":
-      "Inspect the entry: its content could not be compared, or no readable lock attributes it "
-      + "to a repository (reason). Compare it with the reviewed source revision; setup changes "
-      + "nothing until you decide.",
+      "Inspect the entry's reason: its content could not be compared, no readable lock "
+      + "attributes it to a repository, or no independent reference exists because the "
+      + "verifier's own copy is installed in a scanned root. That last one means not compared, "
+      + "not a fault: run apple-verify --repository-root <reviewed checkout> skill-inventory, or "
+      + "build the verifier from the reviewed revision outside the skill roots, and rerun the "
+      + "inventory. lockHash matches only means the folder is unchanged since the Skills CLI "
+      + "installed it, not that it is the reviewed revision. Otherwise compare the entry with the "
+      + "reviewed source revision; setup changes nothing until you decide.",
     "retired":
       "apple-platform-setup reconcile, after approval: back up and remove the owned retired "
       + "entry, then install its replacement.",
@@ -35,16 +40,26 @@ extension SkillInventory {
       "apple-platform-setup reconcile, after approval: remove an owned broken link; a link "
       + "with no ownership evidence is left to its owner.",
     "staleLock":
-      "apple-platform-setup reconcile, after approval: remove the lock entry with an explicit "
-      + "agent list (-a), never a bare remove.",
+      "apple-platform-setup reconcile, after approval: remove a retired, notInLifecycle or "
+      + "missing lock entry with an explicit agent list (-a), never a bare remove. For drift, the "
+      + "installed folder no longer has the tree the lock recorded (replaced outside the Skills "
+      + "CLI, such as by a reinstall from a local checkout): reinstall it in its original form "
+      + "with -g and the original -a list, so the CLI rewrites the lock entry: "
+      + "<collection source> unpinned when the reviewed revision is the default branch head, "
+      + "else <collection source>#<reviewed tag> (pinned; lock.refs lists pins, which a bare "
+      + "update never moves).",
     "foreignSameName":
       "Your decision: no ownership evidence makes the entry the collection's. "
       + "apple-platform-setup shows the evidence and, only on your answer for that entry, moves "
       + "it to its backup or leaves the collection copy uninstalled there. Remove an Xcode "
       + "plug-in import yourself in Xcode Settings > Intelligence > Plug-ins.",
     "reserved":
-      "Not reconciled by setup: Apple and client names belong to their owners. Keep one Apple "
-      + "exposure per Xcode.",
+      "Not reconciled as the collection's: Apple and client names belong to their owners. Keep "
+      + "one Apple exposure per Xcode. An appleExposure export is a folder or link an earlier "
+      + "Apple export left in that root: apple-platform-setup's Retire an old export procedure "
+      + "(apple-skill-exposure.md#retire-an-old-export) moves it to a backup only on your answer "
+      + "for that entry. An appleExposure plugin is an Xcode plug-in import: remove it yourself "
+      + "in Xcode Settings > Intelligence > Plug-ins. Xcode's own copies are never touched.",
   ]
 
   /// Scans every root read-only and classifies each entry against `lifecycle`, using the
@@ -104,19 +119,26 @@ extension SkillInventory {
         entriesByClass[kind, default: 0] += 1
       }
     }
+    // `count` counts entries (one per root that lists a name); `nameCount` counts names.
     for (kind, names) in namesByClass {
-      summary[kind] = ["names": names.sorted(), "count": entriesByClass[kind] ?? 0]
+      summary[kind] = [
+        "names": names.sorted(), "count": entriesByClass[kind] ?? 0, "nameCount": names.count,
+      ]
     }
     let attention = Set(findings.keys).intersection(attentionClasses)
 
+    var collection: [String: Any] = [
+      "source": lifecycle.source, "version": lifecycle.version, "skillsFolder": reference,
+      "reference": referenceRoot.map { "scanned root \($0.id)" } ?? "verifier skills folder",
+    ]
+    if let commit = headCommit((reference as NSString).deletingLastPathComponent) {
+      collection["headCommit"] = commit
+    }
     var report: [String: Any] = [
       "command": "skill-inventory",
       "readOnly": true,
       "status": attention.isEmpty ? "clean" : "attention",
-      "collection": [
-        "source": lifecycle.source, "version": lifecycle.version, "skillsFolder": reference,
-        "reference": referenceRoot.map { "scanned root \($0.id)" } ?? "verifier skills folder",
-      ],
+      "collection": collection,
       "lock": lockReport(locks[0], lifecycle: lifecycle),
       "roots": scans.map { rootReport($0, classified: classified) },
       "findings": findings,
@@ -186,7 +208,9 @@ extension SkillInventory {
   }
 
   /// A lock entry from this repository or a former name whose skill is retired, unknown to the
-  /// lifecycle file, or installed in none of the roots that lock records installs into.
+  /// lifecycle file, installed in none of the roots that lock records installs into, or
+  /// installed in a folder that no longer has the Git tree the entry recorded (`drift`, with the
+  /// roots that list such a folder and the entry's `ref`).
   static func staleLock(_ classified: [Classified], locks: [Lock], lifecycle: Lifecycle)
     -> [[String: Any]]
   {
@@ -205,7 +229,14 @@ extension SkillInventory {
         } else if !installed.contains(name) {
           finding["reason"] = "missing"
         } else {
-          continue
+          let drifted = classified.filter {
+            $0.entry.root.lock == lock.id && $0.entry.name == name
+              && $0.detail["lockHash"] as? String == "differs"
+          }
+          guard !drifted.isEmpty else { continue }
+          finding["reason"] = "drift"
+          finding["roots"] = drifted.map(\.entry.root.id)
+          if let ref = lock.records[name]?.ref { finding["ref"] = ref }
         }
         findings.append(finding)
       }
@@ -214,8 +245,8 @@ extension SkillInventory {
   }
 
   /// A lock's counts, plus the names it still gives a former name of this repository (installed
-  /// before the rename, so likely outdated) and the names it records from a local path (which
-  /// attribute nothing).
+  /// before the rename, so likely outdated), the names it records from a local path (which
+  /// attribute nothing), and the collection names it pins to a `ref`, by ref.
   static func lockReport(_ lock: Lock, lifecycle: Lifecycle) -> [String: Any] {
     var report: [String: Any] = [
       "id": lock.id, "path": lock.path, "location": lock.label, "status": lock.status,
@@ -226,6 +257,14 @@ extension SkillInventory {
     let legacy = lock.sources.filter { $0.value != current && lifecycle.sources.contains($0.value) }
     if !legacy.isEmpty { report["legacySource"] = legacy.keys.sorted() }
     if !lock.local.isEmpty { report["localSource"] = lock.local.sorted() }
+    var refs = [String: [String]]()
+    for (name, record) in lock.records {
+      guard let ref = record.ref, let source = lock.sources[name],
+        lifecycle.sources.contains(source)
+      else { continue }
+      refs[ref, default: []].append(name)
+    }
+    if !refs.isEmpty { report["refs"] = refs.mapValues { $0.sorted() } }
     if let version = lock.version { report["version"] = version }
     if let reason = lock.reason { report["reason"] = reason }
     return report
