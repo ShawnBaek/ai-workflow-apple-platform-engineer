@@ -27,8 +27,10 @@ extension SkillInventory {
       + "client that lacks it, with the same method and revision. Where occupiedBy names a root, "
       + "another entry holds that name there; setup leaves it alone and reports it.",
     "duplicate":
-      "Decide which copy each client loads. Setup removes only an owned stale copy, after "
-      + "approval, and never a foreign one.",
+      "Decide which copy each client loads. apple-platform-setup removes an owned stale copy "
+      + "after approval; where no copy is reserved, it shows the evidence and, only on your "
+      + "answer for that entry, moves the copy you choose to its backup; a reserved copy is "
+      + "reported only.",
     "broken":
       "apple-platform-setup reconcile, after approval: remove an owned broken link; a link "
       + "with no ownership evidence is left to its owner.",
@@ -36,9 +38,10 @@ extension SkillInventory {
       "apple-platform-setup reconcile, after approval: remove the lock entry with an explicit "
       + "agent list (-a), never a bare remove.",
     "foreignSameName":
-      "Not reconciled by setup: no ownership evidence makes the entry the collection's. "
-      + "Rename or remove it yourself, or keep it and leave the collection copy uninstalled "
-      + "there.",
+      "Your decision: no ownership evidence makes the entry the collection's. "
+      + "apple-platform-setup shows the evidence and, only on your answer for that entry, moves "
+      + "it to its backup or leaves the collection copy uninstalled there. Remove an Xcode "
+      + "plug-in import yourself in Xcode Settings > Intelligence > Plug-ins.",
     "reserved":
       "Not reconciled by setup: Apple and client names belong to their owners. Keep one Apple "
       + "exposure per Xcode.",
