@@ -9,20 +9,42 @@ target version's Migration notes in the [changelog](../CHANGELOG.md).
 
 The procedure differs per installation shape, and the shape is not obvious from
 the client — the same agent can load a CLI copy, a link into a checkout, or a
-versioned bundle. Resolve it before updating anything. From the client's skill
-root (for example `~/.agents/skills`, or `~/.claude/skills`):
+versioned bundle. Resolve it before updating anything. Read the client roots and
+the Skills CLI lock:
 
 ```sh
-ls -la <skill-root>            # real directories, or links? where do they point?
-readlink <skill-root>/apple-platform-engineer
-npx skills list -g             # only lists CLI-tracked installations
+ls -la ~/.agents/skills "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"   # real directories, or links? where do they point?
+readlink "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/apple-platform-engineer"
+LOCK="${XDG_STATE_HOME:+$XDG_STATE_HOME/skills}"; LOCK="${LOCK:-$HOME/.agents}/.skill-lock.json"
+grep -A8 '"apple-platform-engineer"' "$LOCK"   # source, ref and hash the CLI recorded
 ```
 
-- **Real directories** → a copy. `npx skills list -g` may still not know about
-  it; an empty update result is not proof that it is current.
+The lock records source, ref and hash, not clients; the roots show those. Do
+not take them from `npx skills list -g`: its `Agents` column names the clients
+the CLI detects on this machine (Codex only while `$CODEX_HOME`, `~/.codex` or
+`/etc/codex` exists), not the ones the install targeted; it never shows the
+ref; and it lists links it did not make, such as a bundle's, as
+`Source: local`.
+
+- **Claude Code links into the CLI's `~/.agents/skills` copy** (links to
+  `../../.agents/skills/<skill>`, with the skill in the lock) → a Skills CLI
+  install for both clients, the layout the README command makes.
+- **Real directories** → a copy. With the skill in the lock, it is a Skills CLI
+  install for one client (Claude Code alone copies into `~/.claude/skills`,
+  Codex alone installs into `~/.agents/skills`) or with `--copy`. Without it,
+  the copy was made another way, and an empty update result is not proof that
+  it is current.
 - **Links into a Git checkout** → update the checkout, respecting its branch.
-- **Links through a shared pointer** (`…-active`) → a versioned bundle; follow
-  the staged-bundle procedure, which also reconciles the per-skill links.
+- **Links through a shared pointer** (`…-active`) → a custom versioned bundle;
+  follow the staged-bundle procedure, which also reconciles the per-skill links.
+
+For a Skills CLI install, rerun the original `add` with the same `-a` list and
+names and the reviewed revision as `owner/repo#<ref>`, as the
+[update procedure](../skills/apple-platform-setup/references/updating.md#skills-cli-installations)
+shows, with the pinned [Skills CLI version](../skills/apple-platform-setup/references/updating.md#skills-cli-version).
+Do not run a bare `npx skills update`: it drops the original `-a` list and
+copy mode, and a pinned install (`owner/repo#<ref>`) never leaves its ref.
+Rerunning `add` with the new ref, or with none, is what moves it.
 
 A skill root often mixes these, plus entries from other collections. Resolve each
 entry's target and leave anything outside this collection untouched.
@@ -36,9 +58,16 @@ duplicated, broken, stale in a lock or carry a collection name without
 ownership evidence. Setup reconciles the collection's own entries after one
 approval. A duplicate with no Apple or client-reserved copy, or a same-name entry it
 cannot attribute, is shown with its evidence and moved to a backup only on your answer for that entry, and a stale
-Xcode plug-in import is yours to remove in Xcode's Intelligence settings. Build
-it as in
-[Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier), then run:
+Xcode plug-in import is yours to remove in Xcode's Intelligence settings.
+
+Verifiers released before `skill-inventory` (2.0.0-beta.11 and earlier) lack
+it and answer `Unknown command`. Build the verifier from the staged new revision, in a folder
+outside every skill root (a fresh clone of the reviewed revision, for example),
+as in
+[Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier)
+with `AGENT_HARNESS_ROOT` set to that copy's `skills/agent-harness`. One built
+inside `~/.agents/skills` compares the copies beside it with themselves and
+reports them `unverified`. Then run:
 
 ```sh
 "$APE" skill-inventory --project '<repository>'
@@ -59,15 +88,18 @@ the result rather than the command's exit status:
    ignored build artifacts should differ. Unexplained differences are local
    overrides that need a decision, not something to reapply by habit.
 3. Confirm every selected skill resolves and that no link is broken: rerun the
-   inventory with the verifier rebuilt from the new revision (one from the
-   previous revision compares with its own older copy). It reports each
-   selected skill `current`; check that no
+   inventory with the verifier built from the new revision outside the skill
+   roots, or pass `--repository-root '<reviewed checkout>'` before
+   `skill-inventory` (one from the previous revision compares with its own
+   older copy). It reports each selected skill `current`; check that no
    `outdated`, `unverified`, `retired`, `unlisted`, `split`, `duplicate`, owned
    `broken` or `staleLock` finding remains for the collection. A copy that no
-   lock attributes to a repository stays `unverified`, with a `reason` saying
-   so: one made without the Skills CLI, or installed from a local checkout,
-   which the CLI records as a path or not at all. Step 2's comparison covers
-   it.
+   lock attributes to a repository, such as one made without the Skills CLI,
+   stays `unverified`, with a `reason` saying so; step 2's comparison covers
+   it. A reinstall from a local checkout path is different: the CLI records no
+   global lock entry for it, so an earlier GitHub entry, with its old ref and
+   hash, stays and the inventory flags it. Reinstall from `owner/repo#<ref>`
+   so the lock is rewritten.
 4. Refresh skill discovery, then run one representative task.
 
 With `apple-platform-setup` installed, ask:

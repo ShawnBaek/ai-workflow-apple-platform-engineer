@@ -201,14 +201,49 @@ provider, build and digest in their evidence.
 An Apple export and the links into it are not collection files. Collection
 updates, link reconciliation, broken-link pruning and storage cleanup never
 remove, overwrite or relink them: they report them. The same holds for Apple
-skill folders copied straight into a client root by an earlier export; report
-them as a duplicate exposure. Xcode's own copies, the `xcode-integration`
-plug-in and the `__xcode` folder in the Codex home Xcode sets, belong to Xcode:
-never edit, link into or remove them. Apple skills imported into
+skill folders copied straight into a client root by an earlier export: the
+inventory reports them `reserved`, and only
+[Retire an old export](#retire-an-old-export) moves them. Xcode's own copies,
+the `xcode-integration` plug-in and the `__xcode` folder in the Codex home
+Xcode sets, belong to Xcode: never edit, link into or remove them. Apple skills imported into
 `CodingAssistant/AgentPlugins` are plug-ins the person manages in Intelligence
 settings: report them and leave removal to the person. Only the steps above
-change an exposure, with approval, and only for the links its record lists.
-Deleting an export folder is the person's decision.
+change an exposure, with approval, and only for the links its record lists, or
+the retirement below on the person's answer for each entry. Deleting an export
+folder is the person's decision.
+
+### Retire an old export
+
+An earlier export can leave Apple skills that no record lists: flat copies in a
+client root, or links into an export folder. Retire them one entry at a time:
+
+1. **Identify** them from the inventory's `reserved` entries: an Apple skill
+   folder copied into a client root, or a link whose target is an export that
+   no record lists.
+2. **Show the person the evidence** for each entry: its path and resolved
+   target, its modification date, and whether a recorded export or Xcode's
+   built-in skills already cover it.
+3. **Move it on that entry's answer**, never deleting: move the folder, or the
+   link itself after recording its target, into the setup backup folder
+   outside every skill root, and record the move for rollback:
+
+   ```sh
+   mkdir '<backup folder>/<root>-<entry name>' && mv '<entry path>' '<backup folder>/<root>-<entry name>/'
+   ```
+
+   `mkdir` stops if that backup entry already exists, so nothing in the backup
+   is replaced. Do not add a trailing `/` to `<entry path>`: for a link it would
+   move the target instead.
+
+4. **Leave Xcode plug-in imports to the person.** For an Apple skill in
+   `CodingAssistant/AgentPlugins`, ask them to remove it in Xcode › Settings ›
+   Intelligence › Plug-ins.
+5. **Never touch Xcode's own copies**, the `xcode-integration` plug-in and the
+   `__xcode` folder.
+6. If the person still wants Apple skills outside Xcode, make one per-build
+   export as [Outside Xcode](#outside-xcode-for-claude-code-or-codex)
+   describes.
+7. **Rerun the inventory.**
 
 ## Inventory without exporting
 

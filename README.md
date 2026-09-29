@@ -28,14 +28,18 @@ Previously **iOS Experts** (`ShawnBaek/iOS-experts`, which now redirects here).
 Install the starter set with the [Skills CLI](https://www.skills.sh/docs/cli). This command installs it for your user (`-g`) in Claude Code; use `-a codex` for Codex, or `-a claude-code codex` for both:
 
 ```sh
-npx skills add ShawnBaek/ai-workflow-apple-platform-engineer -g -a claude-code \
+npx skills@1.5.23 add ShawnBaek/ai-workflow-apple-platform-engineer -g -a claude-code \
   --skill apple-platform-engineer agent-harness apple-platform-setup \
   apple-development-health xcode-project-workflow xcodebuild core-simulator-health \
   apple-platform-ui xcode-preview-design apple-platform-testing screenshot \
   git-workflow code-review open-xcode-handoff
 ```
 
-With `-g`, the skills work in every repository (`~/.claude/skills` for Claude Code, linked to a copy in `~/.agents/skills`; `~/.agents/skills` for Codex). Without it, they install into the current directory, so run the command from your app repository. Add a specialist later with the same command and its name, or use `--skill '*'` for the whole collection. Keep `agent-harness` installed: the lead and many specialists follow its shared references (see the [catalog](docs/skills.md)). Its guarded Swift runtime stays opt-in.
+The command pins the tested [Skills CLI version](skills/apple-platform-setup/references/updating.md#skills-cli-version), 1.5.23, which declares Node.js 22.20.0 or later; an unpinned `npx skills` on an older Node silently runs 1.5.18.
+
+With `-g`, the skills work in every repository. Where they land depends on `-a`: for both clients, the real folders go in `~/.agents/skills`, which Codex reads, and Claude Code gets a link to each in `~/.claude/skills`; for Claude Code alone, the CLI copies real folders into `~/.claude/skills`; for Codex alone, they go in `~/.agents/skills`. Without `-g`, they install into the current directory, so run the command from your app repository. Add a specialist later with the same command and its name, or use `--skill '*'` for the whole collection. Keep `agent-harness` installed: the lead and many specialists follow its shared references (see the [catalog](docs/skills.md)). Its guarded Swift runtime stays opt-in.
+
+Keep `code-review` too, even in a selective install: PR delivery waits for its review verdict. In Claude Code it intentionally replaces the bundled `/code-review`, which stays reachable through its alias `/review`. Codex bundles no `code-review` skill, so `$code-review` is the collection's there as well, and Codex's own `/review` command is unchanged.
 
 Apple builds and Simulator work require macOS and Xcode. Follow the [getting-started guide](docs/getting-started.md) before running coordinated app tasks.
 

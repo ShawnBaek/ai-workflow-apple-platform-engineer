@@ -13,8 +13,8 @@ All bundled runtime helpers and their tests use Swift. The package has no third-
 Requirements: macOS 13 or later, Swift 6, and full Xcode 16.4 or later for the test libraries. Use the project's selected Xcode; a newer verifier toolchain does not raise the app's deployment target.
 
 ```sh
-swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
-APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1 --show-bin-path)"
+xcrun swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+APE_BIN_DIR="$(xcrun swift build --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1 --show-bin-path)"
 "$APE_BIN_DIR/apple-verify" repository --root .
 ```
 
@@ -39,7 +39,7 @@ xcodebuild -version   # identifies Xcode's swift-format, whose --version prints 
 git ls-files -z '*.swift' | xargs -0 xcrun swift-format format --in-place
 git ls-files -z '*.swift' | xargs -0 xcrun swift-format lint   # add no findings beyond the base branch's
 git diff --check
-swift build --build-tests --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
+xcrun swift build --build-tests --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
 for script in skills/*/scripts/*.swift docs/evidence/generate-comparison.swift; do xcrun swiftc -typecheck "$script"; done
 ```
 
@@ -59,7 +59,7 @@ With an Xcode whose bundled swift-format differs, build the pinned release
 instead of accepting unrelated reformatting: run
 `git clone --depth 1 --branch 604.0.0 https://github.com/swiftlang/swift-format`
 and `cd swift-format`, confirm `git rev-parse HEAD` prints that commit, then run
-`swift build -c release --product swift-format`. Still in that checkout, run
+`xcrun swift build -c release --product swift-format`. Still in that checkout, run
 `SF="$(swift build -c release --show-bin-path)/swift-format"`, then use `"$SF"`
 in place of `xcrun swift-format` in the commands above.
 

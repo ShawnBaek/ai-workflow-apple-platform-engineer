@@ -7,14 +7,24 @@ Apple Platform Engineer is a skill collection, not an app framework. Use an indi
 Use the [Skills CLI](https://skills.sh/docs/cli). This installs the starter set for your user (`-g`) and for Claude Code; use `-a codex` for Codex, or `-a claude-code codex` for both:
 
 ```sh
-npx skills add ShawnBaek/ai-workflow-apple-platform-engineer -g -a claude-code \
+npx skills@1.5.23 add ShawnBaek/ai-workflow-apple-platform-engineer -g -a claude-code \
   --skill apple-platform-engineer agent-harness apple-platform-setup \
   apple-development-health xcode-project-workflow xcodebuild core-simulator-health \
   apple-platform-ui xcode-preview-design apple-platform-testing screenshot \
   git-workflow code-review open-xcode-handoff
 ```
 
-With `-g`, the CLI keeps one copy of each skill under `~/.agents/skills`, which Codex reads directly, and links it into `~/.claude/skills` for Claude Code, so it works in every repository. Without `-g`, it installs into the current directory (`.claude/skills` or `.agents/skills`); run it from the app repository root. Each skill folder is installed on its own, so skills that link another skill need that skill installed too: `agent-harness` is required by the lead and by the specialists the [catalog](skills.md) lists. Add a specialist later with the same command and its name, or install the whole collection with `--skill '*'`. These flags match Skills CLI 1.5.23; if your version rejects one, compare with `npx skills add --help`.
+With `-g`, the skills work in every repository, laid out per `-a` value:
+
+- `-a claude-code codex`: one real folder per skill in `~/.agents/skills`, which Codex reads directly, and a link to each in `~/.claude/skills` for Claude Code.
+- `-a claude-code`: real folders copied into `~/.claude/skills`; nothing in `~/.agents/skills`.
+- `-a codex`: real folders in `~/.agents/skills`.
+
+Without `-g`, it installs into the current directory (`.claude/skills` or `.agents/skills`); run it from the app repository root. Each skill folder is installed on its own, so skills that link another skill need that skill installed too: `agent-harness` is required by the lead and by the specialists the [catalog](skills.md) lists. Add a specialist later with the same command and its name, or install the whole collection with `--skill '*'`.
+
+`code-review` is always part of the set; keep it in a selective install, because PR delivery waits for its review verdict. In Claude Code it intentionally replaces the bundled `/code-review`, which stays reachable through its alias `/review`. Codex bundles no `code-review` skill, so `$code-review` is the collection's there as well, and Codex's `/review` command is unchanged.
+
+The command pins Skills CLI 1.5.23, the [tested version](../skills/apple-platform-setup/references/updating.md#skills-cli-version). It declares Node.js 22.20.0 or later (`node --version`); on an older Node, an unpinned `npx skills` silently resolves to 1.5.18, which the collection does not support.
 
 After installing for your client, use the [first-run setup](#first-run-setup-with-your-agent) for a new environment. Then open your app repository and type `$apple-platform-engineer <your task>` in [Codex](https://learn.chatgpt.com/docs/build-skills), or `/apple-platform-engineer <your task>` in [Claude Code](https://code.claude.com/docs/en/skills). See the [README usage examples and workflow](../README.md#after-installation) and the [skill catalog](skills.md) for focused tasks.
 
