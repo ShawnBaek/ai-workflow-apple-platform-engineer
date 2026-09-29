@@ -14,6 +14,8 @@ let usage = """
     knowledge index|query|status
     delivery-report <completion-report.json> [--channel <channel>]
     companion --manifest <manifest.json> check|sync-issue
+    skill-inventory [--home <dir>] [--codex-home <dir>] [--claude-config-dir <dir>]
+      [--xdg-state-home <dir>] [--project <dir>] [--output <new-report.json>]
 
   See docs/verification.md and each skill's reference for command arguments.
   The runtime uses Swift and Apple's tools; it does not prove app behavior by itself.
@@ -132,6 +134,15 @@ do {
   case "knowledge": code = try KnowledgeIndex.run(arguments: arguments, context: context)
   case "delivery-report": code = try DeliveryReport.run(arguments: arguments, context: context)
   case "companion": code = try CompanionWatcher.run(arguments: arguments, context: context)
+  case "skill-inventory":
+    // Read-only and harness-free: the lifecycle file and reference copies stay with this
+    // installed verifier; `--project` selects the repository whose skill roots are listed.
+    guard appRoot == nil else {
+      throw VerificationError.invalid("skill-inventory takes --project, not --app-root")
+    }
+    code = try SkillInventory.run(
+      arguments: arguments, context: installedContext,
+      environment: ProcessInfo.processInfo.environment)
   default: throw VerificationError.invalid("Unknown command: \(command)")
   }
   exit(code)
