@@ -36,11 +36,37 @@ reconcile plan from it:
   attributes to a repository (made without the Skills CLI, or installed from
   a local checkout, which the CLI records as a path or not at all). It changes
   only after the user confirms it is this installation.
-- Never move, remove or overwrite a `foreignSameName`, `reserved`, `foreign` or
-  Apple entry, or a `broken` link with no ownership evidence; report it with its
-  owner's options instead. A `split` whose `occupiedBy` names a root is
-  reported, not installed over. A `duplicate` needs the user's choice of copy.
-- Show the whole plan and get one explicit approval before running it. Remove
+- Never act on your own on an entry the report does not attribute to the
+  collection. `reserved`, `foreign` and Apple entries, a `broken` link with no
+  ownership evidence, Xcode's own folders (`__xcode`, the `xcode-integration`
+  plug-in) and `CodingAssistant/AgentPlugins` are reported with their owner's
+  options and left alone, except where the next bullet lets the person decide.
+  A `split` whose `occupiedBy` names a root is reported, not installed over.
+- A `duplicate` that is not an owned stale copy and whose copies include no
+  `reserved` one, and a `foreignSameName` outside `CodingAssistant/AgentPlugins`,
+  are the person's decision, which setup can carry out; this covers another
+  owner's skill installed twice, because the person decides for their own
+  machine. A `duplicate` with a `reserved` copy is reported only, as
+  [Apple skill exposure](apple-skill-exposure.md#apple-folders-are-foreign)
+  requires. Keep these decisions out of the grouped approval and ask one entry at a
+  time. Show
+  the evidence first: each copy's root and resolved path, which copy each
+  client loads, `equalContent` or a short diff against the collection copy,
+  the `lock` detail and modification date. Offer: keep both; move the chosen
+  copy to the backup folder; or, for a `foreignSameName`, keep it and leave
+  the collection copy uninstalled there. Act only on that entry's explicit
+  answer, and move rather than delete, recording the move for rollback. When
+  the chosen copy is the collection's own lock-recorded install, back it up,
+  then remove it with the Skills CLI from its scope with an explicit `-a`, so
+  no `staleLock` is left.
+- A `foreignSameName` in `CodingAssistant/AgentPlugins` is usually a stale
+  import of a collection skill. Compare its `SKILL.md` with the current copy
+  and, when it is stale, ask the person to remove it in Xcode › Settings ›
+  Intelligence › Plug-ins. Do not edit that folder directly: Xcode keeps a
+  `PluginsManifest.json` index beside the imports. Rerun the inventory after
+  they confirm.
+- Show the whole plan and get one explicit approval for the collection's own
+  entries before running it. Remove
   with the Skills CLI only with an explicit `-a` for the affected clients.
 - Rerun the inventory afterward; a remaining finding is reported, not retried
   in a loop.

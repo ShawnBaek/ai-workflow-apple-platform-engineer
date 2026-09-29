@@ -33,7 +33,11 @@ deprecated `~/.codex/skills`), the project's roots, Xcode's agent roots, and the
 Skills CLI's global lock and project `skills-lock.json`. It marks which entries
 are this collection's, and which are outdated, retired, split between clients,
 duplicated, broken, stale in a lock or carry a collection name without
-ownership evidence. Build it as in
+ownership evidence. Setup reconciles the collection's own entries after one
+approval. A duplicate with no Apple or client-reserved copy, or a same-name entry it
+cannot attribute, is shown with its evidence and moved to a backup only on your answer for that entry, and a stale
+Xcode plug-in import is yours to remove in Xcode's Intelligence settings. Build
+it as in
 [Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier), then run:
 
 ```sh
