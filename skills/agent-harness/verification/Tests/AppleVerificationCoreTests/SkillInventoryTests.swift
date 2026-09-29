@@ -272,6 +272,12 @@ private func withReport(_ body: (SkillInventoryFixture, [String: Any]) throws ->
         "staleLock": ["git-workflow", "native-app-lead", "swift-testing-expert"],
         "unlisted": ["swift-testing-expert", "wip"],
       ])
+    // `count` counts entries, one per root that lists a name; `nameCount` counts names.
+    #expect(
+      summary.mapValues { $0["nameCount"] as? Int }
+        == summary.mapValues { $0["names"].map { ($0 as! [String]).count } })
+    #expect(summary["current"]?["count"] as? Int == 8)
+    #expect(summary["current"]?["nameCount"] as? Int == 5)
     let steps = try #require(report["nextSteps"] as? [String: String])
     #expect(
       Set(steps.keys)
@@ -318,15 +324,21 @@ private func withReport(_ body: (SkillInventoryFixture, [String: Any]) throws ->
     (report["collection"] as? [String: Any])?["reference"] as? String
       == "scanned root agents-user")
   // The verifier's own folder is the reference without a lock entry. Claude's links reach the
-  // fixture's checkout, another copy of the collection, whose content matches. A locked copy is
-  // ours, and the lock covers Claude's user root too.
+  // fixture's checkout, another copy of the collection. A locked copy is ours, and the lock
+  // covers Claude's user root too. The reference is itself an installed copy, so no comparison
+  // with it is independent: none of them is current.
   #expect(
     inventoryEntries(report, "agent-harness").map { "\($0.0) \($0.1) \($0.2)" } == [
-      #"claude-user current ["copy"]"#, #"agents-user current ["path"]"#,
+      #"claude-user unverified ["copy"]"#, #"agents-user unverified ["path"]"#,
     ])
   #expect(
     inventoryEntries(report, "apple-platform-engineer").map { "\($0.0) \($0.1) \($0.2)" } == [
-      #"claude-user current ["copy", "lock"]"#, #"agents-user current ["path", "lock"]"#,
+      #"claude-user unverified ["copy", "lock"]"#, #"agents-user unverified ["path", "lock"]"#,
+    ])
+  #expect(
+    describeEntries(report, "apple-platform-engineer") == [
+      "claude-user unverified \(noIndependentReference("agents-user", itself: false)) -",
+      "agents-user unverified \(noIndependentReference("agents-user", itself: true)) -",
     ])
   // Unlocked entries beside the verifier are not ours, even through a Claude Code link.
   #expect(
@@ -412,7 +424,8 @@ private func withReport(_ body: (SkillInventoryFixture, [String: Any]) throws ->
       locations: locations, collectionSkills: agents, lifecycle: SkillInventoryFixture.lifecycle)
   }
   let clean = try report()
-  #expect(clean["status"] as? String == "clean")
+  // The installation's verifier has no independent reference: each entry is its own reference.
+  #expect(clean["status"] as? String == "attention")
   #expect(
     (clean["collection"] as? [String: Any])?["reference"] as? String
       == "scanned root agents-project:.")
@@ -424,8 +437,19 @@ private func withReport(_ body: (SkillInventoryFixture, [String: Any]) throws ->
   for name in installed {
     #expect(
       inventoryEntries(clean, name).map { "\($0.0) \($0.1) \($0.2)" } == [
-        #"claude-project:. current ["path", "lock"]"#,
-        #"agents-project:. current ["path", "lock"]"#,
+        #"claude-project:. unverified ["path", "lock"]"#,
+        #"agents-project:. unverified ["path", "lock"]"#,
+      ])
+  }
+  // A verifier built from the reviewed revision outside the skill roots compares them: clean.
+  let reviewed = try SkillInventory.inventory(
+    locations: locations, collectionSkills: fixture.skills,
+    lifecycle: SkillInventoryFixture.lifecycle)
+  #expect(reviewed["status"] as? String == "clean")
+  for name in installed {
+    #expect(
+      inventoryEntries(reviewed, name).map { "\($0.0) \($0.1) \($0.2)" } == [
+        #"claude-project:. current ["lock"]"#, #"agents-project:. current ["lock"]"#,
       ])
   }
   #expect(
@@ -489,7 +513,11 @@ private func withReport(_ body: (SkillInventoryFixture, [String: Any]) throws ->
     }
   }
   let beside = "beside the verifier; no lock records it"
-  #expect(describe("agent-harness") == ["claude-user current -", "agents-user current -"])
+  let itself = noIndependentReference("agents-user", itself: true)
+  #expect(
+    describe("agent-harness") == [
+      "claude-user unverified \(itself)", "agents-user unverified \(itself)",
+    ])
   #expect(
     describe("apple-platform-engineer") == [
       "claude-user unverified \(beside)", "agents-user unverified \(beside)",
@@ -594,7 +622,7 @@ private func withReport(_ body: (SkillInventoryFixture, [String: Any]) throws ->
     lifecycle: SkillInventoryFixture.lifecycle)
   #expect(
     inventoryEntries(report, "xcodebuild").map { "\($0.0) \($0.1) \($0.2)" } == [
-      #"agents-user current ["path", "lock"]"#
+      #"agents-user unverified ["path", "lock"]"#
     ])
   // The lock records the verifier, which says nothing about the skills added later.
   let beside = "beside the verifier; no lock records it"
@@ -658,7 +686,7 @@ private func withReport(_ body: (SkillInventoryFixture, [String: Any]) throws ->
     ])
   #expect(
     inventoryEntries(installed, "agent-harness").map { "\($0.0) \($0.1) \($0.2)" } == [
-      #"claude-project:. current ["path"]"#, #"agents-project:. current ["path"]"#,
+      #"claude-project:. unverified ["path"]"#, #"agents-project:. unverified ["path"]"#,
     ])
   let beside = "beside the verifier; its lock records a local path, which names no repository"
   for name in ["apple-platform-engineer", "core-simulator-health", "git-workflow"] {

@@ -62,7 +62,22 @@ path relative to the lock. A path names no repository, so such an entry
 attributes its skill to no one. Each lock's report lists those names under
 `localSource`, and the names it still gives a former name of this repository
 under `legacySource`: those were installed before the rename and are likely
-outdated.
+outdated. The collection names a lock pins to a revision, installed with
+`npx skills add <source>#<ref>`, are listed under `refs`, by ref;
+`npx skills update` keeps that pin.
+
+A remote entry of the global lock also records `skillFolderHash`. When the
+Skills CLI fetched the files through GitHub's Trees API, that is the skill
+folder's Git tree ID at the installed ref, and the inventory recomputes it for
+the installed folder the way `git write-tree` would: regular files with their
+execute bit, no empty folder, and nothing the repository never tracks (`.git`,
+`.build`, `.swiftpm`, `__pycache__`, `.DS_Store`, compiled Python). A current
+skill's entry then carries `lockHash`: `matches` when the folder still has the
+tree the lock recorded, `differs` when it was changed or replaced outside the
+CLI. When the CLI fetched the files another way, it records a SHA-256 of its
+own whose file order depends on the JavaScript locale; the inventory cannot
+reproduce that exactly, so such an entry, a folder holding a link, and a
+project lock's entries get no `lockHash`.
 
 Each client lists a folder once. A root that reaches the same folder as an
 earlier root of the same client, such as `~/.codex/skills` linked to
@@ -101,9 +116,17 @@ collection does not use, is `reserved` whatever the evidence.
 The verifier may run from an installed copy. Its `skills/` folder is then a
 scanned root that can also hold other owners' skills: `~/.agents/skills` for a
 global Skills CLI install, or the project's `.agents/skills` for a
-project-scope one. There only two kinds of entry are the collection's and
-serve as reference copies: the verifier's own `agent-harness`, and the entries
-that root's lock gives this repository or a former name.
+project-scope one. There only two kinds of entry are the collection's: the
+verifier's own `agent-harness`, and the entries that root's lock gives this
+repository or a former name. Its copies are themselves installed, and an entry
+that resolves to one would be compared with itself, so the inventory decides
+`current` or `outdated` only against a reference outside every scanned root.
+Each entry it would compare is `unverified` instead. Its reason starts with
+`no independent reference:`, says whether the entry is the verifier's own
+reference copy or a copy elsewhere, and names the fix: build the verifier from
+the reviewed revision outside the skill roots, or pass
+`--repository-root <reviewed checkout>` before the command. `lockHash` still
+says whether each folder has the tree its lock recorded.
 
 A lock proves nothing about a name it does not give a repository, even when it
 records `agent-harness`, because one installation can mix sources. A skill
@@ -132,10 +155,13 @@ foreign, with a `reason`:
 A collection name that its lock gives another repository or package is
 `foreignSameName`, with `lock: foreign`.
 
-Content is compared with the copy beside the running verifier, so run the
-verifier built from the revision you expect. Before an update, the new
-revision's verifier reports links into the older bundle `outdated`, with that
-bundle's `installedFrom` version; afterwards, `current`. A copy inside a
+Content is compared with the reference copy beside the running verifier, so
+run the verifier built from the revision you expect, outside the skill roots.
+The report's `collection` block names that folder and, when it belongs to a
+Git checkout, the commit its `HEAD` names as `headCommit` (uncommitted edits
+are not reflected). Before an update, the new revision's verifier reports
+links into the older bundle `outdated`, with that bundle's `installedFrom`
+version; afterwards, `current`. A copy inside a
 scanned root proves nothing by its location, because other owners' skills can
 share that folder, so a verifier built elsewhere finds no ownership evidence
 for its unlocked entries. A client root that is itself a link to a checkout's
@@ -146,17 +172,17 @@ does. Whether a newer release exists is a separate update check.
 
 | Class | Meaning |
 | --- | --- |
-| `current` | The collection's, current and identical to the copy beside the verifier |
-| `outdated` | The collection's and current, but its content differs |
-| `unverified` | The collection's, but its content could not be compared; or a collection name no lock attributes to a repository, as above. `reason` says which |
+| `current` | The collection's, current and identical to the reference copy, which lies outside every scanned root |
+| `outdated` | The collection's and current, but its content differs from that reference |
+| `unverified` | The collection's, but its content could not be compared, including when the only reference is an installed copy; or a collection name no lock attributes to a repository, as above. `reason` says which |
 | `retired` | The collection's retired ID is still installed; the report names `replacedBy` |
 | `unlisted` | Its evidence (`path`, `copy`, `lock` or `link`) makes it the collection's, but the lifecycle file does not list the name |
 | `split` | A current skill the collection installed for one client but not the other, in a `current`, `outdated` or `unverified` copy, once both have collection entries. `occupiedBy` names the lacking client's roots where another entry already holds the name |
 | `duplicate` | Two roots of one client list the same name for different folders; `equalContent` says whether their content matches. In Claude Code, `/<name>` runs the personal copy over a project one, and the repository root's copy over a nested directory's, which stays reachable as `/<dir>:<name>`. Codex lists both, and a plain `$name` injects neither. Entries that resolve to one folder are not duplicates: Codex dedupes a `SKILL.md` it reaches twice |
 | `broken` | A link whose target is missing |
-| `staleLock` | A lock names this repository or a former name for a retired or unlisted skill, or for one installed in none of the roots it covers; `lock` says which lock |
+| `staleLock` | A lock names this repository or a former name for a retired or unlisted skill (`reason` `retired` or `notInLifecycle`), for one installed in none of the roots it covers (`missing`), or for a folder that no longer has the tree it recorded (`drift`, from `lockHash` `differs`, with the `roots` that list it and the entry's `ref`), as a reinstall from a local checkout leaves it. `lock` says which lock. A drifted entry is reinstalled in its original form with `-g` and the original `-a` list, so the CLI rewrites it: unpinned when the reviewed revision is the default branch head, else `<source>#<reviewed tag>` (the CLI clones by tag or branch, not by commit SHA) |
 | `foreignSameName` | An entry with a current or retired collection name, no ownership evidence and none of the `unverified` cases above: another owner's (`lock: foreign` when its lock names that owner), or an installation this verifier cannot attribute. An `AgentPlugins` skill is namespaced `<plugin>:<skill>` and does not collide with the bare name; it is listed so a stale import stays visible |
-| `reserved` | Another owner's entry with a name Xcode or a client reserves |
+| `reserved` | Another owner's entry with a name Xcode or a client reserves. An Xcode name has `appleExposure`: `plugin` in `CodingAssistant/AgentPlugins`, which the person removes in Xcode Settings › Intelligence › Plug-ins, and `export` elsewhere, a folder or link an earlier Apple export left, which setup's [Retire an old export](../../apple-platform-setup/references/apple-skill-exposure.md#retire-an-old-export) moves to a backup only on the person's answer for that entry. Xcode's own copies are never touched |
 
 `split` and `duplicate` compare the Claude Code and Codex roots only. They
 match entries by folder name, while Codex names a skill by its `SKILL.md`
@@ -164,15 +190,18 @@ frontmatter `name`, so a renamed folder is not matched. Each root also counts
 `foreign` entries (another owner's, with an unrelated name), `apple` entries
 (Xcode's own skill folders) and `ignored` ones (not a skill folder, such as a
 file beside Xcode's own skills). The report also gives per-root counts, a
-per-class summary and, for each class present, the approval-gated
+per-class summary (`count` counts entries, one per root that lists a name, and
+`nameCount` counts names) and, for each class present, the approval-gated
 [setup step](../../apple-platform-setup/references/updating.md#inventory-before-reconciling)
 that would reconcile it. It exits 0 when nothing needs a decision, 1 when a
 finding does, and 2 on an error.
 
 The inventory is strictly read-only. It creates, modifies, deletes and chmods
 nothing. It opens only the lifecycle file, the locks, the files of skill
-folders it hashes, and the lifecycle file and `VERSION` of a copy of the
-collection an entry resolves into, never client configuration,
+folders it hashes, the lifecycle file and `VERSION` of a copy of the
+collection an entry resolves into, and, for `headCommit`, the reference
+checkout's `.git` file, `HEAD`, `commondir`, the ref `HEAD` names and
+`packed-refs`, never client configuration,
 authentication, history or session files or a plugin manifest. `--output`
 writes one new file. It refuses to overwrite, to write at a lock path, even an
 absent one, or to write inside a scanned root, the collection's skills folder
