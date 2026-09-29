@@ -98,6 +98,7 @@ the installed skill root still supplies trusted schemas and source identity.
 | `knowledge index\|query\|status` | [Optional local FTS retrieval](../skills/agent-harness/references/knowledge-and-rag.md) with freshness checks |
 | `delivery-report` | [Validated report rendering](../skills/delivery-report/SKILL.md); rendering does not send messages |
 | `companion` | [Reference-only upstream check](../skills/icon-composer/contracts/companion-upstream.json) or authorized review-issue reconciliation |
+| `flow record\|render` | [Session flow summary](../skills/agent-harness/references/session-flow.md) from client hooks; no harness |
 
 ## Evidence and limits
 

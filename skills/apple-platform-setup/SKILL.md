@@ -49,6 +49,11 @@ selected Xcode's bundle and expose them as
 `xcrun agent` is `mcpbridge run-agent` and runs only here, after the person
 approves the client, scope, folder and Xcode.
 
+Session flow hooks ([session flow](../agent-harness/references/session-flow.md))
+change a client's configuration. Add them only when the person asks, after they
+approve the exact settings file, scope and entries; never as part of default
+setup or an update.
+
 ## Inventory, then perform authorized setup
 
 1. Inspect the selected tools using local lookup/version/help and the app's actual

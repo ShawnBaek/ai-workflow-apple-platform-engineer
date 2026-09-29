@@ -156,6 +156,15 @@ Documentation Search and store only provenance for the decision it supported.
 [Knowledge and RAG](references/knowledge-and-rag.md) covers the local index and
 the optional AppleSampleCode MCP, including the provenance each result records.
 
+## Session flow summary
+
+To see how a Claude Code or Codex session moved between agents and tools, read
+[session flow](references/session-flow.md). `apple-verify flow record` runs as a
+client hook and appends a redacted, hashed outline; `flow render` draws it as
+Mermaid or a text tree, optionally beside a run ledger. It needs no guarded run.
+Installing its hooks is a client configuration change that needs the person's
+explicit approval.
+
 ## Verification and delivery
 
 Select checks from changed behavior and risk, not a blanket coverage target.

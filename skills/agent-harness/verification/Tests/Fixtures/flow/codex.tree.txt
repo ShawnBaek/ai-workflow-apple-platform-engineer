@@ -1,0 +1,15 @@
+flow d4579277 · codex · 12 steps · 2 agents
+root
+├─ SessionStart (startup)
+├─ Bash ×2
+├─ apply_patch
+├─ spawn_agent → explorer 545c1422
+│  └─ explorer 545c1422 · completed
+│     ├─ Bash
+│     └─ spawn_agent → worker e628b049
+│        └─ worker e628b049 · completed
+│           └─ Bash
+├─ Compact (auto)
+├─ mcp:69ace95e/query
+├─ Stop
+└─ SessionEnd (other)

@@ -1,0 +1,32 @@
+flowchart TD
+  %% flow d4579277 · codex · 12 steps · 2 agents
+  subgraph root["root"]
+    direction TB
+    root_0["SessionStart (startup)"]
+    root_1["Bash ×2"]
+    root_2["apply_patch"]
+    root_3["spawn_agent → explorer 545c1422"]
+    root_4["Compact (auto)"]
+    root_5["mcp:69ace95e/query"]
+    root_6["Stop"]
+    root_7["SessionEnd (other)"]
+    root_0 --> root_1
+    root_1 --> root_2
+    root_2 --> root_3
+    root_3 --> root_4
+    root_4 --> root_5
+    root_5 --> root_6
+    root_6 --> root_7
+  end
+  subgraph a_545c1422544fe6bc["explorer 545c1422 · completed"]
+    direction TB
+    a_545c1422544fe6bc_0["Bash"]
+    a_545c1422544fe6bc_1["spawn_agent → worker e628b049"]
+    a_545c1422544fe6bc_0 --> a_545c1422544fe6bc_1
+  end
+  subgraph a_e628b049b064803e["worker e628b049 · completed"]
+    direction TB
+    a_e628b049b064803e_0["Bash"]
+  end
+  root_3 -.-> a_545c1422544fe6bc
+  a_545c1422544fe6bc_1 -.-> a_e628b049b064803e
