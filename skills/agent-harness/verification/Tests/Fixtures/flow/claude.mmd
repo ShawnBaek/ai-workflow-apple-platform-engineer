@@ -1,0 +1,32 @@
+flowchart TD
+  %% flow 5aeabae1 · claude · 12 steps · 2 agents
+  subgraph root["root"]
+    direction TB
+    root_0["SessionStart (startup)"]
+    root_1["Bash ×2 · 200 ms"]
+    root_2["Edit · 15 ms"]
+    root_3["Agent → Explore f380a95e · 2.4 s"]
+    root_4["Compact (auto)"]
+    root_5["mcp:69ace95e/query · 300 ms"]
+    root_6["Stop"]
+    root_7["SessionEnd (other)"]
+    root_0 --> root_1
+    root_1 --> root_2
+    root_2 --> root_3
+    root_3 --> root_4
+    root_4 --> root_5
+    root_5 --> root_6
+    root_6 --> root_7
+  end
+  subgraph a_f380a95e55ff7a8f["Explore f380a95e · completed"]
+    direction TB
+    a_f380a95e55ff7a8f_0["Bash · 40 ms"]
+    a_f380a95e55ff7a8f_1["Agent → general-purpose a62dfade · 900 ms"]
+    a_f380a95e55ff7a8f_0 --> a_f380a95e55ff7a8f_1
+  end
+  subgraph a_a62dfade9c0214f4["general-purpose a62dfade · completed"]
+    direction TB
+    a_a62dfade9c0214f4_0["Bash · 10 ms"]
+  end
+  root_3 -.-> a_f380a95e55ff7a8f
+  a_f380a95e55ff7a8f_1 -.-> a_a62dfade9c0214f4

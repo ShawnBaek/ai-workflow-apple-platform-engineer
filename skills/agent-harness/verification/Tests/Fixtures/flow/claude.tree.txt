@@ -1,0 +1,15 @@
+flow 5aeabae1 · claude · 12 steps · 2 agents
+root
+├─ SessionStart (startup)
+├─ Bash ×2 · 200 ms
+├─ Edit · 15 ms
+├─ Agent → Explore f380a95e · 2.4 s
+│  └─ Explore f380a95e · completed
+│     ├─ Bash · 40 ms
+│     └─ Agent → general-purpose a62dfade · 900 ms
+│        └─ general-purpose a62dfade · completed
+│           └─ Bash · 10 ms
+├─ Compact (auto)
+├─ mcp:69ace95e/query · 300 ms
+├─ Stop
+└─ SessionEnd (other)

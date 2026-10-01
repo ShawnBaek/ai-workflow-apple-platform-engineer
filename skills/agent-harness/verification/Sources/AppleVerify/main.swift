@@ -16,6 +16,9 @@ let usage = """
     companion --manifest <manifest.json> check|sync-issue
     skill-inventory [--home <dir>] [--codex-home <dir>] [--claude-config-dir <dir>]
       [--xdg-state-home <dir>] [--project <dir>] [--output <new-report.json>]
+    flow record --client claude|codex --store <absolute-dir> [--include-labels]
+    flow render --store <dir> --session <id-or-hash> --format mermaid|tree
+      [--ledger <run-ledger.jsonl>] [--max-steps <n>] [--include-labels]
 
   See docs/verification.md and each skill's reference for command arguments.
   The runtime uses Swift and Apple's tools; it does not prove app behavior by itself.
@@ -72,6 +75,11 @@ do {
     arguments.removeFirst(2)
   }
   let command = arguments.removeFirst()
+  if command == "flow" {
+    // Session flow needs no contracts. `flow record` runs as a client hook: it reads only stdin
+    // and its store, prints nothing and exits 0, so it must not resolve the installed skill.
+    exit(try FlowCommand.run(arguments: arguments))
+  }
   let installedContext = try runtimeContext(repositoryRoot: explicitRoot)
   let context =
     appRoot.map {
