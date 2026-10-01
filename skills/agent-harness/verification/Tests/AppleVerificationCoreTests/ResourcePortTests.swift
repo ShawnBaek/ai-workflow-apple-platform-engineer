@@ -611,6 +611,19 @@ final class ResourcePortTests: XCTestCase {
     XCTAssertEqual(
       try ResourceCoordinator.status(statePath: state)["active_lease_count"] as? Int, 1)
     XCTAssertEqual(receipt["fencing_token"] as? Int, 1)
+    // Before expiry the lease is live work; after it, status attributes the held capacity to
+    // the expired owner, which is what tells the blocked run to recover rather than wait.
+    let live = try ResourceCoordinator.status(statePath: state, now: now)
+    XCTAssertEqual(live["expired_active_lease_count"] as? Int, 0)
+    XCTAssertEqual(
+      live["capacity_held_by_expired"] as? [String: Int],
+      ["heavy_jobs": 0, "active_devices": 0, "internal_workers": 0])
+    let stale = try ResourceCoordinator.status(statePath: state, now: now.addingTimeInterval(2))
+    XCTAssertEqual(stale["expired_active_lease_count"] as? Int, 1)
+    XCTAssertEqual(
+      stale["capacity_held_by_expired"] as? [String: Int],
+      stale["capacity_in_use"] as? [String: Int])
+    XCTAssertEqual((stale["capacity_held_by_expired"] as? [String: Int])?["active_devices"], 2)
   }
 
   func testLegacyStateNeedsQuiescentMigrationAndOldBindingIsRejected() throws {
