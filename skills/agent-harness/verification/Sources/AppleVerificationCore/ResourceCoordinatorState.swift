@@ -76,8 +76,13 @@ extension ResourceCoordinator {
   }
 
   static func capacityUsage(_ state: [String: Any]) -> [String: Int] {
+    capacityUsage(of: active(state))
+  }
+
+  /// The host capacity `leases` admit, by usage key.
+  static func capacityUsage(of leases: [[String: Any]]) -> [String: Int] {
     var usage = ["heavy_jobs": 0, "active_devices": 0, "internal_workers": 0]
-    for lease in active(state) {
+    for lease in leases {
       if let admission = lease["admission"] as? [String: Any] {
         for key in usage.keys { usage[key, default: 0] += integer(admission[key]) ?? 0 }
       }

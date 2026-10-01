@@ -183,14 +183,21 @@ extension ResourceCoordinator {
         JSONSerialization.jsonObject(with: HarnessRuntime.canonicalJSON(state, ensureASCII: true)))
     }
   }
-  public static func status(statePath: URL) throws -> [String: Any] {
+  public static func status(statePath: URL, now: Date = Date()) throws -> [String: Any] {
     let state = try fullStatus(statePath: statePath)
+    // An active lease past its expiry keeps its capacity until it is recovered. Reporting it
+    // separately tells a blocked caller whether the blocker is live work or an expired owner.
+    let expired = active(state).filter { lease in
+      (try? parse(lease["expires_at"])).map { $0 <= now } ?? false
+    }
     return [
       "schema_version": state["schema_version"]!, "runtime_kind": state["runtime_kind"]!,
       "runtime_contract": state["runtime_contract"]!,
       "coordinator_instance_id": state["coordinator_instance_id"]!,
       "migration_bootstrap": state["migration_bootstrap"]!, "host_policy": state["host_policy"]!,
       "capacity_in_use": capacityUsage(state), "active_lease_count": active(state).count,
+      "expired_active_lease_count": expired.count,
+      "capacity_held_by_expired": capacityUsage(of: expired),
     ]
   }
 
