@@ -134,7 +134,13 @@ with `test-without-building` when source/dependency identity, toolchain, scheme,
 configuration, destination compatibility, and built test targets still match.
 Changing an `-only-testing` filter to a test already present in those products
 does not itself require another build. Rebuild when a required target was not
-built or a compatibility input changed.
+built or a compatibility input changed. When the scheme has several test plans,
+such as unit and UI, run `build-for-testing` once without `-testPlan`, then run
+each plan with `test-without-building -testPlan <plan>`, passing the same
+`-derivedDataPath`, destination and configuration to every command. Before
+reusing the build, confirm its products contain an `.xctestrun` file and the
+test bundles for each plan; if one is missing, run `build-for-testing -testPlan
+<plan>` for that plan instead of assuming reuse.
 
 Run tests on a reused destination and disable parallel-testing clones unless
 the test plan requires them, as described in
