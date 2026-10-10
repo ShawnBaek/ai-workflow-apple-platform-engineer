@@ -82,7 +82,8 @@ extension SkillInventory {
     let classifier = Classifier(
       lifecycle: lifecycle,
       locks: Dictionary(
-        (locks + plugins.map(pluginLock)).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }),
+        (locks + plugins.map(pluginLock)).map { ($0.id, $0) },
+        uniquingKeysWith: { first, _ in first }),
       reference: reference,
       verifier: verifier, referenceRoot: referenceRoot,
       scannedFolders: Set(scans.compactMap { realPath($0.root.path) }))
