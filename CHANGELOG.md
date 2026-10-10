@@ -4,6 +4,14 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+## [2.0] - 2026-10-11
+
+The collection now uses `MAJOR.MINOR` versions. 2.0 is the stable release of the 2.0.0 beta series and has the same content as 2.0.0-beta.12.
+
+### Changed
+
+- **Versions are `MAJOR.MINOR`.** `VERSION`, the README label, the lifecycle file and the Claude Code plugin manifest use `2.0`, with no patch number or pre-release suffix. `apple-verify repository` rejects any other `VERSION`, and the lifecycle schema still accepts the earlier `2.0.0-beta.N` form for history such as a retired skill's `since`. Release tags are `v2.0` and `apple-platform-engineer--v2.0` ([contributing](CONTRIBUTING.md#add-a-skill)). The check is in the verifier's Swift sources, so private harnesses re-observe `runtime-identity` and the skill bundle as the 2.0.0-beta.12 Migration item describes. A Claude Code plugin install moves from 2.0.0-beta.12 to 2.0 with `claude plugin update apple-platform-engineer@apple-platform-engineer`.
+
 ## [2.0.0-beta.12] - 2026-10-11
 
 This entry covers the pull requests merged to `main` after 2.0.0-beta.11: [#106] through [#127]. Claude Code can now install and update the collection as a plugin from this repository's marketplace; Codex and other agents keep the Skills CLI.
@@ -199,7 +207,8 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 - Fail-open authorization paths are closed: a `stop` ends the run's authority, a later `rejected` repository decision revokes approval, dispatch re-reads the clock after health probes, and a direct Issue target must be the bound Issue ([#90]).
 - Observed staged and outgoing paths list both sides of a rename, so content cannot leave an unauthorized directory unchecked ([#73]).
 
-[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.12...HEAD
+[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0...HEAD
+[2.0]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.12...v2.0
 [2.0.0-beta.12]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.11...v2.0.0-beta.12
 [2.0.0-beta.11]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.10...v2.0.0-beta.11
 [2.0.0-beta.10]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/5f0ccaec01c246c87cf6a2fceab539f7e0e62c44...v2.0.0-beta.10

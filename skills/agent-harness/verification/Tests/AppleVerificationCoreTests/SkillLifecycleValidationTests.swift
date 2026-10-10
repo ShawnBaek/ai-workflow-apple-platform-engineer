@@ -172,6 +172,18 @@ private func reserved(_ lifecycle: inout [String: Any], _ edit: (inout [String: 
     ])
 }
 
+@Test func aReleaseVersionIsMajorMinor() throws {
+  #expect(RepositoryValidation.releaseVersionErrors(try shippedVersion()) == [])
+  #expect(RepositoryValidation.releaseVersionErrors("2.0") == [])
+  #expect(RepositoryValidation.releaseVersionErrors("12.34") == [])
+  for invalid in ["2.0.0", "2.0.0-beta.12", "2", "v2.0", "2.0-beta"] {
+    #expect(
+      RepositoryValidation.releaseVersionErrors(invalid) == [
+        "VERSION \(invalid) must be MAJOR.MINOR, such as 2.0"
+      ])
+  }
+}
+
 @Test func repositoryValidationRunsTheLifecycleCheckWithTheContracts() throws {
   let manager = FileManager.default
   let root = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -182,8 +194,8 @@ private func reserved(_ lifecycle: inout [String: Any], _ edit: (inout [String: 
       at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
     try value.write(to: file, atomically: true, encoding: .utf8)
   }
-  try write("VERSION", "1.0.0\n")
-  try write("README.md", "**Version:** 1.0.0\n")
+  try write("VERSION", "1.0\n")
+  try write("README.md", "**Version:** 1.0\n")
   try write("docs/skills.md", "[Example](../skills/example/SKILL.md)\n")
   try write("skills/example/SKILL.md", "---\nname: example\ndescription: An example.\n---\n")
   try write(
@@ -193,7 +205,7 @@ private func reserved(_ lifecycle: inout [String: Any], _ edit: (inout [String: 
       + #""exceptions": []}}"#)
   let lifecycleErrors = [
     "skill folder skills/agent-harness is missing from skill lifecycle current",
-    "skill lifecycle version 0.9.0 must equal VERSION 1.0.0",
+    "skill lifecycle version 0.9.0 must equal VERSION 1.0",
   ]
   let full = try RepositoryValidation.validate(root: root)
   for error in lifecycleErrors { #expect(full.errors.contains(error), "\(error)") }

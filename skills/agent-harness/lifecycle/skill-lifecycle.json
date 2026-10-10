@@ -1,7 +1,7 @@
 {
   "$schema": "./skill-lifecycle.schema.json",
   "schemaVersion": "1.0.0",
-  "version": "2.0.0-beta.12",
+  "version": "2.0",
   "source": "ShawnBaek/ai-workflow-apple-platform-engineer",
   "legacySources": [
     "ShawnBaek/iOS-experts"
