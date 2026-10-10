@@ -4,12 +4,14 @@ import Foundation
 /// A strictly read-only inventory of the skills Claude Code, Codex and Xcode's agents can load,
 /// classified against the collection's lifecycle file. It needs no private harness.
 ///
-/// It lists the top-level entries of each client skill root, reads the Skills CLI's global and
-/// project locks, and hashes a skill folder only where a classification needs its content. It
-/// never creates, modifies, deletes or changes the mode of anything it scans, and it opens no
-/// other file than the lifecycle file and `VERSION` of a copy of the collection an entry
-/// resolves into and the files naming the reference checkout's `HEAD` commit: no client
-/// configuration, authentication, history or session state, and no plugin manifest.
+/// It lists the top-level entries of each client skill root, including the `skills/` folder of
+/// each installed Claude Code plugin, reads the Skills CLI's global and project locks and Claude
+/// Code's `plugins/installed_plugins.json` and `plugins/known_marketplaces.json`, and hashes a
+/// skill folder only where a classification needs its content. It never creates, modifies,
+/// deletes or changes the mode of anything it scans, and it opens no other file than the
+/// lifecycle file and `VERSION` of a copy of the collection an entry resolves into and the files
+/// naming the reference checkout's `HEAD` commit: no other client configuration, authentication,
+/// history or session state, and no plugin manifest.
 ///
 /// An entry belongs to the collection only when it resolves into the verifier's own `skills/`
 /// folder or the `skills/` folder of another copy of this collection outside the scanned roots
@@ -100,6 +102,9 @@ public enum SkillInventory {
     /// `project:<label>` for a project directory's `.agents/skills` and `.claude/skills`, and
     /// none for `.codex/skills` and Xcode's roots, which the CLI never installs into.
     var lock: String?
+    /// The namespace a client shows the root's skills under, `<prefix>:<name>`: an installed
+    /// Claude Code plugin's name.
+    var labelPrefix: String?
     /// Lowercased names a client manages or skips inside the root, in any capitalization: Claude
     /// Code's claude.ai `synced` folder, Xcode's `__xcode`.
     var managed: Set<String> = []
@@ -204,6 +209,7 @@ public enum SkillInventory {
         }
       }
     }
+    roots += pluginInstalls(locations).map(\.root)
     let xcode = locations.home.appendingPathComponent("Library/Developer/Xcode/CodingAssistant")
     roots += [
       Root(
@@ -284,7 +290,8 @@ public enum SkillInventory {
       } else if root.plugins {
         scan.entries += pluginEntries(root, plugin: name, path: path)
       } else {
-        scan.entries.append(entry(root, name: name, label: name, path: path))
+        let label = root.labelPrefix.map { "\($0):\(name)" } ?? name
+        scan.entries.append(entry(root, name: name, label: label, path: path))
       }
     }
     return scan

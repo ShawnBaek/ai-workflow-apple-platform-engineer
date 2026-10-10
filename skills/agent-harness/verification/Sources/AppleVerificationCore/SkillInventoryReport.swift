@@ -75,12 +75,15 @@ extension SkillInventory {
     }
     let scans = try roots(locations).map(scan)
     let locks = try lockFiles(locations).map(readLock)
+    let plugins = pluginInstalls(locations)
     let referenceRoot = scans.first {
       $0.status == "present" && realPath($0.root.path) == reference
     }?.root
     let classifier = Classifier(
       lifecycle: lifecycle,
-      locks: Dictionary(uniqueKeysWithValues: locks.map { ($0.id, $0) }), reference: reference,
+      locks: Dictionary(
+        (locks + plugins.map(pluginLock)).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }),
+      reference: reference,
       verifier: verifier, referenceRoot: referenceRoot,
       scannedFolders: Set(scans.compactMap { realPath($0.root.path) }))
     let classified = scans.flatMap { $0.entries.map(classifier.classify) }
@@ -147,6 +150,9 @@ extension SkillInventory {
     ]
     if locks.count > 1 {
       report["projectLocks"] = locks.dropFirst().map { lockReport($0, lifecycle: lifecycle) }
+    }
+    if !plugins.isEmpty {
+      report["claudePlugins"] = plugins.map { pluginReport($0, lifecycle: lifecycle) }
     }
     return report
   }

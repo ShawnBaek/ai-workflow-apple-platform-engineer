@@ -16,6 +16,13 @@ APE="$APE_BIN_DIR/apple-verify"
 
 Run these commands with `DEVELOPER_DIR` set to the Xcode that the [selection rule](../../xcode-project-workflow/references/xcode-selection.md) chooses. That is the newest installed full Xcode unless the user or project pins one, whatever `xcode-select -p` points to (it may be Command Line Tools or an older Xcode). Call `xcrun swift`, as above: `xcrun` resolves `swift` from that Xcode, while a bare `swift` comes from `PATH`, where a swiftly installation comes first and bypasses the selected Xcode. An App Store archive follows the rule's distribution exception instead. Do not change the user's global toolchain. Keep the built executable in its skill directory so it can locate the matching contracts.
 
+When `agent-harness` was installed by the Claude Code plugin, its folder is a versioned copy
+under `~/.claude/plugins/cache/` that an update replaces and later deletes. Leave that copy
+unchanged: add `--scratch-path "${XDG_CACHE_HOME:-$HOME/Library/Caches}/apple-platform-engineer/<plugin version>"`
+to both build commands, and pass `--repository-root "$AGENT_HARNESS_ROOT/../.."` (the plugin
+copy, which holds `skills/`) before every subcommand. After a plugin update, build again from
+the new copy and observe `runtime-identity` again; the old binary's contracts are gone.
+
 Use the same toolchain, configuration and build flags for the build and `--show-bin-path`; a guessed `.build/release` path may select an older executable. Check `--help` for `--app-root`, then observe `runtime-identity` before binding this executable in private setup. Reuse a verified matching binary rather than rebuilding for every task.
 
 Explicit flags go before the subcommand. `--app-root <absolute-app-repository>` selects the app a command checks, while schemas and source identity stay with the installed harness. `--repository-root <skills-repository>` selects a **skills repository**, for example when the executable was copied; it is not the app-root option.
