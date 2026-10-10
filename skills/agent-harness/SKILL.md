@@ -174,7 +174,7 @@ Route test mechanics to `apple-platform-testing` and dependency resolution to
 
 Any Swift change first requires
 [Swift format and compile acceptance](../apple-platform-testing/SKILL.md#swift-format-and-compile-acceptance):
-swift-format on the task's changed lines, lint, then a compile with no errors.
+swift-format in the gate's recorded mode, lint, then a compile with no errors.
 App-change completion also requires
 [build and warning acceptance](../apple-platform-testing/SKILL.md#build-and-warning-acceptance)
 for the final integrated patch, in standalone and guarded workflows. A specialist

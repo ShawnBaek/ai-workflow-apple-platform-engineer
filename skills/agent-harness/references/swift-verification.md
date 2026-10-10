@@ -34,7 +34,7 @@ Explicit flags go before the subcommand. `--app-root <absolute-app-repository>` 
 | `delivery-report` | [Validated report rendering](../../delivery-report/SKILL.md); rendering does not send messages |
 | `compare --manifest <json> --output-dir <new-directory>` | [Clean and aligned side-by-side images](../../screenshot/references/aligned-comparison.md) with signed point deltas |
 | `companion` | [Reference-only upstream check](../../icon-composer/references/companion-upstream.md) or authorized review-issue reconciliation |
-| `repository --root <root>` | Contract and documentation validation of a skills repository checkout |
+| `repository --root <root> [--output <new-report.json>]` | Contract and documentation validation of a skills repository checkout |
 | `flow record\|render` | [Session flow summary](session-flow.md) from client hooks; no harness |
 
 ## Existing installations

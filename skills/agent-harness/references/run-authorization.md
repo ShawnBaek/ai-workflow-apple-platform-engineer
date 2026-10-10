@@ -38,7 +38,8 @@ first. So `dir` and `dir/` each admit `dir` and `dir/file`, but not `dir-evil`,
 `../dir`, `/dir` or `dir/../x`, and an empty list admits nothing.
 
 The envelope is also bounded in time and effort. Its approval window,
-`expires_at` minus `issued_at`, is at most 24 hours. Its `limits` allow at most
+`expires_at` minus `issued_at`, is at most 24 hours. Its `limits` replace the
+[workflow defaults](architecture.md#bounded-attempts) and allow at most
 10 implementation attempts, 10 review cycles and 10 transient retries, and at
 most 1,440 active and 1,440 asynchronous-wait minutes. The schema declares the
 limit ceilings; `initialize-run`, `prepare-action`, `authorize` and

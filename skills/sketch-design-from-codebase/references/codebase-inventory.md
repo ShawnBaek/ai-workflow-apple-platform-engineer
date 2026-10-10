@@ -67,19 +67,22 @@ count once per platform frame that shows them.
 
 ## 5. Sizes and ground truth
 
-- Device points = capture pixels ÷ scale. Verify with `sips -g pixelWidth -g
-  pixelHeight`. Typical current values: iPhone 402×874 @3×, iPad 11" landscape
-  1210×834 @2×, macOS window 1312×912 @2×, Apple Watch 49 mm 205×251 @2×.
+- Device points = capture pixels ÷ scale. Measure each capture with
+  `sips -g pixelWidth -g pixelHeight`; do not use a remembered size table.
 - For reproduction, capture the running build on a device chosen under
   [destination reuse](../../xcodebuild/SKILL.md#choose-and-reuse-a-simulator-destination),
   which skips devices another task owns or the user is using and checks for
   the user's same-bundle app before installing a build from another checkout:
 
   ```sh
-  xcrun simctl list devices booted
-  xcrun simctl install <udid> <path/to/App.app> && xcrun simctl launch <udid> <bundle-id>
+  xcrun simctl install <udid> <path/to/App.app>
+  xcrun simctl launch <udid> <bundle-id>
   xcrun simctl io <udid> screenshot <out.png>
   ```
+
+  `<udid>` is the exact device that destination reuse selected; check each
+  step's result before the next, as
+  [`screenshot`](../../screenshot/SKILL.md) describes.
 
   Drive navigation with the Xcode device-interaction tools or the app's UI
   tests. Data-backed screens need signed-in or seeded state; when the

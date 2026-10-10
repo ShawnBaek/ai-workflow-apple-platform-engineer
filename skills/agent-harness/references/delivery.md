@@ -2,14 +2,14 @@
 
 ## Choose checks by risk
 
+Start from `apple-platform-testing`'s [decision table](../../apple-platform-testing/references/test-selection-and-evidence.md#decision-table),
+which owns the baseline for documentation, bug fixes, logic, UI, presentation-only,
+migration and network changes. Harness work adds these rows:
+
 | Change | Useful baseline |
 |---|---|
-| Prose or metadata | Relevant schema, routing and link checks |
-| Logic or bug fix | Observable changed behavior and a regression for the original failure |
 | Authorization, lifecycle or shared contracts | Valid flow plus meaningful denial, expiry, race or terminal cases |
-| Visible UI | Affected build, relevant states, and screenshot comparison |
 | Interaction or motion | Critical flow plus trimmed recording; a durable UI test when justified |
-| Data migration | Representative existing store and clean install |
 | Performance | Reproducible before/after metric on the same toolchain and destination |
 
 Do not mirror implementation details, duplicate one assertion at several layers, or require a coverage percentage. Use Swift Testing for new suitable logic tests; retain XCTest where the existing project or UI/performance APIs need it. Prefer existing fixtures and test targets. Record material omitted checks and limits once in the evidence report. Full suites and device matrices need shared impact, release risk, or an explicit request.

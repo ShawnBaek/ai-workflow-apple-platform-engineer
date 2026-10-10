@@ -56,7 +56,10 @@ exact-commit/line-level findings use `gh api` with a reviewed JSON input file an
 `--attach` covers images/videos, not arbitrary JSON payloads. Link a small,
 intentional sanitized evidence file or CI artifact for JSON/trace proof. If the
 installed CLI lacks a needed capability, report the specific gap and use only an
-authorized supported alternative; do not auto-upgrade or invent upload endpoints.
+authorized supported alternative: a policy-approved committed image with a
+full-commit permalink, GitHub's browser attachment flow, or an Actions artifact
+with its digest and retention stated. Do not present an expiring artifact as
+permanent proof, auto-upgrade, or invent upload endpoints.
 
 Sources: [gh pr create](https://cli.github.com/manual/gh_pr_create),
 [gh pr edit](https://cli.github.com/manual/gh_pr_edit),

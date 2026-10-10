@@ -33,6 +33,18 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 - The install and update docs match the Skills CLI's verified behavior: one pinned CLI version (1.5.23, which declares Node 22.20.0 or later) replaces 1.5.18; the installed layout is described for each `-a` value; a pinned `owner/repo#ref` install moves only by rerunning `add`, by tag or branch; a both-client install is updated by rerunning its original `add`; `npx skills list -g` is no longer used to record clients; verifier builds use `xcrun swift`; and `code-review` is always installed, intentionally replacing Claude Code's bundled `/code-review`, which stays reachable as `/review` ([#118]).
 - `resources <state> status` reports `expired_active_lease_count` and `capacity_held_by_expired`, so a run blocked by `capacity_exceeded` or `resource_conflict` can tell live work from an expired lease that waiting never clears. [Host resources](skills/agent-harness/references/host-resources.md) gives the matching recovery path for each owner and separates `expired_requires_recover` from `stale_receipt` ([#121]).
 - `apple-platform-testing` runs a gate's several test plans from one `build-for-testing` with `test-without-building -testPlan`, finds the suites that dominate a slow gate before changing what runs, and leaves skipping unchanged plans or running only touched UI suites to the repository's own rules or the person's explicit instruction; `agent-harness`'s host-resources guidance has agents check background indexing, file sync and heavy apps when work runs slow, and change them only with the person's approval ([#122]).
+- **Drifted duplicates reconciled** so each rule has one owner:
+  - The lead and harness summaries no longer say swift-format runs on "changed lines"; they defer to the gate's recorded mode.
+  - `CONTRIBUTING.md` links the commands in `docs/verification.md`, which links the verifier command map in `swift-verification.md`. That map now lists `repository --output`.
+  - `xcodebuild`'s hang recovery no longer offers restarting the Mac, matching `core-simulator-health`.
+  - The health matrix states that Codex loads a project's `.codex/skills` whether or not the project is trusted.
+  - `delivery.md` keeps only its harness rows and links `apple-platform-testing`'s decision table.
+  - `pr-delivery.md` owns the evidence-upload fallbacks, and `screenshot` links to it.
+  - `figma-golden-testing` uses placeholders instead of example thresholds.
+  - `docs/updating.md` is an orientation page that links the setup skill's update procedure.
+  - The bounded-attempt defaults state how an envelope's `limits` replace them.
+  - `sketch-design-from-codebase` measures device sizes instead of using a remembered table, and installs and launches as separate steps.
+  - `apple-platform-ui` routes an existing Figma or Sketch source instead of forbidding the tools.
 
 ## [2.0.0-beta.11] - 2026-09-27
 
