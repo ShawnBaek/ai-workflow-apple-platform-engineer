@@ -12,6 +12,7 @@ ships inside `apple-platform-setup` and owns every step:
 |---|---|
 | Identify each root's installation shape and run the read-only inventory | [Inventory before reconciling](../skills/apple-platform-setup/references/updating.md#inventory-before-reconciling) |
 | Rerun the Skills CLI `add` with the original clients, copy mode and a reviewed ref; never a bare `npx skills update` | [Skills CLI installations](../skills/apple-platform-setup/references/updating.md#skills-cli-installations), pinned to the [tested version](../skills/apple-platform-setup/references/updating.md#skills-cli-version) |
+| Update the Claude Code plugin, pin a release or switch to it from another install | [Claude Code plugin](../skills/apple-platform-setup/references/updating.md#claude-code-plugin) |
 | Update a linked checkout or a versioned bundle and its per-skill links | [Linked checkout or versioned bundle](../skills/apple-platform-setup/references/updating.md#linked-checkout-or-versioned-bundle) |
 | Confirm the update landed, not just that the command exited 0 | [Verify the active result](../skills/apple-platform-setup/references/updating.md#verify-the-active-result) |
 

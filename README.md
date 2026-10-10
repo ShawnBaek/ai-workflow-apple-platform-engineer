@@ -25,6 +25,12 @@ Previously **iOS Experts** (`ShawnBaek/iOS-experts`, which now redirects here).
 
 ## Get started
 
+In Claude Code, install the whole collection as a plugin:
+`claude plugin marketplace add ShawnBaek/ai-workflow-apple-platform-engineer`, then
+`claude plugin install apple-platform-engineer@apple-platform-engineer`
+(see [getting started](docs/getting-started.md#install)). For Codex, or a selective install,
+use the Skills CLI below.
+
 Install the starter set with the [Skills CLI](https://www.skills.sh/docs/cli). This command installs it for your user (`-g`) in Claude Code; use `-a codex` for Codex, or `-a claude-code codex` for both:
 
 ```sh

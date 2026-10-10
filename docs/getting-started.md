@@ -4,7 +4,19 @@ Apple Platform Engineer is a skill collection, not an app framework. Use an indi
 
 ## Install
 
-Use the [Skills CLI](https://skills.sh/docs/cli). This installs the starter set for your user (`-g`) and for Claude Code; use `-a codex` for Codex, or `-a claude-code codex` for both:
+**Claude Code:** install the whole collection as one plugin:
+
+```sh
+claude plugin marketplace add ShawnBaek/ai-workflow-apple-platform-engineer
+claude plugin install apple-platform-engineer@apple-platform-engineer
+```
+
+Its skills load as `/apple-platform-engineer:<skill>`. Updates, pinning and
+switching from an earlier install follow the
+[Claude Code plugin](../skills/apple-platform-setup/references/updating.md#claude-code-plugin)
+procedure. Give Claude Code either the plugin or the Skills CLI install below, not both.
+
+**Codex and other agents, or a selective Claude Code install:** use the [Skills CLI](https://skills.sh/docs/cli). This installs the starter set for your user (`-g`) and for Claude Code; use `-a codex` for Codex, or `-a claude-code codex` for both:
 
 ```sh
 npx skills@1.5.23 add ShawnBaek/ai-workflow-apple-platform-engineer -g -a claude-code \

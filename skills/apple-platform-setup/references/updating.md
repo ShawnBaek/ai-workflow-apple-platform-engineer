@@ -165,6 +165,47 @@ stays in place and no longer describes the copy; the inventory flags it. A
 manually installed copy may be absent from CLI tracking, so an empty update
 result is not proof that your active copy is current.
 
+## Claude Code plugin
+
+Claude Code installs the whole collection as one plugin from this repository's
+marketplace. Codex and other agents keep the Skills CLI path above.
+
+```sh
+claude plugin marketplace add ShawnBaek/ai-workflow-apple-platform-engineer
+claude plugin install apple-platform-engineer@apple-platform-engineer
+```
+
+Skills load as `/apple-platform-engineer:<skill>`; a bare name works unless
+another command owns it, so review is `/apple-platform-engineer:code-review`.
+Pass `--scope project` to record the install in a project's
+`.claude/settings.json` instead of for your user. Inside a session, use
+`/plugin marketplace add` and `/plugin install`.
+
+The plugin's version is the collection's `VERSION`, and each release has a
+`apple-platform-engineer--v<version>` tag. Update to the latest release, then
+start a new session or run `/reload-plugins`:
+
+```sh
+claude plugin marketplace update apple-platform-engineer
+claude plugin update apple-platform-engineer@apple-platform-engineer
+```
+
+Auto-update is off for third-party marketplaces; turn it on for this one in
+`/plugin` → Marketplaces only when you accept unreviewed releases. To pin or
+roll back, remove the marketplace and add it again at a release tag
+(`ShawnBaek/ai-workflow-apple-platform-engineer#apple-platform-engineer--v<version>`),
+then install again.
+
+Give Claude Code one copy of each skill. After switching an existing Skills CLI,
+linked-checkout or bundle install to the plugin, remove only the collection's
+entries from `~/.claude/skills` (back them up, as the link-farm reconciliation
+below describes) and keep `~/.agents/skills` for Codex. The
+[inventory](#inventory-before-reconciling) lists plugin installs under
+`claudePlugins` and reports a personal copy beside the plugin as a `duplicate`.
+The guarded runtime builds its verifier outside the plugin cache, as
+[Build and locate the verifier](../../agent-harness/references/swift-verification.md#build-and-locate-the-verifier)
+describes.
+
 ## Linked checkout or versioned bundle
 
 - **Links into a Git checkout:** verify the resolved checkout and clean working

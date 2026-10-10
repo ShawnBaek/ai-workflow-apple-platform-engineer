@@ -48,6 +48,28 @@ jobs:
           APE_BIN_DIR="$(swift build --package-path skills/agent-harness/verification --show-bin-path)"
           "$APE_BIN_DIR/apple-verify" repository --root .
 
+  claude-plugin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # The Claude Code release whose plugin validator this check was written against; bump it
+      # with a reviewed change.
+      CLAUDE_CODE_VERSION: 2.1.278
+      DISABLE_AUTOUPDATER: 1
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Validate the marketplace and the plugin as installed
+        run: |
+          set -euo pipefail
+          npm install --global --no-fund --no-audit "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+          claude plugin validate . --strict
+          # Installation copies plugin/skills, a link to ../skills, as a real folder; the
+          # validator does not follow the link, so validate that copy.
+          cp -RL plugin "$RUNNER_TEMP/plugin"
+          claude plugin validate "$RUNNER_TEMP/plugin" --strict
+
   swift-format-and-compile:
     runs-on: macos-15
     timeout-minutes: 30
