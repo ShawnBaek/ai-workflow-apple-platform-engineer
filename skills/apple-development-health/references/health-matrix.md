@@ -31,7 +31,7 @@ It lists the top-level entries of these roots and reports a missing one as
 | Client | Roots |
 | --- | --- |
 | Claude Code | `$CLAUDE_CONFIG_DIR/skills` (else `~/.claude/skills`); `.claude/skills` in the project directory and each parent up to the repository root |
-| Codex | `~/.agents/skills`; the deprecated `$CODEX_HOME/skills` (else `~/.codex/skills`), which Codex still loads; `.agents/skills` in the same directories, and `.codex/skills` there, which Codex loads only for a trusted project (the inventory lists it without reading that setting) |
+| Codex | `~/.agents/skills`; the deprecated `$CODEX_HOME/skills` (else `~/.codex/skills`), which Codex still loads; `.agents/skills` in the same directories, and `.codex/skills` there, which Codex loads whether or not the project is trusted ([repository skill precedence](../../agent-harness/references/repo-skill-precedence.md)) |
 | Xcode's agents, when present | `~/Library/Developer/Xcode/CodingAssistant/codex/skills`, its `__xcode` folder of Xcode's own Apple skills, `ClaudeAgentConfig/skills` and the imported `AgentPlugins` |
 
 `--home`, `--codex-home`, `--claude-config-dir` and `--xdg-state-home` replace

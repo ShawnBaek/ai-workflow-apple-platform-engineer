@@ -60,8 +60,8 @@ future run compares the same state.
    contains `SKILL.md` and `scripts/`), not the app checkout. Choose a private
    output directory and an agreed RGB threshold and minimum pixel percentage.
    Before changing production code, run the Swift comparator:
-   `swift "$FIGMA_GOLDEN_ROOT/scripts/overlay_diff.swift" --figma figma.png --actual actual.png --out report --threshold 16 --minimum-match 99`.
-   The numbers are examples, not universal acceptance criteria. Omitting
+   `swift "$FIGMA_GOLDEN_ROOT/scripts/overlay_diff.swift" --figma figma.png --actual actual.png --out report --threshold <agreed-rgb-delta> --minimum-match <agreed-percentage>`.
+   There is no default acceptance criterion. Omitting
    `--minimum-match` produces `not_evaluated` metrics, not a passing test.
    Exit 0 means successful reporting (or an explicit pixel pass), exit 2 means
    pixel comparison failed with artifacts retained, and exit 1 is an input/tool

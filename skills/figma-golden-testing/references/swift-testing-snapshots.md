@@ -188,7 +188,7 @@ swift "$FIGMA_GOLDEN_ROOT/scripts/overlay_diff.swift" \
   --figma evidence/figma.png \
   --actual evidence/actual.png \
   --out evidence/report \
-  --threshold 16 --minimum-match 99
+  --threshold '<agreed-rgb-delta>' --minimum-match '<agreed-percentage>'
 ```
 
 The command must finish with identical input dimensions and creates
@@ -198,7 +198,7 @@ they are not perceptual similarity. Report the threshold, dimensions, exact
 and threshold-matching percentages, and the maximum/mean RGB delta.
 
 Choose the threshold and minimum percentage from the accepted project criteria;
-16 and 99 above are examples. Exit 2 means pixel comparison failed and retains
+there is no default. Exit 2 means pixel comparison failed and retains
 the artifacts. Exit 1 means an input/tool error. Without `--minimum-match`, exit
 0 only means the report was generated, with `status: not_evaluated`. The renderer
 uses the explicit minimum and never invents a 99% acceptance criterion. Continue

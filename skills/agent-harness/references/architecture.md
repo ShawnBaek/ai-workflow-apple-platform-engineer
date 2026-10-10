@@ -257,6 +257,11 @@ without consuming implementation attempts on unchanged busy responses.
 - authority, account, project-root, branch, signing, permission, or destructive
   action failure: no retry; wait for a human gate.
 
+These are the workflow defaults. A guarded run's approved envelope `limits` may
+set other values up to the schema ceilings in
+[run authorization](run-authorization.md); the run never exceeds its approved
+limits.
+
 ## Completion predicates
 
 The selected workflow contract's `completion_requires` is authoritative, and

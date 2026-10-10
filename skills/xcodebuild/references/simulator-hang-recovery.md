@@ -114,7 +114,9 @@ MCP, or Device Hub requests can amplify the queue.
 Prefer a normal user-visible recovery: stop the affected run, quit Simulator or
 Device Hub and Xcode normally, reopen the same Xcode version and authoritative
 container, then retry one separated install/launch sequence. Ask before closing
-the developer's active apps or restarting the Mac. Do not silently open a
+the developer's active apps. Never restart the Mac as a recovery step or
+recommendation; [`core-simulator-health`](../../core-simulator-health/SKILL.md)
+owns the recovery limits. Do not silently open a
 Simulator UI from another installed Xcode merely because its legacy path exists.
 Do not use force-kill,
 CoreSimulator-service reset, device erase, runtime removal, DerivedData deletion,

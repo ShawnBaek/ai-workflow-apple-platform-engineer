@@ -79,26 +79,10 @@ sanitized fixtures and mocked publication, not test issues in the live repositor
 
 ## Command map
 
-Set `APE` to the absolute built executable as shown in [Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier), which also carries this map for installed copies. A copied executable requires `--repository-root <skills-repository>` before its subcommand.
+Set `APE` as shown in [Build and locate the verifier](../skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier),
+which owns the command map. A copied executable requires `--repository-root <skills-repository>` before its subcommand.
 For app health, use `"$APE" --app-root <absolute-app-repository> health ...`;
 the installed skill root still supplies trusted schemas and source identity.
-
-| Command | Purpose and reference |
-|---|---|
-| `repository --root <root> [--output <new-report.json>]` | Repository contract and documentation validation |
-| `compare --manifest <json> --output-dir <new-directory>` | [Clean and aligned side-by-side images](../skills/screenshot/references/aligned-comparison.md) with signed point deltas |
-| `runtime-identity` | Observed executable/source identity for explicit private setup |
-| `resources <state.json> <operation>` | [Host coordination](../skills/agent-harness/references/coordinator-setup.md), capacity and fenced leases |
-| `resolve-project` | [Project resolution](../skills/agent-harness/references/project-registry.md) without guessing a checkout |
-| `materialize`, `initialize-run` | Private schema-bound files and append-only run identity |
-| `health` | [Live health evaluation](../skills/apple-development-health/SKILL.md) for the selected profile |
-| `skill-inventory [--project <dir>] [--output <new-report.json>]` | [Read-only installed skill inventory](../skills/apple-development-health/references/health-matrix.md#installed-skill-inventory) against the lifecycle file; no harness |
-| `authorize`, `prepare-action`, `verify-reservation` | Exact action reservation, dispatch and readback contracts |
-| `spec-snapshot` | [Spec Kit snapshot](../skills/agent-harness/references/spec-kit-adapter.md) when selected |
-| `knowledge index\|query\|status` | [Optional local FTS retrieval](../skills/agent-harness/references/knowledge-and-rag.md) with freshness checks |
-| `delivery-report` | [Validated report rendering](../skills/delivery-report/SKILL.md); rendering does not send messages |
-| `companion` | [Reference-only upstream check](../skills/icon-composer/contracts/companion-upstream.json) or authorized review-issue reconciliation |
-| `flow record\|render` | [Session flow summary](../skills/agent-harness/references/session-flow.md) from client hooks; no harness |
 
 ## Evidence and limits
 

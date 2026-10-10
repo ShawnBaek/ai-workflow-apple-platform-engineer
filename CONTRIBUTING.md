@@ -78,22 +78,9 @@ For a skill evaluation, give a fresh agent the changed skill, a realistic user r
 
 For example, test a `skill-maintenance` report from a private app checkout: the draft must target this collection, omit private material and respect the actual publication scope. Also try an app-only bug: it should route to the app owner rather than automatically creating a collection issue. Compare these outcomes before and after an instruction fix. Add cases for demonstrated regressions, not every imagined edge case.
 
-From this repository root, with macOS and a full Xcode Swift 6 toolchain:
-
-```sh
-# Build only if the verifier is not already built for the current source/toolchain.
-xcrun swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1
-APE_BIN_DIR="$(xcrun swift build --package-path skills/agent-harness/verification --product apple-verify -j 1 -Xswiftc -j1 --show-bin-path)"
-"$APE_BIN_DIR/apple-verify" repository --root .
-
-# For runtime/shared-contract changes; CI runs this suite too.
-xcrun swift test --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
-
-# After any Swift change: format (CI pins swift-format 604.0.0), then compile scripts.
-git ls-files -z '*.swift' | xargs -0 xcrun swift-format format --in-place
-for script in skills/*/scripts/*.swift docs/evidence/generate-comparison.swift; do xcrun swiftc -typecheck "$script"; done
-git diff --check
-```
+From this repository root, with macOS and a full Xcode Swift 6 toolchain, run the
+[validation commands](docs/verification.md#swift-verification) and, after any Swift change,
+the [format and compile commands](docs/verification.md#swift-formatting-and-compilation).
 
 Use `DEVELOPER_DIR` for a per-command Xcode selection when needed; do not alter the user's global toolchain. The validator checks metadata, links, JSON/schema and runtime contracts; the Swift suite checks behavior. See [verification details](docs/verification.md). New custom verification helpers/tests use Swift. Reuse supported tools such as `gh`; do not add a report daemon, a second runtime or XCUITest infrastructure for a documentation change.
 

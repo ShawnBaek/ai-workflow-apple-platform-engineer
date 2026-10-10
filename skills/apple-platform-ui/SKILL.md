@@ -427,7 +427,9 @@ For the `UILaunchScreen` Info.plist setup, the LaunchBackground color-asset patt
 - **Inkscape** → vector (replaces Illustrator)
 - **Blender** → 3D
 
-Never recommend Figma, Sketch, or Adobe unless the developer explicitly asks.
+Do not recommend adopting Figma, Sketch, or Adobe unless the developer asks. When the developer
+already has a Figma or Sketch source, or asks for one, route to `figma-bridge` or
+`sketch-design-from-codebase`.
 
 ---
 

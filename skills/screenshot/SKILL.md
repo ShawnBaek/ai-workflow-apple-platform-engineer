@@ -100,14 +100,8 @@ verification.
 
 ## PR evidence
 
-Inspect the installed `gh pr create --help`: when it exposes `--attach`, use
-that supported image/video upload path with the prepared body file. Some uploads
-can fail after the PR is created; inspect the returned URL and read back the PR
-before retrying. For clients without attachment support, use a policy-approved
-committed image with a full-commit permalink, GitHub's browser attachment flow,
-or an Actions artifact with digest and retention/expiry stated. Verify the final
-PR preview/link for the intended viewer. Do not use an undocumented upload
-endpoint or present an expiring artifact as permanent proof.
+Prepare the sanitized, trimmed images and recordings here; upload, readback and
+fallbacks follow [PR delivery](../git-workflow/references/pr-delivery.md#standard-github-cli-path).
 
 ## Never
 
