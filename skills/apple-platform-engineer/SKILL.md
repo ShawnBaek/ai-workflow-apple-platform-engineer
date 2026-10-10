@@ -125,6 +125,9 @@ gives the order and each client's behavior.
    by default; add graph structure only when actual dependencies justify it.
    Split broad work into coherent reviewable PRs. Assign justified model classes
    and give workers the accepted brief without repeating intake.
+   Run [before coding](references/before-coding.md): working directory and
+   branch rule, edge cases before tests, current Apple guidance, reuse without
+   refactoring, and the UI comparison plan.
 4. Start the first ready implementation slice with one repository writer and,
    when coordinated resources are selected, scoped Apple resource leases. Run useful independent assignments alongside it;
    resource contention queues the affected operation, not the entire task.
