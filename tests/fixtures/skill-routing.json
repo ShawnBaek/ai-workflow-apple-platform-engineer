@@ -367,6 +367,31 @@
         "xcode-preview-design"
       ],
       "why": "Maintainer report: RenderPreview was named in the review checklist and the handoff verification step without guidance on preview selection, overrides, destination checks or failed renders, and xcode-preview-design did not name it. Dropping the link from any doc that names the tool fails validation."
+    },
+    {
+      "id": "release-branch-intended-base",
+      "rule": "Under the default branch model a new branch or PR uses the intended base: the remote default branch unless the recorded rule names an integration branch such as release/<version>.",
+      "statesRule": "release/<version>",
+      "requiresQualifier": "intended base",
+      "appliesTo": [
+        "git-workflow",
+        "apple-platform-engineer",
+        "github-projects",
+        "release-qa-handoff"
+      ],
+      "why": "Review of the default branch model: the first draft told agents to refresh the remote default and branch from release/<version> in the same sentence. A doc that names release/<version> without the intended-base rule invites branching from, or committing to, the wrong base."
+    },
+    {
+      "id": "closing-keywords-default-branch",
+      "rule": "GitHub closing keywords close an issue only when the PR merges into the default branch; a PR into an integration branch references the issue instead.",
+      "statesRule": "closing\\s+keywords?",
+      "requiresQualifier": "default\\s+branch",
+      "appliesTo": [
+        "git-workflow",
+        "github-projects",
+        "skill-maintenance"
+      ],
+      "why": "Review of the default branch model: feature PRs merge into release/<version>, and github-projects recommended closing keywords without the default-branch condition, which leaves issues open after their PR merges."
     }
   ]
 }

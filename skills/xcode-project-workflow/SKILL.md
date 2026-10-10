@@ -139,7 +139,8 @@ Third-party build tooling is an explicit fallback, not a prerequisite.
 
 Before writing code, consult that exposure or Documentation Search for each
 framework the change touches, such as Swift, SwiftUI, UIKit or SwiftData, so
-API choices follow the selected SDK rather than remembered behavior. When the
+API choices follow the selected SDK rather than remembered behavior, then check
+each choice against [API availability](references/api-availability.md). When the
 export predates the selected Xcode, refresh it only through
 `apple-platform-setup`.
 

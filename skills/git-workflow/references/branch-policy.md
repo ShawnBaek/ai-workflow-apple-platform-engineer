@@ -9,15 +9,14 @@ branch name and base. When the user explicitly continues an existing PR, retain
 that PR's branch and base unless the user directs otherwise.
 
 For a fresh task without an explicit base or planned stack dependency, refresh
-the verified remote default safely and create the branch from that revision
-in the same checkout. Under the [default branch model](#default-branch-model),
-that base is the current `release/<version>` branch rather than `main`. Do not branch from an unrelated current HEAD merely
+the [intended base](#default-branch-model) safely and create the branch from
+that revision in the same checkout. Do not branch from an unrelated current HEAD merely
 because it is checked out. Resolve existing changes as described below before
 updating or switching; verify the repository path, branch and base afterward.
 A local-only [small change](../../agent-harness/references/small-change-path.md)
 is edited in place on the current branch instead; it takes a branch this way
 only when it will be committed or delivered as a PR, and is never committed to
-the default branch directly.
+the default or integration branch directly.
 
 Branch-name selection is routine. It differs from a meaningful uncertainty
 about the base branch, an overlap with existing work, or whether the task is a
@@ -57,10 +56,16 @@ project overlay. Do not ask again for each task or branch name.
 | `release/<version>` | Release candidate for a marketing version, such as `release/1.4.0`. |
 
 The default flow is `feature/<slug>` → PR into `release/<version>` → verify
-the release candidate → PR from `release/<version>` into `main`. Branch a
-feature from the current `release/<version>` when one exists for the target
-version; otherwise ask which version the work targets. Creating or pushing a
-`release/<version>` branch and every merge remain human gates.
+the release candidate → PR from `release/<version>` into `main`. The
+**intended base** of a new branch or PR is the remote default branch unless
+the recorded rule names an integration branch; under this model it is the
+current `release/<version>` for the target version. When none exists, ask which
+version the work targets. Creating or pushing a `release/<version>` branch and
+every merge remain human gates.
+
+GitHub closing keywords act only on a merge into the default branch, so a PR
+into `release/<version>` uses `Refs #<issue>`; the issue closes when the
+release reaches `main`.
 
 Convert slashes, spaces, and other path-unsafe characters in the requested
 name to hyphens; keep the slug concise and descriptive, for example

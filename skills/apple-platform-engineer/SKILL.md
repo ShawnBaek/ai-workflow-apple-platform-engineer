@@ -176,8 +176,11 @@ load its real scene/nib for preview when appropriate. A small logic fix does not
 need a design phase. On the standard path, compare the accepted preview or Figma
 state with the integrated app through `screenshot`'s comparison guidance; a
 [small change](../agent-harness/references/small-change-path.md) uses its one
-render instead. When the Figma node is the contract and a repeatable pixel/text
-report or snapshot test is wanted, use `figma-golden-testing`.
+render instead. Report each visual difference (spacing, color, typography,
+asset or state) with its fix or the reason it is accepted; a preview that
+compiles is not a visual match. When the Figma node is the contract and a
+repeatable pixel/text report or snapshot test is wanted, use
+`figma-golden-testing`.
 
 UI mocks are preview fixtures only. Prefer a value fixture; add a narrow protocol
 mock only when the interaction requires one. Acceptance for an existing

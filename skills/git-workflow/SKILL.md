@@ -18,11 +18,11 @@ See [PR delivery](references/pr-delivery.md) for the shared attachment commands.
 ## Start from the authoritative checkout
 
 - Use the exact repository and Xcode project directory the user identified. Inspect its top level, redacted remote, current branch and working state before implementation, and its remote default branch before creating a branch.
-- A normal feature starts in that same checkout. Derive and create its branch automatically from the assigned task, following an explicit user or repository rule when supplied. When neither defines one, ask once for the repository's branch rule, offering the [default branch model](references/branch-policy.md#default-branch-model) (`main`, `feature/<slug>`, `release/<version>`), and record the answer. Selecting a routine task-derived name needs no separate approval; ask only when the intended base, overlap with existing work, or requested continuation is materially unclear.
-- A local-only [small change](../agent-harness/references/small-change-path.md) the user asks for in their checkout is edited in place on the current branch: no fetch, task branch or switch. Report pre-existing changes that do not touch the edited file and continue; changes to that file need the handling decision below. Create the task branch from the refreshed default only when the work will be committed or delivered as a PR, and never commit to the default branch directly.
+- A normal feature starts in that same checkout. Derive and create its branch automatically from the assigned task, following the [default branch model](references/branch-policy.md#default-branch-model) for its rule and intended base. Selecting a routine task-derived name needs no separate approval; ask only when the intended base, overlap with existing work, or requested continuation is materially unclear.
+- A local-only [small change](../agent-harness/references/small-change-path.md) the user asks for in their checkout is edited in place on the current branch: no fetch, task branch or switch. Report pre-existing changes that do not touch the edited file and continue; changes to that file need the handling decision below. Create the task branch from the refreshed intended base only when the work will be committed or delivered as a PR, and never commit to the default or integration branch directly.
 - Apply the detailed [branch policy](references/branch-policy.md) before creating or switching a branch.
 - If pre-existing staged, unstaged, or untracked changes exist, follow the branch policy's read-only report and handling decision before checkout mutation. Explain the assigned work, actual changes, their relationship and exact preservation/exclusion proposal; wait for explicit approval or rejection. Reuse approval for unchanged handling, without asking again for the agent's own task edits.
-- Update safely from the remote default branch only when the checkout is clean or the user has explicitly approved handling of its existing changes, and the repository policy permits it. Do not use `--force`, reset, automatic pruning, or a replacement clone to work around a problem.
+- Update safely from the intended base only when the checkout is clean or the user has explicitly approved handling of its existing changes, and the repository policy permits it. Do not use `--force`, reset, automatic pruning, or a replacement clone to work around a problem.
 - Before the first commit or push, show the repository name, absolute path, branch, and a credential-redacted remote, then honor any repository-confirmation gate required by applicable policy. This skill does not add a separate author-preference approval gate.
 
 Resolve publication from this authoritative checkout's remote and intended base,
@@ -55,16 +55,15 @@ asset catalogs and snapshot baselines. Plan the stack before implementation and
 split at real phase boundaries. When one phase alone still exceeds 20 files
 because an intermediate state would be invalid, keep it together and record
 that dependency in the PR body. Never pad a stack with tiny mechanical PRs just to stay under a
-number. Revisit this checkpoint when scope grows, before the whole feature is
+number. Revisit this limit when scope grows, before the whole feature is
 implemented. A shared file alone does not require one large PR: consider a
 compatible prerequisite followed by its consumers. Keep genuinely incompatible
-changes together and name that dependency rather than citing line count alone.
+changes together and name that dependency rather than citing file count alone.
 
 When phases depend on each other, use stacked PRs. Derive each branch name from
 its assigned phase unless the user supplies one, base each branch and PR on its
 planned predecessor, and put the shared stack-plan link and immediate dependency
-in each body. The first PR targets the default base, which is
-`release/<version>` under the default branch model; each later one uses
+in each body. The first PR targets the intended base; each later one uses
 `gh pr create --base <predecessor-branch>`. Each body lists the whole stack in
 order and marks the current PR. Each phase gets its own diff, checks,
 evidence, and review status. A stacked PR does not grant merge, force-push, or

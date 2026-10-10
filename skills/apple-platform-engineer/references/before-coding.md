@@ -1,59 +1,41 @@
 # Before coding
 
 Run these five steps after intake and before the first production edit. Each
-step names its owner; follow the owner for detail instead of restating it. A
-[small change](../../agent-harness/references/small-change-path.md) runs steps
-1, 4 and, when it renders UI, 5.
+step links its owner; follow the owner for detail. A
+[small change](../../agent-harness/references/small-change-path.md) records
+only the working directory and checkout state in step 1, skips the PR split,
+and uses its one render in step 5.
 
 ## 1. Working directory and branch rule
 
-- Print the working directory, repository top level, current branch, working
-  state and remote default branch. Confirm they are the authoritative checkout
-  from `xcode-project-workflow`.
-- Resolve the repository's branch rule from its instructions or the recorded
-  project policy. When neither defines one, ask the user once, offer the
-  [default branch model](../../git-workflow/references/branch-policy.md#default-branch-model),
-  and record the answer in the project overlay so later tasks reuse it.
-- Plan the PR split now. More than 20 changed source files means
-  [stacked PRs](../../git-workflow/SKILL.md#plan-phase-sized-pull-requests).
+- Record the working directory and the authoritative checkout from
+  `xcode-project-workflow`.
+- Resolve the branch rule and intended base through the
+  [default branch model](../../git-workflow/references/branch-policy.md#default-branch-model).
+- Plan the PR split against the
+  [stacked-PR limit](../../git-workflow/SKILL.md#plan-phase-sized-pull-requests).
 
-## 2. Tests: edge cases first
+## 2. Edge cases before tests
 
-Before writing a test, list the changed logic's edge cases, then write the
-fewest meaningful tests that cover the ones that can change behavior.
-`apple-platform-testing` owns
-[test selection](../../apple-platform-testing/SKILL.md#choose-the-minimum-sufficient-evidence).
+Follow [test selection](../../apple-platform-testing/SKILL.md#choose-the-minimum-sufficient-evidence).
 
 ## 3. Current Apple guidance
 
-For each framework the change touches (Swift, SwiftUI, UIKit, SwiftData,
-Foundation Models and so on), read the selected Xcode's Apple-authored skills
-or Documentation Search before choosing an API. Check the result against the
-target's minimum OS. `xcode-project-workflow` owns
-[Apple official-first routing](../../xcode-project-workflow/SKILL.md#apple-official-first-routing);
-refresh a stale export only through `apple-platform-setup`.
+Follow [Apple official-first routing](../../xcode-project-workflow/SKILL.md#apple-official-first-routing)
+for each framework the change touches.
 
 ## 4. Think before writing code
 
-- Read the existing logic around the change and reuse its types, helpers,
-  extensions and design-system components before adding new ones.
-- Change only what the task needs. The stable branch works; do not refactor
-  surrounding code, rename, reformat or move files the task does not require.
-- Remove code the change makes unused, and do not add speculative parameters,
-  protocols, flags or dead branches. Report other unused code you notice as a
-  follow-up instead of deleting it in this change.
-- Write no explanatory or commented-out code comments. Make names carry the
-  meaning; when an API needs documentation, use a DocC `///` comment with
-  `- Parameters:`, `- Returns:` and `- Throws:` as applicable.
+- Read the existing logic around the change and reuse its types, helpers and
+  components; the small-change path's reuse rule applies to every change.
+- Change only what the task needs. The stable branch works; do not refactor,
+  rename, reformat or move code the task does not require.
+- Remove code the change makes unused, and add no speculative parameters,
+  protocols, flags or branches. Report other unused code as a follow-up.
+- Write no explanatory or commented-out code. Let names carry the meaning; when
+  an API needs documentation, use a DocC `///` comment with `- Parameters:`,
+  `- Returns:` and `- Throws:` as applicable.
 
 ## 5. UI against its design source
 
-- With a Figma source, use `figma-bridge` for the draft and compare the
-  integrated screen with the frame through `screenshot` or, for a repeatable
-  report or snapshot test, `figma-golden-testing`.
-- Without Figma, design and review the view in SwiftUI Previews through
-  `xcode-preview-design`; preview UIKit through its `UIViewController` or
-  `UIView` preview.
-- Report each visual difference (spacing, color, typography, asset, state)
-  with the fix or the reason it is accepted. A preview that compiles is not a
-  visual match.
+Follow the lead's [UI path](../SKILL.md#ui-path).
