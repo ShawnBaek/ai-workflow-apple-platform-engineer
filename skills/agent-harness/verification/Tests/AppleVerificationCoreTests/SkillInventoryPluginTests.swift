@@ -30,8 +30,7 @@ private func installPlugin(
     String(decoding: try JSONSerialization.data(withJSONObject: marketplaces), as: UTF8.self))
 }
 
-private func copySkill(_ fixture: SkillInventoryFixture, _ name: String, to folder: String) throws
-{
+private func copySkill(_ fixture: SkillInventoryFixture, _ name: String, to folder: String) throws {
   let target = fixture.base.appendingPathComponent("\(folder)/skills/\(name)")
   try FileManager.default.createDirectory(
     at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -89,7 +88,8 @@ private func copySkill(_ fixture: SkillInventoryFixture, _ name: String, to fold
 
   // A record whose install path leaves the plugin cache is not scanned.
   try fixture.skill("elsewhere/skills/git-workflow", "Outside the cache.")
-  try installPlugin(fixture, repo: "ShawnBaek/ai-workflow-apple-platform-engineer", installPath: "elsewhere")
+  try installPlugin(
+    fixture, repo: "ShawnBaek/ai-workflow-apple-platform-engineer", installPath: "elsewhere")
   report = try fixture.report()
   #expect(report["claudePlugins"] == nil)
   #expect(inventoryEntries(report, "apple-platform-engineer:git-workflow").isEmpty)

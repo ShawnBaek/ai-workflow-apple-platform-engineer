@@ -17,7 +17,8 @@ extension SkillInventory {
 
     var root: Root {
       Root(
-        id: "claude-plugin:\(key)", path: (installPath as NSString).appendingPathComponent("skills"),
+        id: "claude-plugin:\(key)",
+        path: (installPath as NSString).appendingPathComponent("skills"),
         client: "claude", scope: "plugin:\(scope)", lock: "plugin:\(key)", labelPrefix: plugin)
     }
   }
@@ -44,7 +45,8 @@ extension SkillInventory {
       let parts = key.split(separator: "@", maxSplits: 1).map(String.init)
       guard parts.count == 2, let records = value as? [[String: Any]] else { continue }
       let declared = (marketplaces[parts[1]] as? [String: Any])?["source"] as? [String: Any]
-      let source = (declared?["source"] as? String == "github")
+      let source =
+        (declared?["source"] as? String == "github")
         ? (declared?["repo"] as? String).map(normalizedSource) : nil
       for record in records {
         guard let path = record["installPath"] as? String,

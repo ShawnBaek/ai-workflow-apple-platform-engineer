@@ -26,7 +26,8 @@ private func errors(
 }
 
 @Test func shippedPluginMatchesTheCheckout() throws {
-  #expect(PluginManifestValidation.validate(root: checkoutRoot, version: try shippedVersion()) == [])
+  #expect(
+    PluginManifestValidation.validate(root: checkoutRoot, version: try shippedVersion()) == [])
 }
 
 @Test func pluginVersionDriftFails() throws {
@@ -47,11 +48,14 @@ private func errors(
     entries[0]["source"] = "./"
     marketplace["plugins"] = entries
   }
-  #expect(moved == [".claude-plugin/marketplace.json must source apple-platform-engineer from ./plugin"])
+  #expect(
+    moved == [".claude-plugin/marketplace.json must source apple-platform-engineer from ./plugin"])
   #expect(try errors(skillsLink: nil) == ["plugin/skills must be a symbolic link to ../skills"])
   let duplicated = try errors { marketplace, _ in
     let entries = marketplace["plugins"] as! [[String: Any]]
     marketplace["plugins"] = entries + entries
   }
-  #expect(duplicated.contains(".claude-plugin/marketplace.json must list apple-platform-engineer exactly once"))
+  #expect(
+    duplicated.contains(
+      ".claude-plugin/marketplace.json must list apple-platform-engineer exactly once"))
 }
