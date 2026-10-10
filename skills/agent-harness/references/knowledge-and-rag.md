@@ -109,7 +109,7 @@ store that text under the policy's authority. The fixture's zero-tool-call
 expectation is a declared policy that the repository validator only checks is
 still declared. Retrieval cannot show what an agent does with the text: prove
 zero tool calls with an agent evaluation that records actual tool calls, as in
-the [workflow test plan](../../../docs/workflow-test-plan.md#run-an-agent-scenario).
+the [workflow test plan](https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/blob/main/docs/workflow-test-plan.md#run-an-agent-scenario).
 
 Use vector embeddings only when exact/FTS retrieval is insufficient. If Ollama
 embeddings are enabled, use the same model for indexing and querying and record

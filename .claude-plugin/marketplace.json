@@ -1,0 +1,15 @@
+{
+  "name": "apple-platform-engineer",
+  "description": "Marketplace for the Apple Platform Engineer skill collection.",
+  "owner": {
+    "name": "ShawnBaek",
+    "url": "https://github.com/ShawnBaek"
+  },
+  "plugins": [
+    {
+      "name": "apple-platform-engineer",
+      "source": "./plugin",
+      "description": "Apple-platform engineering skills: one plugin with every skill in this collection."
+    }
+  ]
+}
