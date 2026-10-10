@@ -50,8 +50,8 @@ tester access, and neither is a passing merge. An unconfirmed number stays
 
 Take the commit range between this build's commit and the previous build's, then
 resolve the merged pull requests in that range. For each PR, read its title and
-body for the tracker card it closes — a card link, a closing keyword, or the
-card number in the branch name. Keep the card's own title as the tester-facing
+body for the tracker card it closes — a card link, a closing keyword or
+`Refs #<issue>` reference, or the card number in the branch name. Keep the card's own title as the tester-facing
 phrasing; it is already written for a reader, while a commit subject is written
 for a reviewer.
 
