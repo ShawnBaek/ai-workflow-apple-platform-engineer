@@ -9,14 +9,14 @@ branch name and base. When the user explicitly continues an existing PR, retain
 that PR's branch and base unless the user directs otherwise.
 
 For a fresh task without an explicit base or planned stack dependency, refresh
-the verified remote default safely and create the branch from that revision
-in the same checkout. Do not branch from an unrelated current HEAD merely
+the [intended base](#default-branch-model) safely and create the branch from
+that revision in the same checkout. Do not branch from an unrelated current HEAD merely
 because it is checked out. Resolve existing changes as described below before
 updating or switching; verify the repository path, branch and base afterward.
 A local-only [small change](../../agent-harness/references/small-change-path.md)
 is edited in place on the current branch instead; it takes a branch this way
 only when it will be committed or delivered as a PR, and is never committed to
-the default branch directly.
+the default or integration branch directly.
 
 Branch-name selection is routine. It differs from a meaningful uncertainty
 about the base branch, an overlap with existing work, or whether the task is a
@@ -42,18 +42,32 @@ approach. Approval for one file or operation is not approval to stash, discard
 or include other changes. Reinspect before acting; new external changes or a
 different handling proposal need a new summary and decision.
 
-When the repository has no naming rule, use:
+## Default branch model
 
-```
-codex/<type>/<slug>
-```
+Read the branch rule from the repository's instructions or the recorded
+project policy. When neither defines one, ask the user once which rule the
+repository follows, offering this default, and record the answer in the
+project overlay. Do not ask again for each task or branch name.
 
-Allowed default types are `feat`, `fix`, `chore`, `docs`, and `release`. An
-optional issue reference may appear in the slug, for example
-`codex/fix/123-simulator-timeout`. Convert slashes, spaces, and other
-path-unsafe characters in the requested name to hyphens; keep the resulting
-slug concise and descriptive.
+| Branch | Role |
+|---|---|
+| `main` | Stable branch; always releasable. Never commit to it directly. |
+| `feature/<slug>` | One task or one stacked phase. |
+| `release/<version>` | Release candidate for a marketing version, such as `release/1.4.0`. |
 
-Release branches follow the repository's release policy when one exists. Do
-not invent a release branch convention or replace a repository-defined naming
-scheme with this default.
+The default flow is `feature/<slug>` → PR into `release/<version>` → verify
+the release candidate → PR from `release/<version>` into `main`. The
+**intended base** of a new branch or PR is the remote default branch unless
+the recorded rule names an integration branch; under this model it is the
+current `release/<version>` for the target version. When none exists, ask which
+version the work targets. Creating or pushing a `release/<version>` branch and
+every merge remain human gates.
+
+GitHub closing keywords act only on a merge into the default branch, so a PR
+into `release/<version>` uses `Refs #<issue>`; the issue closes when the
+release reaches `main`.
+
+Convert slashes, spaces, and other path-unsafe characters in the requested
+name to hyphens; keep the slug concise and descriptive, for example
+`feature/123-simulator-timeout`. A recorded repository rule, such as
+`codex/<type>/<slug>` or a `develop` branch, replaces this default entirely.

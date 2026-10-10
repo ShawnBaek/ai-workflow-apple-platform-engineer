@@ -42,7 +42,8 @@ Use a repository Issue as the smallest independently reviewable work unit when
 the repository uses Issues. Its acceptance criteria should name only the
 necessary behavior and smallest useful verification. Link the feature branch
 and PR through the issue number; use GitHub's closing keywords only when the
-PR is intended to close the issue on merge.
+PR is intended to close the issue on merge and targets the default branch
+([branch policy](../git-workflow/references/branch-policy.md#default-branch-model)).
 
 When Spec Kit is selected, use one feature Issue by default. Expand T### tasks
 into separate Issues only when each task is independently reviewable,
