@@ -160,6 +160,7 @@ public enum RepositoryValidation {
     if includeContracts {
       errors += SkillLifecycleValidation.validate(
         root: root, skillFolders: folderNames, version: version)
+      errors += PluginManifestValidation.validate(root: root, version: version)
       errors += ContractValidation.validateRepository(
         context: RuntimeContext(
           repositoryRoot: root, harnessRoot: root.appendingPathComponent("skills/agent-harness")))
