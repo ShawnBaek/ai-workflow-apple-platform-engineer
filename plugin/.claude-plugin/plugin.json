@@ -1,0 +1,12 @@
+{
+  "name": "apple-platform-engineer",
+  "version": "2.0.0-beta.11",
+  "description": "Apple-platform engineering skills for iOS, iPadOS, watchOS and macOS: a lead that routes design, build, verification and PR delivery to specialist skills.",
+  "author": {
+    "name": "ShawnBaek",
+    "url": "https://github.com/ShawnBaek"
+  },
+  "homepage": "https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer",
+  "repository": "https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer",
+  "license": "MIT"
+}

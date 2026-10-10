@@ -121,7 +121,7 @@
     "exceptions": [
       {
         "id": "code-review",
-        "reason": "Claude Code bundles a /code-review skill, and a personal or project skill with this name replaces it, while the bundled /review alias still runs Claude Code's review. The collision is intentional and kept: the collection's review gate is part of every delivery, so its code-review replaces the bundled /code-review on purpose."
+        "reason": "Claude Code bundles a /code-review skill, and a personal or project skill with this name replaces it, while the bundled /review alias still runs Claude Code's review. The collision is intentional and kept: the collection's review gate is part of every delivery, so its code-review replaces the bundled /code-review on purpose. The Claude Code plugin namespaces it as /apple-platform-engineer:code-review, which leaves the bundled /code-review in place."
       }
     ]
   }
