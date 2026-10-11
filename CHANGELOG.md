@@ -10,7 +10,10 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
   - lists booted Xcode Preview devices next to the default set, with a `WARNING` once both together exceed the Simulator budget (`APE_SIMULATOR_BUDGET`, default 2);
   - asks the user before `simctl create` or `clone`, naming the existing devices of the same type to reuse;
   - asks before any `simctl delete` or `erase` and before `simctl shutdown all`, in either set;
-  - asks before a `simctl boot` at the budget, and before `xcodebuild test`, a `gate.sh` or an Xcode MCP test or run tool above it.
+  - asks before a `simctl boot` at the budget, counting each boot earlier in the same command, and before `xcodebuild test`, a `gate.sh`, or an Xcode MCP test, run or device-interaction session above it;
+  - reads `simctl` again after any call that boots, creates, clones, deletes, erases or shuts down a device, rather than the minute-old cache.
+
+  Quoted words now count as command words, and `xcrun` options and `simctl --profiles` are skipped, so `xcrun --sdk iphonesimulator simctl delete …` or `simctl shutdown "all"` is seen; a wrapper given by full path, such as `/usr/bin/xcrun`, is recognized.
 
   The [xcodebuild](skills/xcodebuild/SKILL.md) skill names the Preview set and the hook.
 

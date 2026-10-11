@@ -420,32 +420,59 @@ func lines(
   return out
 }
 
-/// The words each simple command of a Bash command line starts with, quoted text removed, so
-/// a word only mentioned in an argument (`grep xcodebuild`, a commit message) never counts.
+/// The words of each simple command of a Bash command line, quotes removed and quoted text kept
+/// as one word, after the assignments and wrappers (`env`, `sudo`, `xcrun` with its options)
+/// that run the next word as the command. Only a command's first word names what it runs, so a
+/// word mentioned in an argument (`grep xcodebuild`, a commit message) never counts.
 func commandWords(_ command: String) -> [[String]] {
-  var unquoted = ""
+  var commands = [[String]]()
+  var words = [String]()
+  var word = ""
+  var inWord = false
   var quote: Character?
+  func endWord() {
+    if inWord { words.append(word) }
+    word = ""
+    inWord = false
+  }
+  func endCommand() {
+    endWord()
+    if !words.isEmpty { commands.append(words) }
+    words = []
+  }
   for character in command {
     if let open = quote {
-      if character == open { quote = nil }
-      continue
-    }
-    if character == "'" || character == "\"" {
+      if character == open { quote = nil } else { word.append(character) }
+    } else if character == "'" || character == "\"" {
       quote = character
-      unquoted.append(" ")
+      inWord = true
+    } else if ";&|()\n".contains(character) {
+      endCommand()
+    } else if character.isWhitespace {
+      endWord()
     } else {
-      unquoted.append(character)
+      word.append(character)
+      inWord = true
     }
   }
-  return unquoted.split(whereSeparator: { ";&|()\n".contains($0) }).map { segment in
-    var words = segment.split(whereSeparator: \.isWhitespace).map(String.init)
-    // Assignments and the wrappers that run the next word as the command.
-    while let first = words.first,
-      first.contains("=") && !first.hasPrefix("-")
-        || ["env", "sudo", "time", "nohup", "command", "exec", "nice", "xcrun"].contains(
-          (first as NSString).lastPathComponent)
-    {
-      words.removeFirst()
+  endCommand()
+  let wrappers: Set = ["env", "sudo", "time", "nohup", "command", "exec", "nice"]
+  let xcrunValueOptions: Set = ["--sdk", "-sdk", "--toolchain", "-toolchain"]
+  return commands.map { words in
+    var words = words
+    while let first = words.first {
+      let name = (first as NSString).lastPathComponent
+      if first.contains("=") && !first.hasPrefix("-") || wrappers.contains(name) {
+        words.removeFirst()
+      } else if name == "xcrun" {
+        words.removeFirst()
+        while let option = words.first, option.hasPrefix("-") {
+          words.removeFirst()
+          if xcrunValueOptions.contains(option), !words.isEmpty { words.removeFirst() }
+        }
+      } else {
+        break
+      }
     }
     return words
   }
@@ -457,7 +484,7 @@ func commandWords(_ command: String) -> [[String]] {
 func heavyWork(_ event: [String: Any]) -> String? {
   let tool = event["tool_name"] as? String ?? ""
   if tool.hasPrefix("mcp__"),
-    let action = ["BuildProject", "RunAllTests", "RunSomeTests", "RunProject"].first(where: {
+    let action = (["BuildProject"] + deviceTools).first(where: {
       tool.hasSuffix("__\($0)")
     })
   {
@@ -505,7 +532,9 @@ func simctlCalls(_ command: String) -> [(set: String?, subcommand: String, argum
     var set: String?
     while let first = rest.first, first.hasPrefix("-") {
       rest.removeFirst()
-      if first == "--set", !rest.isEmpty { set = rest.removeFirst() }
+      guard first == "--set" || first == "--profiles", !rest.isEmpty else { continue }
+      let value = rest.removeFirst()
+      if first == "--set" { set = value }
     }
     guard let subcommand = rest.first else { return nil }
     return (set, subcommand, Array(rest.dropFirst()))
@@ -515,12 +544,19 @@ func simctlCalls(_ command: String) -> [(set: String?, subcommand: String, argum
 /// Why a tool call needs the user under the Simulator rules, one reason per rule it meets: it
 /// creates or clones a device, deletes or erases one, shuts down every device, boots one more
 /// at the budget, or starts tests or a run above it. `simulators` is read only when needed.
+/// The Xcode MCP tools that run tests or the app, or open a device session, on a Simulator
+/// they may boot.
+let deviceTools = [
+  "RunAllTests", "RunSomeTests", "RunProject", "DeviceInteractionInstallAndRun",
+  "DeviceInteractionStartSession", "DeviceInteractionStartWorkspaceSession",
+]
+
 func simulatorReasons(_ event: [String: Any], simulators: () -> Simulators?) -> [String] {
   let tool = event["tool_name"] as? String ?? ""
   var reasons = [String]()
   var startsTestsOrRun =
     tool.hasPrefix("mcp__")
-    && ["RunAllTests", "RunSomeTests", "RunProject"].contains { tool.hasSuffix("__\($0)") }
+    && deviceTools.contains { tool.hasSuffix("__\($0)") }
   let command =
     tool == "Bash" ? (event["tool_input"] as? [String: Any])?["command"] as? String ?? "" : ""
   for words in commandWords(command) {
@@ -536,12 +572,15 @@ func simulatorReasons(_ event: [String: Any], simulators: () -> Simulators?) -> 
       startsTestsOrRun = true
     }
   }
+  // Each boot earlier in the same command line adds a device before the next one is judged.
+  var boots = 0
   for call in simctlCalls(command) {
     switch call.subcommand {
     case "create", "clone":
       var reason =
         "`simctl \(call.subcommand)` adds a Simulator. Reuse an existing device first; create one "
-        + "only when the user approves, name it agent-<task-id> and delete it when the task ends."
+        + "only when the user approves, name it `agent-<task-id> <device type>` and delete it "
+        + "when the task ends."
       if let available = simulators()?.available, !available.isEmpty {
         let sameType = available.filter { device in
           call.arguments.contains {
@@ -549,28 +588,32 @@ func simulatorReasons(_ event: [String: Any], simulators: () -> Simulators?) -> 
               || device.type.hasSuffix("." + $0.replacingOccurrences(of: " ", with: "-"))
           }
         }
-        let names = (sameType.isEmpty ? available : sameType).map(\.name)
-        reason +=
-          " Existing devices to reuse: \(names.prefix(6).joined(separator: ", "))"
-          + (names.count > 6 ? " (+\(names.count - 6) more)." : ".")
+        let names = sameType.map(\.name).sorted()
+        if !names.isEmpty {
+          reason +=
+            " Existing devices of that type to reuse: \(names.prefix(6).joined(separator: ", "))"
+            + (names.count > 6 ? " (+\(names.count - 6) more)." : ".")
+        }
       }
       reasons.append(reason)
     case "delete", "erase":
       reasons.append(
-        "`simctl \(call.subcommand)` permanently removes Simulator devices or their data, which "
-          + "may belong to another session or to the user. Name the exact devices to the user "
-          + "first.")
+        "`simctl \(call.subcommand)` permanently removes Simulator devices or their data. Unless "
+          + "the device is one this task created, it may belong to another session or to the "
+          + "user; name the exact devices to the user first.")
     case "shutdown" where call.arguments.first == "all":
       reasons.append(
         "`simctl shutdown all` stops every "
           + (call.set == "previews" ? "Xcode Preview " : "")
           + "Simulator, including devices other sessions are using.")
     case "boot":
-      if let found = simulators(), found.bootedCount >= simulatorBudget {
+      defer { boots += 1 }
+      if let found = simulators(), found.bootedCount + boots >= simulatorBudget {
         reasons.append(
-          "\(found.bootedCount) Simulators are already booted (\(found.booted.count) + "
-            + "\(found.previews.count) Xcode Preview); the budget is \(simulatorBudget). "
-            + "Reuse a booted device, or have the user shut one down first.")
+          "\(found.bootedCount + boots) Simulators are already booted or booting "
+            + "(\(found.booted.count) + \(found.previews.count) Xcode Preview before this "
+            + "command); the budget is \(simulatorBudget). Reuse a booted device, or have the "
+            + "user shut one down first.")
       }
     default:
       break
@@ -620,6 +663,16 @@ if event["hook_event_name"] as? String == "PreToolUse" {
   reasons += simulatorReasons(event) {
     if read == nil { read = .some(simulators(cache: cache)) }
     return read!
+  }
+  // A call that may change which devices exist or run makes the cached list stale; the next
+  // reading asks `simctl` again rather than letting a second boot pass on the old count.
+  let changing: Set = ["boot", "create", "clone", "delete", "erase", "shutdown"]
+  let command = (event["tool_input"] as? [String: Any])?["command"] as? String ?? ""
+  if event["tool_name"] as? String == "Bash",
+    simctlCalls(command).contains(where: { changing.contains($0.subcommand) })
+  {
+    try? FileManager.default.removeItem(
+      at: cache.appendingPathComponent("booted-simulators.json"))
   }
   if !reasons.isEmpty {
     let output: [String: Any] = [
