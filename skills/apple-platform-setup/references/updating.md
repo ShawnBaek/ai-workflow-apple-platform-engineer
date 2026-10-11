@@ -194,7 +194,9 @@ whether to run it now or wait; in a
 non-interactive run (`claude -p`) that question can stop the build. The same
 hook asks you before an agent creates, clones, deletes or erases a Simulator,
 shuts down every Simulator, or boots one more past the Simulator budget, as
-[xcodebuild](../../xcodebuild/SKILL.md) describes.
+[xcodebuild](../../xcodebuild/SKILL.md) describes. When Codex hands a task to
+Claude, the status shows `Handoff waiting for Claude`, as
+[session-handoff](../../session-handoff/SKILL.md) describes.
 Skills load as `/apple-platform-engineer:<skill>`; a bare name works unless
 another command owns it, so review is `/apple-platform-engineer:code-review`.
 Pass `--scope project` to record the install in a project's

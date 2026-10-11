@@ -19,6 +19,11 @@ let usage = """
     flow record --client claude|codex --store <absolute-dir> [--include-labels]
     flow render --store <dir> --session <id-or-hash> --format mermaid|tree
       [--ledger <run-ledger.jsonl>] [--max-steps <n>] [--include-labels]
+    handoff create --from claude|codex --to claude|codex --task <text>
+      --brief <text>|--brief-file <file> [--thread <id>] [--session <id>] [--repo <dir>]
+    handoff resume --as claude|codex [--id <id>] [--session <id>] [--repo <dir>]
+    handoff list [--pending-for claude|codex] [--json] [--repo <dir>]
+    handoff close --thread <id> --by claude|codex [--note <text>] [--repo <dir>]
 
   See docs/verification.md and each skill's reference for command arguments.
   The runtime uses Swift and Apple's tools; it does not prove app behavior by itself.
@@ -79,6 +84,12 @@ do {
     // Session flow needs no contracts. `flow record` runs as a client hook: it reads only stdin
     // and its store, prints nothing and exits 0, so it must not resolve the installed skill.
     exit(try FlowCommand.run(arguments: arguments))
+  }
+  if command == "handoff" {
+    // Handoffs read only the repository's Git state and its ledger, never the contracts.
+    exit(
+      try SessionHandoff.run(
+        arguments: arguments, executable: try ResourceCoordinator.runningExecutableURL().path))
   }
   let installedContext = try runtimeContext(repositoryRoot: explicitRoot)
   let context =
