@@ -195,7 +195,11 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
     return event
   }
   // Ordinary commands never ask.
-  for command in ["ls -la", "git status", "echo swift is fun"] {
+  for command in [
+    "ls -la", "git status", "echo swift is fun", "grep -rn xcodebuild skills",
+    "git commit -m \"bump xcodebuild flags\"", "cat scripts/gate.sh", "xcodebuild -version",
+    "xcrun simctl list", "swift --version",
+  ] {
     #expect(try decision(event("Bash", command), data: fixture.data) == nil, "\(command)")
   }
   // Heavy work asks exactly when the host is overloaded; near the threshold the load can move
@@ -211,6 +215,7 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
   for heavy in [
     event("Bash", "xcodebuild test -scheme App"), event("Bash", "swift test --parallel"),
     event("Bash", "xcrun simctl boot ABC"), event("Bash", "cd app && scripts/gate.sh --full"),
+    event("Bash", "env CI=1 xcodebuild build -scheme App 2>&1 | tail"),
     event("mcp__xcode__RunAllTests"),
   ] {
     #expect(try decision(heavy, data: fixture.data) == (overloaded ? "ask" : nil))

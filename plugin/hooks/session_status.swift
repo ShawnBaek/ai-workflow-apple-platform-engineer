@@ -345,9 +345,39 @@ func lines(
   return out
 }
 
+/// The words each simple command of a Bash command line starts with, quoted text removed, so
+/// a word only mentioned in an argument (`grep xcodebuild`, a commit message) never counts.
+func commandWords(_ command: String) -> [[String]] {
+  var unquoted = ""
+  var quote: Character?
+  for character in command {
+    if let open = quote {
+      if character == open { quote = nil }
+      continue
+    }
+    if character == "'" || character == "\"" {
+      quote = character
+      unquoted.append(" ")
+    } else {
+      unquoted.append(character)
+    }
+  }
+  return unquoted.split(whereSeparator: { ";&|()\n".contains($0) }).map { segment in
+    var words = segment.split(whereSeparator: \.isWhitespace).map(String.init)
+    // Assignments and the wrappers that run the next word as the command.
+    while let first = words.first,
+      first.contains("=") && !first.hasPrefix("-")
+        || ["env", "sudo", "time", "nohup", "command", "exec", "nice", "xcrun"].contains(first)
+    {
+      words.removeFirst()
+    }
+    return words
+  }
+}
+
 /// What a tool call starts that an overloaded host would stall: an Xcode MCP build, test or
-/// run tool, or a Bash command running `xcodebuild`, `swift build`, `swift test`,
-/// `simctl boot` or a repository's `gate.sh`; nil for anything else.
+/// run tool, or a Bash command that runs `xcodebuild` (other than a query such as `-version`),
+/// `swift build`, `swift test`, `simctl boot` or a repository's `gate.sh`; nil otherwise.
 func heavyWork(_ event: [String: Any]) -> String? {
   let tool = event["tool_name"] as? String ?? ""
   if tool.hasPrefix("mcp__"),
@@ -360,13 +390,27 @@ func heavyWork(_ event: [String: Any]) -> String? {
   guard tool == "Bash",
     let command = (event["tool_input"] as? [String: Any])?["command"] as? String
   else { return nil }
-  let words = command.split(whereSeparator: { " \t\n;&|()".contains($0) }).map(String.init)
-  for (index, word) in words.enumerated() {
-    let name = (word as NSString).lastPathComponent
-    let next = index + 1 < words.count ? words[index + 1] : ""
-    if name == "xcodebuild" || name == "gate.sh" { return name }
-    if name == "swift", next == "build" || next == "test" { return "swift \(next)" }
-    if name == "simctl", next == "boot" { return "simctl boot" }
+  let queries: Set = [
+    "-version", "-list", "-showsdks", "-showBuildSettings", "-showdestinations", "-help",
+    "-usage", "-showTestPlans", "-showComponent",
+  ]
+  for words in commandWords(command) {
+    guard let program = words.first.map({ ($0 as NSString).lastPathComponent }) else {
+      continue
+    }
+    let arguments = words.dropFirst()
+    switch program {
+    case "xcodebuild" where !arguments.contains(where: queries.contains):
+      return "xcodebuild"
+    case "gate.sh":
+      return "gate.sh"
+    case "swift" where arguments.first == "build" || arguments.first == "test":
+      return "swift \(arguments.first!)"
+    case "simctl" where arguments.first == "boot":
+      return "simctl boot"
+    default:
+      continue
+    }
   }
   return nil
 }

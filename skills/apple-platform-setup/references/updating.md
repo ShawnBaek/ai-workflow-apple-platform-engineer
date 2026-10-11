@@ -186,7 +186,8 @@ Claude sessions active in the last 30 minutes, at session start and with every
 prompt; it reads Xcode through Automation, so allow that once when macOS asks.
 On an overloaded or full host, a build, test run or Simulator boot (`xcodebuild`,
 `swift build` or `swift test`, `simctl boot`, a `gate.sh`, or an Xcode MCP
-build, test or run tool) first asks you whether to run it now or wait.
+build, test or run tool) first asks you whether to run it now or wait; in a
+non-interactive run (`claude -p`) that question can stop the build.
 Skills load as `/apple-platform-engineer:<skill>`; a bare name works unless
 another command owns it, so review is `/apple-platform-engineer:code-review`.
 Pass `--scope project` to record the install in a project's
