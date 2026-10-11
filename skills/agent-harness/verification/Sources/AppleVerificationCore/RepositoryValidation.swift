@@ -155,6 +155,7 @@ public enum RepositoryValidation {
     if version.isEmpty || !(texts["README.md"] ?? "").contains("**Version:** \(version)") {
       errors.append("README version must match VERSION")
     }
+    errors += releaseVersionErrors(version)
     errors += SkillRoutingValidation.validate(texts: texts)
     errors += SkillDescriptionBudget.validate(texts: texts)
     if includeContracts {
@@ -170,6 +171,13 @@ public enum RepositoryValidation {
       documentsChecked: documents.count, localLinksChecked: links,
       validatedDocumentDigest: digest.finalize().map { String(format: "%02x", $0) }.joined(),
       errors: errors.sorted())
+  }
+
+  /// A release is `MAJOR.MINOR`, such as `2.0`: no patch number and no pre-release suffix.
+  /// Releases before 2.0 used `2.0.0-beta.N`; the lifecycle file still names them as history.
+  static func releaseVersionErrors(_ version: String) -> [String] {
+    version.wholeMatch(of: /[0-9]+\.[0-9]+/) == nil
+      ? ["VERSION \(version) must be MAJOR.MINOR, such as 2.0"] : []
   }
 
   private static func relative(_ url: URL, to root: URL) -> String {

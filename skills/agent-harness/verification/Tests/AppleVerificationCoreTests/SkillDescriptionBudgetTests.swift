@@ -39,8 +39,8 @@ private func entryPoint(_ name: String, _ frontmatterDescription: String) -> Str
   func write(_ path: String, _ value: String) throws {
     try value.write(to: root.appendingPathComponent(path), atomically: true, encoding: .utf8)
   }
-  try write("VERSION", "1.0.0\n")
-  try write("README.md", "**Version:** 1.0.0\n")
+  try write("VERSION", "1.0\n")
+  try write("README.md", "**Version:** 1.0\n")
   try write("docs/skills.md", "[Example](../skills/example/SKILL.md)\n")
   let line = String(repeating: "a", count: 150)
 
