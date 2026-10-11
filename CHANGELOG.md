@@ -4,6 +4,15 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+### Added
+
+- **PR gate hook in the Claude Code plugin.** A `PreToolUse` hook denies `gh pr create`, `gh pr ready`, `gh pr edit --base` and a branch `git push`, including inside `sh -c`, `env` or compound commands, unless that command's own `APE_REVIEWED_HEAD=<sha>` assignment names the commit it publishes or its `APE_REVIEW_OVERRIDE` records the user's explicit decision. It holds even when the agent never loaded `git-workflow` or lost it to context compaction, which let one app session open thirteen pull requests without the review loop. Tag pushes, deletions and text that only mentions these commands pass. A small `sh` wrapper passes unrelated commands at once and runs the Swift gate, compiled once per revision into the plugin's data folder ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
+
+### Changed
+
+- **A repository instruction owns only the steps it names.** [Repository skill precedence](skills/agent-harness/references/repo-skill-precedence.md) now says that a repository's partial procedure, such as a pull-request test gate, replaces only those steps; the review verdict, evidence attachment and readback still apply unless the repository or the user waives them by name.
+- Release tags are created with `git tag`, because `claude plugin tag` refuses a `MAJOR.MINOR` version ([contributing](CONTRIBUTING.md#add-a-skill)).
+
 ## [2.0] - 2026-10-11
 
 The collection now uses `MAJOR.MINOR` versions. 2.0 is the stable release of the 2.0.0 beta series and has the same content as 2.0.0-beta.12.

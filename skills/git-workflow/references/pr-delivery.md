@@ -8,6 +8,8 @@
 6. Match the published head/base to the approved review. Publish its verdict with its findings or a concise no-findings summary as a COMMENT review when authorized, and read back its ID/URL; the internal `approve` is never posted as a GitHub `APPROVE` event. The author checks the feedback and verifies accepted fixes. Reuse a review of the identical patch; repeat only affected review after changes. A PR-body claim of independent review is not a posted review.
 7. Read back the remote head, PR base, body, proof and review. Report required CI as passed, failed, pending or unavailable exactly as observed; an empty check list is not a green build. Do not infer merge authority. If a predecessor merges, retarget only within authorization and recheck the resulting diff.
 
+In Claude Code, the plugin's PR gate hook enforces step 5. It denies `gh pr create`, `gh pr ready`, `gh pr edit --base` and a `git push` of a branch, also inside `sh -c`, `env` or a compound command, unless that command carries its own assignment `APE_REVIEWED_HEAD=<sha>` naming the commit it publishes: `HEAD`, or each pushed branch. Write the assignment only after `code-review` returned `approve` for that commit, for example `APE_REVIEWED_HEAD=1a2b3c4 git push -u origin feature/x`. When the user explicitly decides to publish without `approve`, use `APE_REVIEW_OVERRIDE='<their decision>'` instead and disclose it in the PR. Tag pushes, deletions and other `gh pr edit` changes pass.
+
 Use a shared stack plan for broad work; do not repeat a complete stack map in every body or force arbitrary phase titles. A local verification task need not create a PR. See [delivery guidance](../../agent-harness/references/delivery.md) for evidence and runtime boundaries.
 
 ## Standard GitHub CLI path

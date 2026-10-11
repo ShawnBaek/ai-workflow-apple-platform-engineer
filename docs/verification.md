@@ -40,7 +40,7 @@ git ls-files -z '*.swift' | xargs -0 xcrun swift-format format --in-place
 git ls-files -z '*.swift' | xargs -0 xcrun swift-format lint   # add no findings beyond the base branch's
 git diff --check
 xcrun swift build --build-tests --package-path skills/agent-harness/verification -j 1 -Xswiftc -j1
-for script in skills/*/scripts/*.swift docs/evidence/generate-comparison.swift; do xcrun swiftc -typecheck "$script"; done
+for script in skills/*/scripts/*.swift plugin/hooks/*.swift docs/evidence/generate-comparison.swift; do xcrun swiftc -typecheck "$script"; done
 ```
 
 This repository's CI gates formatting and compilation. It builds swift-format
