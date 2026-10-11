@@ -6,15 +6,26 @@ import Testing
 private let hook = GateRunSupport.repositoryRoot.appendingPathComponent(
   "plugin/hooks/pr-gate.sh")
 
+/// A compile cache shared by the tests, so the gate is built once.
+private let cache = FileManager.default.temporaryDirectory.appendingPathComponent(
+  "pr-gate-tests-\(ProcessInfo.processInfo.processIdentifier)")
+
 /// Runs the plugin's PreToolUse hook on one Bash command from `cwd` and returns whether it
 /// denied the command.
 private func denies(_ command: String, cwd: URL) throws -> Bool {
-  let input = try JSONSerialization.data(withJSONObject: [
-    "cwd": cwd.path, "tool_name": "Bash", "tool_input": ["command": command],
-  ])
+  try denies(
+    input: try JSONSerialization.data(withJSONObject: [
+      "cwd": cwd.path, "tool_name": "Bash", "tool_input": ["command": command],
+    ]))
+}
+
+private func denies(input: Data) throws -> Bool {
   let process = Process()
   process.executableURL = URL(fileURLWithPath: "/bin/sh")
   process.arguments = [hook.path]
+  var environment = ProcessInfo.processInfo.environment
+  environment["CLAUDE_PLUGIN_DATA"] = cache.path
+  process.environment = environment
   let stdin = Pipe()
   let stdout = Pipe()
   process.standardInput = stdin
@@ -28,15 +39,20 @@ private func denies(_ command: String, cwd: URL) throws -> Bool {
   return String(decoding: output, as: UTF8.self).contains(#""permissionDecision":"deny""#)
 }
 
-/// A repository with one commit, and its HEAD.
-private func repository() throws -> (URL, String) {
-  let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    .resolvingSymlinksInPath()
+/// A repository whose path has a space: tag `v2.0` and branch `other` on the first commit,
+/// HEAD on a second. Returns the folder, HEAD and `other`.
+private func repository() throws -> (URL, String, String) {
+  let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+    "\(UUID().uuidString)/repo with space"
+  ).resolvingSymlinksInPath()
   try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+  @discardableResult
   func git(_ arguments: String...) throws -> String {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-    process.arguments = ["-C", root.path] + arguments
+    process.arguments =
+      ["-C", root.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com"]
+      + arguments
     let out = Pipe()
     process.standardOutput = out
     try process.run()
@@ -44,47 +60,66 @@ private func repository() throws -> (URL, String) {
     process.waitUntilExit()
     return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
   }
-  _ = try git("init", "-q")
-  _ = try git(
-    "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-q",
-    "--allow-empty", "-m", "fixture")
-  return (root, try git("rev-parse", "HEAD"))
+  try git("init", "-q")
+  try git("commit", "-q", "--allow-empty", "-m", "one")
+  try git("tag", "v2.0")
+  try git("branch", "other")
+  try git("commit", "-q", "--allow-empty", "-m", "two")
+  return (root, try git("rev-parse", "HEAD"), try git("rev-parse", "other"))
 }
 
 @Test func publishingAPullRequestNeedsTheReviewedHead() throws {
-  let (root, head) = try repository()
-  defer { try? FileManager.default.removeItem(at: root) }
+  let (root, head, other) = try repository()
+  defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
   let short = String(head.prefix(7))
+  let path = root.path
   for command in [
     "gh pr create --base main",
-    "FOO=1 gh pr edit 3 --body x",
+    "FOO=1 gh pr ready 3",
+    "gh pr edit 3 --base main",
     "git add .\ngh pr ready 5",
     "git commit -m x && git push",
-    "git -C \(root.path) push",
+    "git -C \"\(path)\" push",
+    "git push origin feature && git push --tags",
+    "git push --follow-tags",
     "APE_REVIEWED_HEAD=deadbeef gh pr create",
-    "APE_REVIEW_OVERRIDE= gh pr create",
+    "APE_REVIEWED_HEAD=\(short) git push origin other",
     "cd /tmp && APE_REVIEWED_HEAD=\(short) git push",
+    "APE_REVIEW_OVERRIDE= gh pr create",
+    "gh pr create --body \"APE_REVIEW_OVERRIDE=none was not used\"",
+    "sh -c \"gh pr create\"", "bash -c 'git push'", "{ git push; }",
+    "if true; then gh pr create; fi", "env gh pr create", "command git push",
+    "gh -R owner/repo pr create", "git -c key=value push", "git --no-pager push",
   ] {
     #expect(try denies(command, cwd: root), "\(command)")
   }
   for command in [
     "APE_REVIEWED_HEAD=\(short) gh pr create --base main",
-    "APE_REVIEWED_HEAD=\(head) git push -u origin feature/x",
-    "cd \"\(root.path)\" && APE_REVIEWED_HEAD=\(short) gh pr ready 5",
-    "APE_REVIEWED_HEAD=\(short) git -C \(root.path) push -u origin x",
+    "APE_REVIEWED_HEAD=\(short.uppercased()) gh pr create",
+    "APE_REVIEWED_HEAD=\(head) git push -u origin HEAD",
+    "APE_REVIEWED_HEAD=\(short) git -C \"\(path)\" push -u origin HEAD",
+    "APE_REVIEWED_HEAD=\(other.prefix(7)) git push origin other",
+    "cd \"\(path)\"; APE_REVIEWED_HEAD=\(short) git push",
+    "env APE_REVIEWED_HEAD=\(short) gh pr create",
     "APE_REVIEW_OVERRIDE='the user chose to publish without review' gh pr create",
   ] {
     #expect(try !denies(command, cwd: root), "\(command)")
   }
 }
 
-@Test func otherCommandsPassTheGate() throws {
-  let (root, _) = try repository()
-  defer { try? FileManager.default.removeItem(at: root) }
+@Test func tagsDeletionsAndOtherCommandsPassTheGate() throws {
+  let (root, _, _) = try repository()
+  defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
   for command in [
-    "ls -la", "gh pr view 5", "gh pr checks 5", "git push origin refs/tags/v2.0",
-    "git push --tags", "echo 'how to gh pr create'", "grep -n \"gh pr create\" README.md",
+    "ls -la", "gh pr view 5", "gh pr checks 5", "gh pr edit 3 --add-label docs",
+    "git push origin v2.0", "git push origin refs/tags/v2.0", "git push --tags",
+    "git push --delete origin old", "git push origin :old",
+    "echo 'how to gh pr create'", "grep -n \"git push\" README.md",
   ] {
     #expect(try !denies(command, cwd: root), "\(command)")
   }
+}
+
+@Test func unreadableHookInputIsDenied() throws {
+  #expect(try denies(input: Data(#"{"tool_input": {"command": "gh pr create"#.utf8)))
 }
