@@ -11,7 +11,7 @@ if revision=$(/sbin/md5 -q "$source" 2>/dev/null); then
   binary="$cache/session-status-$revision"
   if [ ! -x "$binary" ]; then
     mkdir -p "$cache" 2>/dev/null
-    xcrun swiftc -O -o "$binary.$$" "$source" 2>/dev/null && mv -f "$binary.$$" "$binary"
+    xcrun swiftc -swift-version 5 -O -o "$binary.$$" "$source" 2>/dev/null && mv -f "$binary.$$" "$binary"
   fi
   if [ -x "$binary" ]; then
     printf '%s' "$input" | "$binary" 2>/dev/null
