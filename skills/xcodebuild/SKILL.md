@@ -156,6 +156,16 @@ and x86_64); use it only when no compatible Simulator exists.
    `~/Library/Developer/XCTestDevices` directories (which `simctl list`
    omits) and broader cleanup to `xcode-storage`.
 
+Xcode Previews boots its own devices in a separate set
+(`xcrun simctl --set previews list devices booted`), which the default
+`simctl list` never shows; they count toward the host's Simulator load. In
+Claude Code, the plugin's session status hook asks the user before
+`simctl create` or `clone` (naming same-type devices to reuse), any
+`simctl delete` or `erase` (including step 3's deletion of this task's own
+device), and `simctl shutdown all`; before a boot once the booted devices of
+both sets reach the budget (`APE_SIMULATOR_BUDGET`, default 2); and before a
+test run, app run or device session above it.
+
 ## Tool routing
 
 For installation, registration, duplicate-provider, or first-connection

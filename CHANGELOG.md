@@ -4,6 +4,19 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+### Added
+
+- **Simulator guard in the Claude Code plugin.** Agents kept creating their own Simulators (`Timeline Gate iPhone 18 Pro`, `agent-…`) and never deleting them, and Xcode Preview devices stayed booted unseen; six booted devices ran about 1,300 CoreSimulator processes. The session status hook now:
+  - lists booted Xcode Preview devices next to the default set, with a `WARNING` once both together exceed the Simulator budget (`APE_SIMULATOR_BUDGET`, default 2);
+  - asks the user before `simctl create` or `clone`, naming the existing devices of the same type to reuse;
+  - asks before any `simctl delete` or `erase` and before `simctl shutdown all`, in either set;
+  - asks before a `simctl boot` at the budget, counting each boot earlier in the same command, and before `xcodebuild test`, a `gate.sh`, or an Xcode MCP test, run or device-interaction session above it;
+  - reads `simctl` again after any call that boots, creates, clones, deletes, erases or shuts down a device, rather than the minute-old cache.
+
+  Quoted words now count as command words, and `xcrun` options and `simctl --profiles` are skipped, so `xcrun --sdk iphonesimulator simctl delete …` or `simctl shutdown "all"` is seen; a wrapper given by full path, such as `/usr/bin/xcrun`, is recognized.
+
+  The [xcodebuild](skills/xcodebuild/SKILL.md) skill names the Preview set and the hook.
+
 ## [2.1] - 2026-10-11
 
 The Claude Code plugin now enforces the PR delivery review and shows each session where it works and how loaded the host is. Both hooks are Swift, compiled once per revision into the plugin's data folder; Codex and other Skills CLI installs have neither.

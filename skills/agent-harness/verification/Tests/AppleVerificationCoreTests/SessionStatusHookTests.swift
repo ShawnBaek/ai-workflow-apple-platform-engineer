@@ -73,6 +73,7 @@ private struct Fixture {
     environment["CLAUDE_PLUGIN_DATA"] = data.path
     // A loaded host can take seconds per Git call; the test checks content, not speed.
     environment["APE_STATUS_TIMEOUT"] = "60"
+    environment["APE_SIMULATOR_BUDGET"] = "2"
     if let budget { environment["APE_STATUS_BUDGET"] = budget }
     process.environment = environment
     // Keep the Simulator cache fresh however long the run has taken.
@@ -169,12 +170,27 @@ private func line(_ output: [String: Any], _ prefix: String) throws -> String? {
 
 /// The hook's answer before a tool call: the permission decision, or nil for none.
 private func decision(_ event: [String: Any], data: URL) throws -> String? {
+  try answer(event, data: data).decision
+}
+
+/// The hook's permission decision and reason before a tool call; both nil when it says nothing.
+private func answer(_ event: [String: Any], data: URL) throws -> (
+  decision: String?, reason: String?
+) {
   let process = Process()
   process.executableURL = URL(fileURLWithPath: "/bin/sh")
   process.arguments = [hook.path]
   var environment = ProcessInfo.processInfo.environment
   environment["CLAUDE_PLUGIN_DATA"] = data.path
+  environment["APE_SIMULATOR_BUDGET"] = "2"
   process.environment = environment
+  // However long compiling the hook takes on a loaded host, the written Simulators stay fresh: a
+  // date an hour ahead never ages past the cache's minute.
+  let cached = data.appendingPathComponent("booted-simulators.json")
+  if FileManager.default.fileExists(atPath: cached.path) {
+    try FileManager.default.setAttributes(
+      [.modificationDate: Date().addingTimeInterval(3600)], ofItemAtPath: cached.path)
+  }
   let stdin = Pipe()
   let stdout = Pipe()
   process.standardInput = stdin
@@ -185,11 +201,13 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
   let output = stdout.fileHandleForReading.readDataToEndOfFile()
   process.waitUntilExit()
   #expect(process.terminationStatus == 0)
-  guard !output.isEmpty else { return nil }
+  guard !output.isEmpty else { return (nil, nil) }
   let object = try #require(JSONSerialization.jsonObject(with: output) as? [String: Any])
   let specific = try #require(object["hookSpecificOutput"] as? [String: Any])
   #expect(specific["hookEventName"] as? String == "PreToolUse")
-  return specific["permissionDecision"] as? String
+  return (
+    specific["permissionDecision"] as? String, specific["permissionDecisionReason"] as? String
+  )
 }
 
 @Test func heavyWorkOnAnOverloadedHostGoesToTheUser() throws {
@@ -255,4 +273,113 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
     try line(output, "Directory")
       == "Directory ~/app with space · Git state unknown (no answer in time)")
   #expect(try line(output, "Host: load ") != nil)
+}
+
+/// Writes a fresh Simulator cache: booted default-set names, booted Xcode Preview names and the
+/// available devices with their types.
+private func cacheSimulators(
+  _ data: URL, booted: [String], previews: [String] = [],
+  available: [(String, String)] = []
+) throws {
+  try JSONSerialization.data(withJSONObject: [
+    "names": booted, "previews": previews,
+    "available": available.map { ["name": $0.0, "type": $0.1] },
+  ]).write(to: data.appendingPathComponent("booted-simulators.json"))
+}
+
+@Test func sessionStatusCountsXcodePreviewSimulatorsAgainstTheBudget() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  try cacheSimulators(fixture.data, booted: ["Gate"], previews: ["iPhone Air", "iPad Air"])
+  let output = try fixture.status(cwd: fixture.repository)
+  #expect(
+    try line(output, "Simulators: ")?.hasPrefix(
+      "Simulators: 1 booted (Gate), 2 Xcode Preview booted (iPhone Air, iPad Air), ") == true)
+  #expect(
+    try line(output, "WARNING Simulators over budget")
+      == "WARNING Simulators over budget: 3 booted (1 + 2 Xcode Preview), budget 2")
+}
+
+@Test func simulatorRulesGoToTheUser() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  let phone = "com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro"
+  let available = [("Old Phone", phone), ("Gate", phone), ("iPad", "com.apple.iPad-Air")]
+  var booted = ["Gate"]
+  var previews = [String]()
+  // Writes the Simulators before every call: a call that changes devices drops the cache.
+  func ask(_ command: String, tool: String = "Bash") throws -> String? {
+    try cacheSimulators(fixture.data, booted: booted, previews: previews, available: available)
+    var event: [String: Any] = [
+      "hook_event_name": "PreToolUse", "cwd": fixture.repository.path, "tool_name": tool,
+    ]
+    event["tool_input"] = ["command": command]
+    let (decision, reason) = try answer(event, data: fixture.data)
+    #expect(decision == (reason == nil ? nil : "ask"), "\(command)")
+    return reason
+  }
+
+  // Creating or cloning always asks and names the devices of the same type to reuse, by
+  // identifier or by display name.
+  let create = try #require(
+    try ask(
+      "xcrun simctl create 'Agent Phone' \(phone) com.apple.CoreSimulator.SimRuntime.iOS-27-2"))
+  #expect(create.contains("`simctl create` adds a Simulator"))
+  #expect(create.contains("Existing devices of that type to reuse: Gate, Old Phone."))
+  #expect(
+    try ask("xcrun simctl create agent-1 \"iPhone 18 Pro\" iOS-27-2")?.contains(
+      "to reuse: Gate, Old Phone.") == true)
+  #expect(try ask("xcrun simctl create x \"Apple TV\" tvOS")?.contains("to reuse") == false)
+  #expect(try ask("cd app && /usr/bin/xcrun simctl clone ABC copy")?.contains("clone") == true)
+  // Removing devices or data, or stopping every device, asks, however it is written.
+  for command in [
+    "xcrun simctl delete unavailable", "xcrun simctl erase ABC", "xcrun simctl shutdown all",
+    "xcrun simctl --set previews shutdown all", "xcrun --sdk iphonesimulator simctl delete X",
+    "xcrun simctl --profiles /tmp/p delete X", "xcrun simctl \"delete\" X",
+    "xcrun simctl shutdown 'all'", "xcrun simctl \\\n  delete X",
+  ] {
+    #expect(try ask(command) != nil, "\(command)")
+  }
+  #expect(try ask("xcrun simctl --set previews shutdown all")?.contains("Xcode Preview") == true)
+  // Reading, or stopping one named device, never asks for a Simulator rule.
+  for command in [
+    "xcrun simctl list devices", "xcrun simctl shutdown ABC", "echo simctl create x",
+    "git commit -m 'simctl delete docs; xcrun simctl delete all'", "echo don\\'t simctl delete",
+  ] {
+    #expect(try ask(command)?.contains("Simulator") != true, "\(command)")
+  }
+  // Under the budget one boot or test run passes the Simulator rules; a second boot in the
+  // same command line counts the first.
+  #expect(try ask("xcrun simctl boot ABC")?.contains("budget") != true)
+  #expect(
+    try ask("xcrun simctl boot A && xcrun simctl boot B")?.contains("the budget is 2") == true)
+  // At the budget another boot asks; tests and runs ask only above it.
+  previews = ["Preview"]
+  #expect(try ask("xcrun simctl boot ABC")?.contains("the budget is 2") == true)
+  #expect(try ask("xcodebuild test -scheme App")?.contains("budget") != true)
+  booted = ["Gate", "Other"]
+  for (command, tool) in [
+    ("xcodebuild test -scheme App", "Bash"), ("sh scripts/gate.sh", "Bash"),
+    ("", "mcp__xcode__RunAllTests"), ("", "mcp__xcode__DeviceInteractionStartSession"),
+    ("xcodebuild -scheme App \\\n  test -destination id=X", "Bash"),
+  ] {
+    #expect(
+      try ask(command, tool: tool)?.contains("over the budget of 2") == true, "\(tool) \(command)")
+  }
+  #expect(try ask("xcodebuild build -scheme App")?.contains("budget") != true)
+}
+
+@Test func aCallThatChangesSimulatorsDropsTheCache() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  let file = fixture.data.appendingPathComponent("booted-simulators.json")
+  for (command, drops) in [("xcrun simctl list", false), ("xcrun simctl boot ABC", true)] {
+    try cacheSimulators(fixture.data, booted: [])
+    _ = try answer(
+      [
+        "hook_event_name": "PreToolUse", "cwd": fixture.repository.path, "tool_name": "Bash",
+        "tool_input": ["command": command],
+      ], data: fixture.data)
+    #expect(FileManager.default.fileExists(atPath: file.path) == !drops, "\(command)")
+  }
 }

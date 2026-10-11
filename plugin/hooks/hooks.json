@@ -16,7 +16,7 @@
         ]
       },
       {
-        "matcher": "mcp__.*__(BuildProject|RunAllTests|RunSomeTests|RunProject)",
+        "matcher": "mcp__.*__(BuildProject|RunAllTests|RunSomeTests|RunProject|DeviceInteractionInstallAndRun|DeviceInteractionStartSession|DeviceInteractionStartWorkspaceSession)",
         "hooks": [
           {
             "type": "command",
