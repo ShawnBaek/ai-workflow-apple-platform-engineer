@@ -125,6 +125,43 @@ func backtick(_ characters: inout ArraySlice<Character>) -> String {
   return body
 }
 
+/// Skips an arithmetic `((…))` body after its opening `((`, through the matching `))`.
+func arithmetic(_ characters: inout ArraySlice<Character>) {
+  var depth = 2
+  while let next = characters.popFirst() {
+    if next == "(" { depth += 1 }
+    if next == ")" {
+      depth -= 1
+      if depth == 0 { return }
+    }
+  }
+}
+
+/// Whether a simple command is a shell that reads its script from standard input: `sh`,
+/// `bash`, `zsh` or `dash`, possibly behind assignments and `env`, `command`, `exec` or
+/// `sudo`, with no `-c` script and no script file.
+func readsScriptFromInput(_ words: [Word]) -> Bool {
+  var rest = assignments(words).1
+  while let first = rest.first?.text,
+    ["env", "command", "exec", "sudo", "nohup", "time", "nice"].contains(first)
+      || assignments([rest.first!]).0.count == 1
+  {
+    rest = rest.dropFirst()
+  }
+  guard let program = rest.first?.text,
+    ["sh", "bash", "zsh", "dash"].contains((program as NSString).lastPathComponent)
+  else { return false }
+  for argument in rest.dropFirst().map(\.text) {
+    if argument == "-s" || argument == "--" { return true }
+    if argument.hasPrefix("-") {
+      if !argument.hasPrefix("--"), argument.contains("c") { return false }
+      continue
+    }
+    return false  // a script file
+  }
+  return true
+}
+
 /// Splits `source` into simple commands of words, honouring quotes, backslashes, `#` comments,
 /// redirections (dropped with their targets) and command substitutions. Unquoted `&&`, `||`,
 /// `;`, `|`, `&`, newlines, parentheses and braces end a command.
@@ -134,6 +171,7 @@ func simpleCommands(_ source: String) -> [[Word]] {
   var word: Word?
   var dropNextWord = false
   var pending = [Heredoc]()
+  var lineStart = 0
   var characters = Array(source)[...]
   func endWord() {
     if let finished = word {
@@ -196,7 +234,12 @@ func simpleCommands(_ source: String) -> [[Word]] {
           word!.text.append(escaped)
         } else if next == "$", characters.first == "(" {
           characters.removeFirst()
-          word!.substitutions.append(substitution(&characters))
+          if characters.first == "(" {
+            characters.removeFirst()
+            arithmetic(&characters)
+          } else {
+            word!.substitutions.append(substitution(&characters))
+          }
         } else if next == "`" {
           word!.substitutions.append(backtick(&characters))
         } else {
@@ -206,7 +249,12 @@ func simpleCommands(_ source: String) -> [[Word]] {
     case "$" where characters.first == "(":
       characters.removeFirst()
       word = word ?? Word()
-      word!.substitutions.append(substitution(&characters))
+      if characters.first == "(" {
+        characters.removeFirst()
+        arithmetic(&characters)
+      } else {
+        word!.substitutions.append(substitution(&characters))
+      }
     case "`":
       word = word ?? Word()
       word!.substitutions.append(backtick(&characters))
@@ -228,17 +276,30 @@ func simpleCommands(_ source: String) -> [[Word]] {
       // The bodies follow this line. They are data; only an expanding body's command
       // substitutions run, as part of this command.
       endWord()
+      // A shell on this line that reads its input runs the body as its script.
+      let shellReads = (commands[lineStart...] + [words]).contains(where: readsScriptFromInput)
       var runs = [String]()
       for heredoc in pending {
         let (body, _) = heredocBody(&characters, heredoc)
-        if heredoc.expands { runs += expansions(in: body) }
+        if shellReads {
+          runs.append(body)
+        } else if heredoc.expands {
+          runs += expansions(in: body)
+        }
       }
       pending = []
       if !runs.isEmpty {
         words.append(Word(text: "", quoted: true, quotedName: true, substitutions: runs))
       }
       endCommand()
-    case "\n", ";", "&", "|", "(", ")", "{", "}":
+      lineStart = commands.count
+    case "(" where characters.first == "(" && word == nil:
+      characters.removeFirst()
+      arithmetic(&characters)
+    case "\n":
+      endCommand()
+      lineStart = commands.count
+    case ";", "&", "|", "(", ")", "{", "}":
       endCommand()
     default:
       word = word ?? Word()

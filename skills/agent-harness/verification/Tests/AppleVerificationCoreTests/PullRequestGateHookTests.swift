@@ -102,6 +102,10 @@ private func repository() throws -> (URL, String, String) {
     "APE_REVIEWED_HEAD=\(short) gh pr create --body \"$(cat <<'X'\nIt's done\nX\n)\" && git push origin other",
     "cat > b.md <<'X'\nIt's ready\nX\ngit push origin feature",
     "cat <<EOF\n$(gh pr create)\nEOF", "cat <<-X\n\ttext\n\tX\ngit push", "cat <<< x && git push",
+    "sh <<'X'\ngit push origin other\nX", "cat <<X | bash\ngit push origin other\nX",
+    "bash -s <<X\ngh pr create\nX",
+    "env FOO=1 bash <<'X'\necho \"it's fine\"\ngit push origin other\nX",
+    "((n = 1<<2))\ngit push origin other", "echo $((1<<2)) && git push origin other",
   ] {
     #expect(try denies(command, cwd: root), "\(command)")
   }
@@ -121,6 +125,8 @@ private func repository() throws -> (URL, String, String) {
     "APE_REVIEWED_HEAD=\(short) gh pr create --body \"$(cat <<'X'\nit's done; git push later\nX\n)\"",
     "APE_REVIEW_OVERRIDE='the user chose to' git push --all",
     "APE_REVIEWED_HEAD=\(short) gh pr create --body-file - <<'X'\nRun `git push` later, it's fine\nX",
+    "APE_REVIEWED_HEAD=\(short) bash <<'X'\ngit push -u origin feature\nX",
+    "bash -c 'echo hi' <<X\ngit push origin other\nX",
   ] {
     #expect(try !denies(command, cwd: root), "\(command)")
   }
