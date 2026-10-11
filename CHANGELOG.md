@@ -6,6 +6,14 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ### Added
 
+- **Session status hook in the Claude Code plugin.** At session start and with every prompt, a Swift hook shows you (`systemMessage`) and gives the agent (`additionalContext`) a short status:
+  - the working directory's branch, upstream with ahead/behind, changed-file count and worktree;
+  - each workspace or project open in Xcode, with its branch and worktree (read through Automation);
+  - the booted Simulators (cached for a minute) and the number of CoreSimulator processes;
+  - the host's load against its cores, available memory, and the working volume's free storage, with a `WARNING` line when the load exceeds twice the cores, memory falls under 15% or storage under 20 GB or 10%;
+  - the other Claude sessions active in the last 30 minutes, with their directory and branch.
+
+  The agent is told to stop and ask when the target checkout differs, or another session works in it, and on an overloaded or full host to tell the user before starting a build, test run or Simulator instead of waiting silently. Git runs without optional locks, so the hook never rewrites an index. Mid-turn, the same Swift binary checks the host before a build, test run or Simulator boot (`xcodebuild`, `swift build`/`test`, `simctl boot`, a `gate.sh`, or an Xcode MCP build, test or run tool) and, when it is overloaded or full, asks the user whether to run now instead of letting the agent wait silently. Git calls run concurrently (about 0.7 s with four open Xcode projects), and a failure prints nothing and never blocks the prompt ([updating](skills/apple-platform-setup/references/updating.md#claude-code-plugin)).
 - **PR gate hook in the Claude Code plugin.** A `PreToolUse` hook denies `gh pr create`, `gh pr ready`, `gh pr edit --base` and a branch `git push`, including inside `sh -c`, `env` or compound commands, unless that command's own `APE_REVIEWED_HEAD=<sha>` assignment names the commit it publishes or its `APE_REVIEW_OVERRIDE` records the user's explicit decision. It holds even when the agent never loaded `git-workflow` or lost it to context compaction, which let one app session open thirteen pull requests without the review loop. Tag pushes, deletions and text that only mentions these commands pass. A small `sh` wrapper passes unrelated commands at once and runs the Swift gate, compiled once per revision into the plugin's data folder ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
 
 ### Changed

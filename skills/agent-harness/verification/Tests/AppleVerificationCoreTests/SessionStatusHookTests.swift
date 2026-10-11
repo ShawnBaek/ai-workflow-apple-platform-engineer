@@ -1,0 +1,258 @@
+import Darwin
+import Foundation
+import Testing
+
+@testable import AppleVerificationCore
+
+private let hook = GateRunSupport.repositoryRoot.appendingPathComponent(
+  "plugin/hooks/session-status.sh")
+
+/// A fixture home with a repository, a linked worktree of it, a fresh Simulator cache and two
+/// session transcripts: this session's and another one's.
+private struct Fixture {
+  let home: URL
+  let repository: URL
+  let worktree: URL
+  let data: URL
+
+  init() throws {
+    let created = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: created, withIntermediateDirectories: true)
+    // Git reports real paths (/private/var/...); `resolvingSymlinksInPath` would strip
+    // /private, so take the home from realpath(3).
+    let real = try #require(realpath(created.path, nil))
+    defer { free(real) }
+    home = URL(fileURLWithPath: String(cString: real))
+    repository = home.appendingPathComponent("app with space")
+    worktree = home.appendingPathComponent("worktree/feature")
+    data = home.appendingPathComponent("plugin-data")
+    let manager = FileManager.default
+    try manager.createDirectory(at: repository, withIntermediateDirectories: true)
+    try manager.createDirectory(at: data, withIntermediateDirectories: true)
+    try git(["init", "-q", "-b", "main"], in: repository)
+    try git(["commit", "-q", "--allow-empty", "-m", "one"], in: repository)
+    try git(["worktree", "add", "-q", "-b", "feature/x", worktree.path], in: repository)
+    try Data("changed".utf8).write(to: worktree.appendingPathComponent("file.txt"))
+    try JSONSerialization.data(withJSONObject: ["names": ["iPhone Fixture"]]).write(
+      to: data.appendingPathComponent("booted-simulators.json"))
+    let projects = home.appendingPathComponent(".claude/projects/fixture")
+    try manager.createDirectory(at: projects, withIntermediateDirectories: true)
+    for (id, cwd, branch) in [
+      ("own-session", repository.path, "main"), ("other-session", "/tmp/other", "fix/y"),
+    ] {
+      let entry = try JSONSerialization.data(withJSONObject: [
+        "cwd": cwd, "gitBranch": branch, "sessionId": id,
+      ])
+      try (Data("{\"type\":\"summary\"}\n".utf8) + entry + Data("\n".utf8)).write(
+        to: projects.appendingPathComponent("\(id).jsonl"))
+    }
+  }
+
+  func git(_ arguments: [String], in directory: URL) throws {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+    process.arguments =
+      ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com"]
+      + arguments
+    process.standardOutput = FileHandle.nullDevice
+    process.standardError = FileHandle.nullDevice
+    try process.run()
+    process.waitUntilExit()
+  }
+
+  /// Runs the hook from `cwd` and returns its decoded output.
+  func status(
+    cwd: URL, event: String = "UserPromptSubmit", sessionID: String = "own-session",
+    budget: String? = nil
+  ) throws -> [String: Any] {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/bin/sh")
+    process.arguments = [hook.path]
+    var environment = ProcessInfo.processInfo.environment
+    environment["HOME"] = home.path
+    environment["CLAUDE_PLUGIN_DATA"] = data.path
+    // A loaded host can take seconds per Git call; the test checks content, not speed.
+    environment["APE_STATUS_TIMEOUT"] = "60"
+    if let budget { environment["APE_STATUS_BUDGET"] = budget }
+    process.environment = environment
+    // Keep the Simulator cache fresh however long the run has taken.
+    try FileManager.default.setAttributes(
+      [.modificationDate: Date()],
+      ofItemAtPath: data.appendingPathComponent("booted-simulators.json").path)
+    let stdin = Pipe()
+    let stdout = Pipe()
+    process.standardInput = stdin
+    process.standardOutput = stdout
+    try process.run()
+    stdin.fileHandleForWriting.write(
+      try JSONSerialization.data(withJSONObject: [
+        "cwd": cwd.path, "session_id": sessionID, "hook_event_name": event,
+      ]))
+    try stdin.fileHandleForWriting.close()
+    let output = stdout.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    #expect(process.terminationStatus == 0)
+    return try #require(JSONSerialization.jsonObject(with: output) as? [String: Any])
+  }
+}
+
+/// The status lines, and the one that starts with `prefix`.
+private func line(_ output: [String: Any], _ prefix: String) throws -> String? {
+  try #require(output["systemMessage"] as? String).split(separator: "\n").map(String.init)
+    .first { $0.hasPrefix(prefix) }
+}
+
+@Test func sessionStatusShowsTheWorktreeSimulatorsHostAndOtherSessions() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  let output = try fixture.status(cwd: fixture.worktree)
+  #expect(
+    try line(output, "Directory")
+      == "Directory ~/worktree/feature · feature/x (no upstream) 1 changed · worktree of "
+      + "~/app with space")
+  #expect(
+    try line(output, "Simulators")?.hasPrefix("Simulators: 1 booted (iPhone Fixture), ") == true)
+  #expect(try line(output, "Host: load ")?.contains(" on ") == true)
+  // This session's own transcript is not another session.
+  #expect(
+    try line(output, "Other Claude sessions")?.hasPrefix(
+      "Other Claude sessions active in 30 min: 1 (/tmp/other@fix/y ") == true)
+  let specific = try #require(output["hookSpecificOutput"] as? [String: Any])
+  #expect(specific["hookEventName"] as? String == "UserPromptSubmit")
+  let context = try #require(specific["additionalContext"] as? String)
+  #expect(context.hasPrefix("Live session environment"))
+  #expect(context.contains("- Simulators: 1 booted (iPhone Fixture)"))
+}
+
+@Test func sessionStatusLeavesTheGitIndexAlone() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  // A tracked file touched after the commit leaves stale stat data that a plain
+  // `git status` would refresh by rewriting the index.
+  let file = fixture.repository.appendingPathComponent("tracked.txt")
+  try Data("one".utf8).write(to: file)
+  try fixture.git(["add", "tracked.txt"], in: fixture.repository)
+  try fixture.git(["commit", "-q", "-m", "tracked"], in: fixture.repository)
+  let index = fixture.repository.appendingPathComponent(".git/index")
+  let before = try #require(
+    FileManager.default.attributesOfItem(atPath: index.path)[.modificationDate] as? Date)
+  Thread.sleep(forTimeInterval: 1.1)
+  try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
+  _ = try fixture.status(cwd: fixture.repository)
+  let after = try #require(
+    FileManager.default.attributesOfItem(atPath: index.path)[.modificationDate] as? Date)
+  #expect(after == before)
+}
+
+@Test func sessionStatusLabelsADetachedHeadAndKeepsSessionsWithoutAnID() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  try fixture.git(["checkout", "-q", "--detach"], in: fixture.repository)
+  let output = try fixture.status(cwd: fixture.repository, sessionID: "")
+  #expect(try line(output, "Directory")?.contains("· (detached ") == true)
+  // Without a session id, every recent transcript counts as another session.
+  #expect(
+    try line(output, "Other Claude sessions")?.hasPrefix(
+      "Other Claude sessions active in 30 min: 2") == true)
+}
+
+@Test func sessionStatusOutsideGitStillAnswers() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  let outside = fixture.home.appendingPathComponent("plain")
+  try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+  let output = try fixture.status(cwd: outside, event: "SessionStart")
+  #expect(try line(output, "Directory") == "Directory ~/plain · not a Git repository")
+  let specific = try #require(output["hookSpecificOutput"] as? [String: Any])
+  #expect(specific["hookEventName"] as? String == "SessionStart")
+}
+
+/// The hook's answer before a tool call: the permission decision, or nil for none.
+private func decision(_ event: [String: Any], data: URL) throws -> String? {
+  let process = Process()
+  process.executableURL = URL(fileURLWithPath: "/bin/sh")
+  process.arguments = [hook.path]
+  var environment = ProcessInfo.processInfo.environment
+  environment["CLAUDE_PLUGIN_DATA"] = data.path
+  process.environment = environment
+  let stdin = Pipe()
+  let stdout = Pipe()
+  process.standardInput = stdin
+  process.standardOutput = stdout
+  try process.run()
+  stdin.fileHandleForWriting.write(try JSONSerialization.data(withJSONObject: event))
+  try stdin.fileHandleForWriting.close()
+  let output = stdout.fileHandleForReading.readDataToEndOfFile()
+  process.waitUntilExit()
+  #expect(process.terminationStatus == 0)
+  guard !output.isEmpty else { return nil }
+  let object = try #require(JSONSerialization.jsonObject(with: output) as? [String: Any])
+  let specific = try #require(object["hookSpecificOutput"] as? [String: Any])
+  #expect(specific["hookEventName"] as? String == "PreToolUse")
+  return specific["permissionDecision"] as? String
+}
+
+@Test func heavyWorkOnAnOverloadedHostGoesToTheUser() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  func event(_ tool: String, _ command: String? = nil) -> [String: Any] {
+    var event: [String: Any] = [
+      "hook_event_name": "PreToolUse", "cwd": fixture.repository.path, "tool_name": tool,
+    ]
+    event["tool_input"] = command.map { ["command": $0] } ?? [:]
+    return event
+  }
+  // Ordinary commands never ask.
+  for command in [
+    "ls -la", "git status", "echo swift is fun", "grep -rn xcodebuild skills",
+    "git commit -m \"bump xcodebuild flags\"", "cat scripts/gate.sh", "xcodebuild -version",
+    "xcrun simctl list", "swift --version", "sh -c 'echo hi'", "bash",
+  ] {
+    #expect(try decision(event("Bash", command), data: fixture.data) == nil, "\(command)")
+  }
+  // Heavy work asks exactly when the host is overloaded; near the threshold the load can move
+  // between the two readings, so only clear cases are judged.
+  var averages = [Double](repeating: 0, count: 3)
+  _ = getloadavg(&averages, 3)
+  let limit = Double(ProcessInfo.processInfo.activeProcessorCount * 2)
+  guard abs(averages[0] - limit) > limit * 0.25 else { return }
+  var level: Int32 = 100
+  var size = MemoryLayout<Int32>.size
+  _ = sysctlbyname("kern.memorystatus_level", &level, &size, nil, 0)
+  let overloaded = averages[0] > limit || level < 15
+  for heavy in [
+    event("Bash", "xcodebuild test -scheme App"), event("Bash", "swift test --parallel"),
+    event("Bash", "xcrun simctl boot ABC"), event("Bash", "cd app && scripts/gate.sh --full"),
+    event("Bash", "env CI=1 xcodebuild build -scheme App 2>&1 | tail"),
+    event("Bash", "bash scripts/gate.sh --dry-run"),
+    event("mcp__xcode__RunAllTests"),
+  ] {
+    #expect(try decision(heavy, data: fixture.data) == (overloaded ? "ask" : nil))
+  }
+}
+
+@Test func sessionStatusIsStableAcrossRuns() throws {
+  // Concurrent Git reads must never drop an answer: a lost one shows a branch as detached or
+  // its changes as unknown.
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  for _ in 0..<20 {
+    let output = try fixture.status(cwd: fixture.repository)
+    #expect(try line(output, "Directory") == "Directory ~/app with space · main (no upstream)")
+  }
+}
+
+@Test func sessionStatusAnswersWithinItsBudget() throws {
+  // With almost no budget left, every slow call is skipped and the status still answers at
+  // once, marking what it could not read.
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  _ = try fixture.status(cwd: fixture.repository)  // compiles the binary first
+  let started = Date()
+  let output = try fixture.status(cwd: fixture.repository, budget: "0.001")
+  #expect(Date().timeIntervalSince(started) < 10)
+  #expect(
+    try line(output, "Directory")
+      == "Directory ~/app with space · Git state unknown (no answer in time)")
+  #expect(try line(output, "Host: load ") != nil)
+}
