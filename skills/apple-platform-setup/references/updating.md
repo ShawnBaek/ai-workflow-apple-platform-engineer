@@ -194,7 +194,10 @@ whether to run it now or wait; in a
 non-interactive run (`claude -p`) that question can stop the build. The same
 hook asks you before an agent creates, clones, deletes or erases a Simulator,
 shuts down every Simulator, or boots one more past the Simulator budget, as
-[xcodebuild](../../xcodebuild/SKILL.md) describes. When Codex hands a task to
+[xcodebuild](../../xcodebuild/SKILL.md) describes. Heavy work an agent starts
+in the background needs the plugin's deadline wrapper, and a turn that would end
+while unbounded background work runs is sent back, as
+[host resources](../../agent-harness/references/host-resources.md) describes. When Codex hands a task to
 Claude, the status shows `Handoff waiting for Claude`, as
 [session-handoff](../../session-handoff/SKILL.md) describes.
 Skills load as `/apple-platform-engineer:<skill>`; a bare name works unless

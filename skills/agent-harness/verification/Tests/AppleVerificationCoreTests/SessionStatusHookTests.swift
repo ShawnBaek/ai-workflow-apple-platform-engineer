@@ -7,6 +7,12 @@ import Testing
 private let hook = GateRunSupport.repositoryRoot.appendingPathComponent(
   "plugin/hooks/session-status.sh")
 
+/// JSON as Claude Code writes it: unlike Foundation's default, `/` stays unescaped, so a fixture
+/// matches a real transcript, event or ledger byte for byte.
+private func fixtureJSON(_ object: Any) throws -> Data {
+  try JSONSerialization.data(withJSONObject: object, options: [.withoutEscapingSlashes])
+}
+
 /// A fixture home with a repository, a linked worktree of it, a fresh Simulator cache and two
 /// session transcripts: this session's and another one's.
 private struct Fixture {
@@ -33,14 +39,14 @@ private struct Fixture {
     try git(["commit", "-q", "--allow-empty", "-m", "one"], in: repository)
     try git(["worktree", "add", "-q", "-b", "feature/x", worktree.path], in: repository)
     try Data("changed".utf8).write(to: worktree.appendingPathComponent("file.txt"))
-    try JSONSerialization.data(withJSONObject: ["names": ["iPhone Fixture"]]).write(
+    try fixtureJSON(["names": ["iPhone Fixture"]]).write(
       to: data.appendingPathComponent("booted-simulators.json"))
     let projects = home.appendingPathComponent(".claude/projects/fixture")
     try manager.createDirectory(at: projects, withIntermediateDirectories: true)
     for (id, cwd, branch) in [
       ("own-session", repository.path, "main"), ("other-session", "/tmp/other", "fix/y"),
     ] {
-      let entry = try JSONSerialization.data(withJSONObject: [
+      let entry = try fixtureJSON([
         "cwd": cwd, "gitBranch": branch, "sessionId": id,
       ])
       try (Data("{\"type\":\"summary\"}\n".utf8) + entry + Data("\n".utf8)).write(
@@ -89,7 +95,7 @@ private struct Fixture {
     process.standardOutput = stdout
     try process.run()
     stdin.fileHandleForWriting.write(
-      try JSONSerialization.data(withJSONObject: [
+      try fixtureJSON([
         "cwd": cwd.path, "session_id": sessionID, "hook_event_name": event,
       ]))
     try stdin.fileHandleForWriting.close()
@@ -199,7 +205,7 @@ private func answer(_ event: [String: Any], data: URL) throws -> (
   process.standardInput = stdin
   process.standardOutput = stdout
   try process.run()
-  stdin.fileHandleForWriting.write(try JSONSerialization.data(withJSONObject: event))
+  stdin.fileHandleForWriting.write(try fixtureJSON(event))
   try stdin.fileHandleForWriting.close()
   let output = stdout.fileHandleForReading.readDataToEndOfFile()
   process.waitUntilExit()
@@ -296,7 +302,7 @@ private func cacheSimulators(
   _ data: URL, booted: [String], previews: [String] = [],
   available: [(String, String)] = []
 ) throws {
-  try JSONSerialization.data(withJSONObject: [
+  try fixtureJSON([
     "names": booted, "previews": previews,
     "available": available.map { ["name": $0.0, "type": $0.1] },
   ]).write(to: data.appendingPathComponent("booted-simulators.json"))
@@ -405,7 +411,7 @@ private func fakeGitHub(
   in home: URL, _ pullRequests: [[String: Any]], defaultBranch: String = "main"
 ) throws -> String {
   let json = home.appendingPathComponent("pull-requests.json")
-  try JSONSerialization.data(withJSONObject: pullRequests).write(to: json)
+  try fixtureJSON(pullRequests).write(to: json)
   let script = home.appendingPathComponent("gh")
   try Data(
     "#!/bin/sh\nif [ \"$1\" = repo ]; then echo '\(defaultBranch)'; else cat '\(json.path)'; fi\n"
@@ -520,7 +526,7 @@ private func pullRequest(
       "to": "codex", "branch": "main", "task": "Newer",
     ],
   ]
-  try events.map { String(decoding: try JSONSerialization.data(withJSONObject: $0), as: UTF8.self) }
+  try events.map { String(decoding: try fixtureJSON($0), as: UTF8.self) }
     .joined(separator: "\n").write(to: ledger, atomically: true, encoding: .utf8)
   // The ledger lives in the common directory, so the linked worktree sees it too.
   for cwd in [fixture.repository, fixture.worktree] {
@@ -534,4 +540,230 @@ private func pullRequest(
       (output["hookSpecificOutput"] as? [String: Any])?["additionalContext"] as? String)
     #expect(context.contains("`handoff resume --as claude`"))
   }
+}
+
+private let deadlineWrapper = GateRunSupport.repositoryRoot.appendingPathComponent(
+  "plugin/hooks/deadline.sh")
+
+/// Runs `deadline.sh` with `arguments` and returns its exit status and standard error.
+private func runUnderDeadline(_ arguments: [String], data: URL) throws -> (Int32, String) {
+  let process = Process()
+  process.executableURL = URL(fileURLWithPath: "/bin/sh")
+  process.arguments = [deadlineWrapper.path] + arguments
+  var environment = ProcessInfo.processInfo.environment
+  environment["APE_DEADLINE_CACHE"] = data.path
+  process.environment = environment
+  let stderr = Pipe()
+  process.standardError = stderr
+  process.standardOutput = FileHandle.nullDevice
+  try process.run()
+  let message = stderr.fileHandleForReading.readDataToEndOfFile()
+  process.waitUntilExit()
+  return (process.terminationStatus, String(decoding: message, as: UTF8.self))
+}
+
+/// Waits up to `seconds` for `pid` to be gone; a stopped process can linger as a zombie briefly.
+private func gone(_ pid: Int32, within seconds: Double = 5) -> Bool {
+  let end = Date().addingTimeInterval(seconds)
+  while Date() < end {
+    if kill(pid, 0) != 0 { return true }
+    usleep(100_000)
+  }
+  return kill(pid, 0) != 0
+}
+
+@Test func theDeadlineWrapperStopsTheWholeCommandAndReportsIt() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  _ = try runUnderDeadline(["5s", "true"], data: fixture.data)  // compiles the wrapper first
+  let pidFile = fixture.home.appendingPathComponent("grandchild.pid")
+  let started = Date()
+  let (status, message) = try runUnderDeadline(
+    ["2s", "--", "sh", "-c", "sleep 300 & echo $! > '\(pidFile.path)'; wait"], data: fixture.data)
+  #expect(status == 124)
+  #expect(message.contains("outlived its 2s deadline and was stopped"))
+  #expect(Date().timeIntervalSince(started) < 60)
+  // The background grandchild belonged to the command's process group and is gone too.
+  let grandchild = try #require(
+    Int32(
+      String(contentsOf: pidFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+    ))
+  #expect(gone(grandchild))
+  // A command that ignores SIGTERM is killed after the grace period.
+  let (ignored, _) = try runUnderDeadline(
+    ["1s", "sh", "-c", "trap '' TERM; sleep 300"], data: fixture.data)
+  #expect(ignored == 124)
+  // The command's own status passes through; a bad call is refused.
+  #expect(try runUnderDeadline(["1m", "sh", "-c", "exit 7"], data: fixture.data).0 == 7)
+  for duration in ["30", "infs", "25h", "0m"] {
+    #expect(try runUnderDeadline([duration, "true"], data: fixture.data).0 == 125, "\(duration)")
+  }
+  #expect(try runUnderDeadline(["30m"], data: fixture.data).0 == 125)
+}
+
+@Test func stoppingTheDeadlineWrapperStopsItsCommand() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  _ = try runUnderDeadline(["5s", "true"], data: fixture.data)  // compiles the wrapper first
+  let pidFile = fixture.home.appendingPathComponent("child.pid")
+  let process = Process()
+  process.executableURL = URL(fileURLWithPath: "/bin/sh")
+  process.arguments = [
+    deadlineWrapper.path, "10m", "--", "sh", "-c", "echo $$ > '\(pidFile.path)'; sleep 300",
+  ]
+  var environment = ProcessInfo.processInfo.environment
+  environment["APE_DEADLINE_CACHE"] = fixture.data.path
+  process.environment = environment
+  try process.run()
+  // `echo > file` creates the file before it writes, so wait until the pid is in it.
+  let end = Date().addingTimeInterval(30)
+  while ((try? String(contentsOf: pidFile, encoding: .utf8)) ?? "").isEmpty && Date() < end {
+    usleep(100_000)
+  }
+  let child = try #require(
+    Int32(
+      String(contentsOf: pidFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+    ))
+  process.terminate()
+  process.waitUntilExit()
+  #expect(process.terminationStatus == 128 + SIGTERM)
+  #expect(gone(child))
+}
+
+@Test func heavyBackgroundWorkNeedsADeadline() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  func check(_ command: String, background: Bool) throws -> (String?, String?) {
+    try answer(
+      [
+        "hook_event_name": "PreToolUse", "cwd": fixture.repository.path, "tool_name": "Bash",
+        "tool_input": ["command": command, "run_in_background": background],
+      ], data: fixture.data)
+  }
+  for (command, background) in [
+    ("xcodebuild test -scheme App", true), ("cd app && sh scripts/gate.sh --full", true),
+    ("env CI=1 swift test --parallel", true), ("xcrun simctl boot ABC", true),
+    ("bash -c 'xcodebuild test -scheme App'", true), ("caffeinate xcodebuild test", true),
+    ("if true; then xcodebuild test; fi", true), ("bash -lc 'xcodebuild test'", true),
+    // `&` sends the whole pipeline or list to the background.
+    ("xcodebuild test | xcpretty &", false), ("cd app && xcodebuild test && echo ok &", false),
+    // A command sent to the background with `&` inside a foreground call.
+    ("nohup xcodebuild test -scheme App > log 2>&1 &", false),
+  ] {
+    let (decision, reason) = try check(command, background: background)
+    #expect(decision == "deny", "\(command)")
+    #expect(reason?.contains("/deadline.sh' 30m -- <command>") == true, "\(command)")
+  }
+  // With the wrapper, in the foreground, or for light work, the deadline rule says nothing.
+  for (command, background) in [
+    ("'/x/hooks/deadline.sh' 30m -- xcodebuild test -scheme App", true),
+    ("sh /x/hooks/deadline.sh 45m xcodebuild test -scheme App", true),
+    ("'/x/deadline.sh' 30m bash -c 'xcodebuild test' &", false),
+    ("xcodebuild test -scheme App 2>&1 | tail", false), ("xcodebuild -version", true),
+    ("git log --oneline &", false),
+  ] {
+    #expect(try check(command, background: background).0 != "deny", "\(command)")
+  }
+}
+
+/// The Stop hook's answer: the block reason, or nil when the turn may end. `tasks` becomes the
+/// `background_tasks` Claude Code sends; without it, the hook reads `transcript`.
+private func stopReason(
+  tasks: [[String: Any]]? = nil, transcript: [[String: Any]] = [], data: URL,
+  active: Bool = false
+) throws -> String? {
+  let file = data.appendingPathComponent("transcript-\(UUID().uuidString).jsonl")
+  try transcript.map { String(decoding: try fixtureJSON($0), as: UTF8.self) }
+    .joined(separator: "\n").write(to: file, atomically: true, encoding: .utf8)
+  var event: [String: Any] = [
+    "hook_event_name": "Stop", "cwd": "/tmp", "transcript_path": file.path,
+    "stop_hook_active": active,
+  ]
+  event["background_tasks"] = tasks
+  let process = Process()
+  process.executableURL = URL(fileURLWithPath: "/bin/sh")
+  process.arguments = [hook.path]
+  var environment = ProcessInfo.processInfo.environment
+  environment["CLAUDE_PLUGIN_DATA"] = data.path
+  process.environment = environment
+  let stdin = Pipe()
+  let stdout = Pipe()
+  process.standardInput = stdin
+  process.standardOutput = stdout
+  try process.run()
+  stdin.fileHandleForWriting.write(try fixtureJSON(event))
+  try stdin.fileHandleForWriting.close()
+  let output = stdout.fileHandleForReading.readDataToEndOfFile()
+  process.waitUntilExit()
+  guard !output.isEmpty else { return nil }
+  let object = try #require(JSONSerialization.jsonObject(with: output) as? [String: Any])
+  #expect(object["decision"] as? String == "block")
+  return object["reason"] as? String
+}
+
+private func shellTask(_ command: String, status: String = "running") -> [String: Any] {
+  [
+    "id": "b\(UUID().uuidString.prefix(8))", "type": "shell", "status": status,
+    "description": "task", "command": command,
+  ]
+}
+
+private func backgroundStart(_ id: String, _ command: String) -> [String: Any] {
+  [
+    "type": "assistant",
+    "message": [
+      "content": [
+        [
+          "type": "tool_use", "id": id, "name": "Bash",
+          "input": ["command": command, "run_in_background": true],
+        ]
+      ]
+    ],
+  ]
+}
+
+private func notification(_ id: String) -> [String: Any] {
+  [
+    "type": "user",
+    "message": [
+      "content": "<task-notification><tool-use-id>\(id)</tool-use-id><status>completed</status>"
+        + "</task-notification>"
+    ],
+  ]
+}
+
+@Test func aTurnEndsOnlyWhenNoUnboundedBackgroundWorkRuns() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  // In flight without a deadline: a build, a watch, or a loop that may never end.
+  for command in [
+    "xcodebuild test -scheme App", "gh run watch 42 --exit-status",
+    "until [ -f done ]; do sleep 5; done", "bash -c 'xcodebuild test'",
+    "for d in A B; do while true; do sleep 1; done; echo $d; done",
+  ] {
+    let reason = try stopReason(tasks: [shellTask(command)], data: fixture.data)
+    #expect(reason?.contains("still run without a deadline") == true, "\(command)")
+  }
+  // Finished, under a deadline, bounded, not a shell, or already sent back once: it may end.
+  for tasks in [
+    [shellTask("xcodebuild test", status: "completed")],
+    [shellTask("'/x/deadline.sh' 30m -- xcodebuild test")], [shellTask("sleep 600")],
+    [shellTask("for d in A B; do sleep 1; done")],
+    [shellTask("tail -f log")],
+    [["id": "a1", "type": "subagent", "status": "running", "description": "review"]],
+    [],
+  ] {
+    #expect(try stopReason(tasks: tasks, data: fixture.data) == nil, "\(tasks)")
+  }
+  #expect(
+    try stopReason(tasks: [shellTask("xcodebuild test")], data: fixture.data, active: true) == nil
+  )
+  // A client without `background_tasks`: the transcript's unfinished background starts count.
+  #expect(
+    try stopReason(transcript: [backgroundStart("toolu_1", "xcodebuild test")], data: fixture.data)
+      != nil)
+  #expect(
+    try stopReason(
+      transcript: [backgroundStart("toolu_1", "xcodebuild test"), notification("toolu_1")],
+      data: fixture.data) == nil)
 }

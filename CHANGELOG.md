@@ -4,6 +4,17 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+### Added
+
+- **Background work gets a deadline.** An agent started a Simulator screenshot capture in the background on an overloaded host, ended its turn with "I'll show you when it's done", and the capture hung: nothing woke the session for 44 minutes. The Claude Code plugin now:
+  - ships `hooks/deadline.sh <duration> [--] <command>` (Swift; at most 24 hours), which runs the command in its own process group and, at the deadline or when the wrapper is stopped, sends the group SIGTERM, then SIGKILL after ten seconds; at the deadline it exits 124 with a message, which wakes the session. It is compiled at session start;
+  - denies `xcodebuild`, `swift build`/`test`, `simctl boot` or a `gate.sh` started in the background without that wrapper, whether the whole call runs in the background or the command ends in `&`, also inside `sh -c`, `caffeinate`, `nohup` or `if`/`while` bodies, naming the command to run (30 minutes by default);
+  - adds a `Stop` hook that sends the turn back once when a shell task Claude Code still lists as running, including one moved to the background, is heavy work or may wait without end (a `gh` watch or a loop) and has no deadline.
+
+  Limits: a command started some other way (another interpreter, a script file) is not inspected, and processes that launchd starts for the command, such as a Simulator's services, are outside its process group.
+
+  [Host resources](skills/agent-harness/references/host-resources.md) owns the rule for every client.
+
 ## [2.2] - 2026-10-12
 
 The Claude Code plugin now keeps agents from piling up Simulators and merged branches, and a task can move between Claude Code and Codex sessions with a record of every handoff.
