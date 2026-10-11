@@ -9,23 +9,88 @@ import Foundation
 struct Word {
   var text = ""
   var quoted = false
+  /// A quote began before any `=`, so the word cannot be an assignment.
+  var quotedName = false
+  /// The source of each `$(…)` or backtick substitution inside the word, which runs as its
+  /// own command line.
+  var substitutions = [String]()
 }
 
-/// Splits `source` into simple commands of words, honouring quotes and backslashes. Unquoted
-/// `&&`, `||`, `;`, `|`, `&`, newlines, parentheses and braces end a command.
+/// Reads a `$(…)` body after its opening parenthesis, through the matching one.
+func substitution(_ characters: inout ArraySlice<Character>) -> String {
+  var body = ""
+  var depth = 1
+  var quote: Character?
+  while let next = characters.popFirst() {
+    if let open = quote {
+      if next == open { quote = nil }
+    } else if next == "'" || next == "\"" {
+      quote = next
+    } else if next == "(" {
+      depth += 1
+    } else if next == ")" {
+      depth -= 1
+      if depth == 0 { break }
+    }
+    body.append(next)
+  }
+  return body
+}
+
+/// Reads a backtick body after its opening backtick, through the closing one.
+func backtick(_ characters: inout ArraySlice<Character>) -> String {
+  var body = ""
+  while let next = characters.popFirst(), next != "`" { body.append(next) }
+  return body
+}
+
+/// Splits `source` into simple commands of words, honouring quotes, backslashes, `#` comments,
+/// redirections (dropped with their targets) and command substitutions. Unquoted `&&`, `||`,
+/// `;`, `|`, `&`, newlines, parentheses and braces end a command.
 func simpleCommands(_ source: String) -> [[Word]] {
   var commands = [[Word]]()
   var words = [Word]()
   var word: Word?
+  var dropNextWord = false
   var characters = Array(source)[...]
   func endWord() {
-    if let finished = word { words.append(finished) }
+    if let finished = word {
+      if dropNextWord {
+        dropNextWord = false
+        // A redirection target is not an argument, but a substitution in it still runs.
+        if !finished.substitutions.isEmpty {
+          words.append(Word(text: "", quoted: true, substitutions: finished.substitutions))
+        }
+      } else {
+        words.append(finished)
+      }
+    }
     word = nil
   }
   func endCommand() {
     endWord()
+    dropNextWord = false
     if !words.isEmpty { commands.append(words) }
     words = []
+  }
+  func redirect() {
+    // A file descriptor number written right before the operator belongs to it.
+    if let current = word, !current.quoted, current.text.allSatisfy(\.isNumber) { word = nil }
+    endWord()
+    while let next = characters.first, next == ">" || next == "<" || next == "|" {
+      characters.removeFirst()
+    }
+    if characters.first == "&" {
+      characters.removeFirst()
+      // `>&2` or `>&-` duplicates a descriptor; `>& file` names a file.
+      if let next = characters.first, next.isNumber || next == "-" {
+        while let digit = characters.first, digit.isNumber || digit == "-" {
+          characters.removeFirst()
+        }
+        return
+      }
+    }
+    dropNextWord = true
   }
   while let character = characters.popFirst() {
     switch character {
@@ -37,18 +102,39 @@ func simpleCommands(_ source: String) -> [[Word]] {
     case "'":
       word = word ?? Word()
       word!.quoted = true
+      if !word!.text.contains("=") { word!.quotedName = true }
       while let next = characters.popFirst(), next != "'" { word!.text.append(next) }
     case "\"":
       word = word ?? Word()
       word!.quoted = true
+      if !word!.text.contains("=") { word!.quotedName = true }
       while let next = characters.popFirst(), next != "\"" {
         if next == "\\", let escaped = characters.popFirst() {
           if !"\"\\$`".contains(escaped) { word!.text.append(next) }
           word!.text.append(escaped)
+        } else if next == "$", characters.first == "(" {
+          characters.removeFirst()
+          word!.substitutions.append(substitution(&characters))
+        } else if next == "`" {
+          word!.substitutions.append(backtick(&characters))
         } else {
           word!.text.append(next)
         }
       }
+    case "$" where characters.first == "(":
+      characters.removeFirst()
+      word = word ?? Word()
+      word!.substitutions.append(substitution(&characters))
+    case "`":
+      word = word ?? Word()
+      word!.substitutions.append(backtick(&characters))
+    case "#" where word == nil:
+      while let next = characters.first, next != "\n" { characters.removeFirst() }
+    case ">", "<":
+      redirect()
+    case "&" where characters.first == ">":
+      characters.removeFirst()
+      redirect()
     case " ", "\t":
       endWord()
     case "\n", ";", "&", "|", "(", ")", "{", "}":
@@ -62,11 +148,12 @@ func simpleCommands(_ source: String) -> [[Word]] {
   return commands
 }
 
-/// Leading `NAME=value` assignments, and the words after them.
+/// Leading `NAME=value` assignments, and the words after them. A word written in quotes is
+/// never an assignment: the shell runs it as the command name.
 func assignments(_ words: [Word]) -> ([String: String], ArraySlice<Word>) {
   var values = [String: String]()
   var rest = words[...]
-  while let first = rest.first, !first.text.hasPrefix("="),
+  while let first = rest.first, !first.quotedName, !first.text.hasPrefix("="),
     let equals = first.text.firstIndex(of: "="),
     first.text[..<equals].allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" })
   {
@@ -126,18 +213,48 @@ struct Gate {
     }
   }
 
+  /// Checks a nested command line (`sh -c`, `eval`, a substitution) with the outer command's
+  /// assignments in front of each of its commands.
+  mutating func checkLine(_ source: String, _ marker: [String: String], depth: Int) {
+    var inner = Gate(directory: directory)
+    for nested in simpleCommands(source) {
+      inner.check(prefixed(nested, marker), depth: depth + 1)
+    }
+    reasons += inner.reasons
+  }
+
   mutating func check(_ command: [Word], depth: Int = 0) {
+    guard depth < 6 else {
+      reasons.append("The command nests too deeply to check.")
+      return
+    }
     var (marker, rest) = assignments(command)
-    // Wrappers that run the next word as the command.
+    for word in command {
+      for source in word.substitutions { checkLine(source, marker, depth: depth) }
+    }
+    // Keywords and wrappers that run the following words as the command.
+    let optionArguments: Set = ["-u", "-g", "-n", "-s", "-k", "-I", "-L", "-P", "-E", "-d"]
     while let first = rest.first?.text {
       if first == "env" {
-        let (more, after) = assignments(Array(rest.dropFirst()))
+        rest = rest.dropFirst()
+        while let option = rest.first?.text, option.hasPrefix("-") {
+          rest = rest.dropFirst(option == "-u" || option == "-S" ? 2 : 1)
+        }
+        let (more, after) = assignments(Array(rest))
         marker.merge(more) { _, new in new }
         rest = after
-      } else if ["command", "time", "nohup", "exec", "builtin", "then", "do", "else", "!"]
-        .contains(first)
-      {
+      } else if first == "eval" {
+        checkLine(rest.dropFirst().map(\.text).joined(separator: " "), marker, depth: depth)
+        return
+      } else if [
+        "command", "time", "nohup", "exec", "builtin", "then", "do", "else", "!", "if", "elif",
+        "while", "until", "sudo", "nice", "xargs", "timeout",
+      ].contains(first) {
         rest = rest.dropFirst()
+        while let option = rest.first?.text, option.hasPrefix("-") {
+          rest = rest.dropFirst(optionArguments.contains(option) ? 2 : 1)
+        }
+        if first == "timeout" { rest = rest.dropFirst() }  // the duration
       } else {
         break
       }
@@ -145,15 +262,11 @@ struct Gate {
     guard let program = rest.first?.text else { return }
     let arguments = rest.dropFirst().map(\.text)
     let name = (program as NSString).lastPathComponent
-    if ["sh", "bash", "zsh", "dash"].contains(name), depth < 4,
+    if ["sh", "bash", "zsh", "dash"].contains(name),
       let flag = arguments.firstIndex(where: { $0.hasPrefix("-") && $0.contains("c") }),
       flag + 1 < arguments.count
     {
-      var inner = Gate(directory: directory)
-      for nested in simpleCommands(arguments[flag + 1]) {
-        inner.check(marker.isEmpty ? nested : prefixed(nested, marker), depth: depth + 1)
-      }
-      reasons += inner.reasons
+      checkLine(arguments[flag + 1], marker, depth: depth)
       return
     }
     switch name {
@@ -211,10 +324,15 @@ struct Gate {
     var options = arguments[(index + 1)...].makeIterator()
     while let argument = options.next() {
       switch argument {
-      case "--delete", "-d", "--prune", "--dry-run", "-n":
+      case "--delete", "-d", "--dry-run", "-n":
         return
       case "--tags":
         tagsOnly = true
+      case "--all", "--branches", "--mirror":
+        if marker["APE_REVIEW_OVERRIDE"]?.isEmpty == false { return }
+        reasons.append(
+          "git push \(argument) publishes every branch; push each reviewed branch by name.")
+        return
       case "--repo", "--receive-pack", "--exec", "-o", "--push-option":
         _ = options.next()
       default:
@@ -229,13 +347,25 @@ struct Gate {
     }
     for refspec in refspecs {
       var source = refspec.hasPrefix("+") ? String(refspec.dropFirst()) : refspec
-      if let colon = source.firstIndex(of: ":") { source = String(source[..<colon]) }
+      var destination = source
+      if let colon = source.firstIndex(of: ":") {
+        destination = String(source[source.index(after: colon)...])
+        source = String(source[..<colon])
+      }
       if source.isEmpty { continue }  // `:branch` deletes a remote ref.
-      if source.hasPrefix("refs/tags/")
+      if source.contains("*") {
+        if marker["APE_REVIEW_OVERRIDE"]?.isEmpty == false { continue }
+        reasons.append(
+          "git push \(refspec) publishes a pattern; push each reviewed branch by name.")
+        continue
+      }
+      let toTag = destination.hasPrefix("refs/tags/") || destination == source
+      let isTag =
+        source.hasPrefix("refs/tags/")
         || (git(["show-ref", "--verify", "--quiet", "refs/tags/\(source)"], in: repository) != nil
           && git(["show-ref", "--verify", "--quiet", "refs/heads/\(source)"], in: repository)
             == nil)
-      {
+      if toTag && isTag {
         continue
       }
       require(marker, publishing: source, in: repository, "git push \(refspec)")

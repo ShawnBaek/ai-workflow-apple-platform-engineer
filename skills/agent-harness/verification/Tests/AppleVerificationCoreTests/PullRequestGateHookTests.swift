@@ -65,6 +65,7 @@ private func repository() throws -> (URL, String, String) {
   try git("tag", "v2.0")
   try git("branch", "other")
   try git("commit", "-q", "--allow-empty", "-m", "two")
+  try git("branch", "feature")
   return (root, try git("rev-parse", "HEAD"), try git("rev-parse", "other"))
 }
 
@@ -90,6 +91,13 @@ private func repository() throws -> (URL, String, String) {
     "sh -c \"gh pr create\"", "bash -c 'git push'", "{ git push; }",
     "if true; then gh pr create; fi", "env gh pr create", "command git push",
     "gh -R owner/repo pr create", "git -c key=value push", "git --no-pager push",
+    "git push -u origin feature 2>&1", "URL=\"$(gh pr create --fill)\"", "echo `gh pr create`",
+    "URL=$(gh pr create)", "if git push origin feature; then echo ok; fi",
+    "while ! git push; do sleep 1; done", "eval \"git push origin feature\"", "xargs git push",
+    "timeout 60 git push", "sudo git push", "env -i gh pr create", "time -p git push",
+    "git push origin v2.0:refs/heads/feature",
+    "git push --prune origin 'refs/heads/*:refs/heads/*'",
+    "git push --all", "gh pr create --title 'x' # comment", "gh pr create --title 'x",
   ] {
     #expect(try denies(command, cwd: root), "\(command)")
   }
@@ -102,6 +110,12 @@ private func repository() throws -> (URL, String, String) {
     "cd \"\(path)\"; APE_REVIEWED_HEAD=\(short) git push",
     "env APE_REVIEWED_HEAD=\(short) gh pr create",
     "APE_REVIEW_OVERRIDE='the user chose to publish without review' gh pr create",
+    "APE_REVIEWED_HEAD=\(short) git push -u origin feature 2>&1",
+    "APE_REVIEWED_HEAD=\(short) git push -u origin feature > /dev/null",
+    "APE_REVIEWED_HEAD=\(short) git push -u origin feature &> /tmp/log # push",
+    "APE_REVIEWED_HEAD=\(short) URL=\"$(gh pr create --fill)\"",
+    "APE_REVIEWED_HEAD=\(short) gh pr create --body \"$(cat <<'X'\nit's done; git push later\nX\n)\"",
+    "APE_REVIEW_OVERRIDE='the user chose to' git push --all",
   ] {
     #expect(try !denies(command, cwd: root), "\(command)")
   }
@@ -115,6 +129,7 @@ private func repository() throws -> (URL, String, String) {
     "git push origin v2.0", "git push origin refs/tags/v2.0", "git push --tags",
     "git push --delete origin old", "git push origin :old",
     "echo 'how to gh pr create'", "grep -n \"git push\" README.md",
+    "git log --oneline | grep push", "\"APE_REVIEW_OVERRIDE=x\" gh pr create",
   ] {
     #expect(try !denies(command, cwd: root), "\(command)")
   }
