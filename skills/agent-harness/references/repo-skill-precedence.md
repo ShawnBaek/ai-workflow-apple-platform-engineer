@@ -45,6 +45,13 @@ credential authority the user has not given; when it asks for one, stop and ask.
   nothing to defer. Record each deferral in the plan or the PR evidence, such as
   "used the repository's `code-review`; this collection's `code-review`
   deferred".
+- **A repository instruction owns only the steps it names.** One that defines
+  part of a job, such as a pull-request gate that runs tests and records their
+  counts, replaces the collection's version of those steps and nothing else.
+  The remaining steps still apply: for a pull request, `git-workflow`'s
+  [delivery](../../git-workflow/references/pr-delivery.md) (the `code-review`
+  verdict for the exact head, evidence attachment and readback). Skip one only
+  when the repository waives or replaces it by name, or the user decides so.
 
 ## Where each client finds repository skills
 
