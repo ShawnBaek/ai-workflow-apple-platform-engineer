@@ -4,9 +4,18 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+## [2.2] - 2026-10-12
+
+The Claude Code plugin now keeps agents from piling up Simulators and merged branches, and a task can move between Claude Code and Codex sessions with a record of every handoff.
+
+### Migration
+
+- **Private harnesses: observe `runtime-identity` and the skill bundle again** ([#133], [#134], [#135]). [#135] changes the verifier's Swift sources (`verification/Sources` adds `apple-verify handoff`), so recover the runtime binding as the 2.0.0-beta.11 Migration item describes: finish or safely recover active leases, [build and locate the verifier](skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier), run `runtime-identity`, and review and update the private bindings. All three change skills that every harness requires (`agent-harness`, `git-workflow` or `apple-platform-setup`), so re-derive `expected_bundle_sha256` as the 2.0.0-beta.12 Migration item describes. [#133] also changes the bundle for a harness whose task skills include `xcodebuild`, and [#135] for one that includes `apple-platform-engineer`; [#135] adds the `session-handoff` skill.
+- **Expect questions you did not get before:** the plugin now asks before an agent creates, clones, deletes or erases a Simulator, runs `simctl shutdown all`, or boots past the Simulator budget (`APE_SIMULATOR_BUDGET`, default 2). Raise the budget if your host has room.
+
 ### Added
 
-- **Simulator guard in the Claude Code plugin.** Agents kept creating their own Simulators (`Timeline Gate iPhone 18 Pro`, `agent-…`) and never deleting them, and Xcode Preview devices stayed booted unseen; six booted devices ran about 1,300 CoreSimulator processes. The session status hook now:
+- **Simulator guard in the Claude Code plugin** ([#133]). Agents kept creating their own Simulators (`Timeline Gate iPhone 18 Pro`, `agent-…`) and never deleting them, and Xcode Preview devices stayed booted unseen; six booted devices ran about 1,300 CoreSimulator processes. The session status hook now:
   - lists booted Xcode Preview devices next to the default set, with a `WARNING` once both together exceed the Simulator budget (`APE_SIMULATOR_BUDGET`, default 2);
   - asks the user before `simctl create` or `clone`, naming the existing devices of the same type to reuse;
   - asks before any `simctl delete` or `erase` and before `simctl shutdown all`, in either set;
@@ -16,13 +25,9 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
   Quoted words now count as command words, and `xcrun` options and `simctl --profiles` are skipped, so `xcrun --sdk iphonesimulator simctl delete …` or `simctl shutdown "all"` is seen; a wrapper given by full path, such as `/usr/bin/xcrun`, is recognized.
 
   The [xcodebuild](skills/xcodebuild/SKILL.md) skill names the Preview set and the hook.
-- **Clean up after a merge** ([git-workflow](skills/git-workflow/references/branch-hygiene.md)). Agents kept working on branches whose PR had merged, merged `main` into them, and left worktrees and local branches behind; one checkout held 29 local branches from merged PRs. Once a PR merges, follow-up work starts a new branch from the refreshed base; the task removes only the worktree, local branch and (by policy or approval) remote branch it created; older leftovers go into a read-only sweep report and are removed only from an approved list. The Claude Code session status warns when the session's branch belongs to a merged PR and counts the local branches and worktrees whose latest PR merged (`gh pr list`, cached ten minutes per repository; fork pull requests, the default branch and a branch an open pull request targets never count).
+- **Clean up after a merge** ([#134], [git-workflow](skills/git-workflow/references/branch-hygiene.md)). Agents kept working on branches whose PR had merged, merged `main` into them, and left worktrees and local branches behind; one checkout held 29 local branches from merged PRs. Once a PR merges, follow-up work starts a new branch from the refreshed base; the task removes only the worktree, local branch and (by policy or approval) remote branch it created; older leftovers go into a read-only sweep report and are removed only from an approved list. The Claude Code session status warns when the session's branch belongs to a merged PR and counts the local branches and worktrees whose latest PR merged (`gh pr list`, cached ten minutes per repository; fork pull requests, the default branch, also read from `gh repo view` when `origin/HEAD` is missing ([#135]), and a branch an open pull request targets never count).
 
-- **Session handoff between Claude Code and Codex** ([session-handoff](skills/session-handoff/SKILL.md)). `apple-verify handoff create|resume|list|close` hands a task to the other agent with a brief, records who delegated what and when in an append-only ledger in the repository's Git common directory (shared by every worktree, never committed), and keeps each back-and-forth in one thread. `create` prints the one command that continues the task in the other client, which starts only when `resume` succeeds; nothing starts automatically. `resume` records the pickup and prints a prompt with the thread's history, a check of the current worktree, branch and HEAD, and the brief fenced as the other agent's report. Approvals never travel with a handoff, and a brief cannot grant one. A newer handoff in a thread supersedes an older one nobody resumed; an unreadable ledger line is skipped with a warning. The Claude Code session status shows a handoff waiting for Claude; Codex lists its waiting handoffs when asked to continue.
-
-### Fixed
-
-- **Session status:** a repository created without cloning, which has no `origin/HEAD`, takes its default branch from `gh repo view`, so a merged back-merge from it is never counted; `gh` keeps its four-second limit unless `APE_STATUS_TIMEOUT` raises every limit; the overload test judges a call only when the host readings before and after it agree.
+- **Session handoff between Claude Code and Codex** ([#135], [session-handoff](skills/session-handoff/SKILL.md)). `apple-verify handoff create|resume|list|close` hands a task to the other agent with a brief, records who delegated what and when in an append-only ledger in the repository's Git common directory (shared by every worktree, never committed), and keeps each back-and-forth in one thread. `create` prints the one command that continues the task in the other client, which starts only when `resume` succeeds; nothing starts automatically. `resume` records the pickup and prints a prompt with the thread's history, a check of the current worktree, branch and HEAD, and the brief fenced as the other agent's report. Approvals never travel with a handoff, and a brief cannot grant one. A newer handoff in a thread supersedes an older one nobody resumed; an unreadable ledger line is skipped with a warning. The Claude Code session status shows a handoff waiting for Claude; Codex lists its waiting handoffs when asked to continue.
 
 ## [2.1] - 2026-10-11
 
@@ -253,7 +258,8 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 - Fail-open authorization paths are closed: a `stop` ends the run's authority, a later `rejected` repository decision revokes approval, dispatch re-reads the clock after health probes, and a direct Issue target must be the bound Issue ([#90]).
 - Observed staged and outgoing paths list both sides of a rename, so content cannot leave an unauthorized directory unchecked ([#73]).
 
-[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.1...HEAD
+[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.2...HEAD
+[2.2]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.1...v2.2
 [2.1]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0...v2.1
 [2.0]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.12...v2.0
 [2.0.0-beta.12]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.11...v2.0.0-beta.12
@@ -343,3 +349,6 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 [#127]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/127
 [#130]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/130
 [#131]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/131
+[#133]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/133
+[#134]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/134
+[#135]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/135
