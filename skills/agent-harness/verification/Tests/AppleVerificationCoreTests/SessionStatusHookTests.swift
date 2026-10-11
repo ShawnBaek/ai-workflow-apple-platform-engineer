@@ -185,11 +185,11 @@ private func answer(_ event: [String: Any], data: URL) throws -> (
   environment["APE_SIMULATOR_BUDGET"] = "2"
   process.environment = environment
   // However long compiling the hook takes on a loaded host, the written Simulators stay fresh: a
-  // future date never ages past the cache's minute.
+  // date an hour ahead never ages past the cache's minute.
   let cached = data.appendingPathComponent("booted-simulators.json")
   if FileManager.default.fileExists(atPath: cached.path) {
     try FileManager.default.setAttributes(
-      [.modificationDate: Date.distantFuture], ofItemAtPath: cached.path)
+      [.modificationDate: Date().addingTimeInterval(3600)], ofItemAtPath: cached.path)
   }
   let stdin = Pipe()
   let stdout = Pipe()
@@ -336,7 +336,7 @@ private func cacheSimulators(
     "xcrun simctl delete unavailable", "xcrun simctl erase ABC", "xcrun simctl shutdown all",
     "xcrun simctl --set previews shutdown all", "xcrun --sdk iphonesimulator simctl delete X",
     "xcrun simctl --profiles /tmp/p delete X", "xcrun simctl \"delete\" X",
-    "xcrun simctl shutdown 'all'",
+    "xcrun simctl shutdown 'all'", "xcrun simctl \\\n  delete X",
   ] {
     #expect(try ask(command) != nil, "\(command)")
   }
@@ -344,7 +344,7 @@ private func cacheSimulators(
   // Reading, or stopping one named device, never asks for a Simulator rule.
   for command in [
     "xcrun simctl list devices", "xcrun simctl shutdown ABC", "echo simctl create x",
-    "git commit -m 'simctl delete docs; xcrun simctl delete all'",
+    "git commit -m 'simctl delete docs; xcrun simctl delete all'", "echo don\\'t simctl delete",
   ] {
     #expect(try ask(command)?.contains("Simulator") != true, "\(command)")
   }
@@ -361,6 +361,7 @@ private func cacheSimulators(
   for (command, tool) in [
     ("xcodebuild test -scheme App", "Bash"), ("sh scripts/gate.sh", "Bash"),
     ("", "mcp__xcode__RunAllTests"), ("", "mcp__xcode__DeviceInteractionStartSession"),
+    ("xcodebuild -scheme App \\\n  test -destination id=X", "Bash"),
   ] {
     #expect(
       try ask(command, tool: tool)?.contains("over the budget of 2") == true, "\(tool) \(command)")

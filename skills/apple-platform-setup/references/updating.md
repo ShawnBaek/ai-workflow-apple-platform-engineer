@@ -187,7 +187,7 @@ Claude sessions active in the last 30 minutes, at session start and with every
 prompt; it reads Xcode through Automation, so allow that once when macOS asks.
 On an overloaded or full host, a build, test run or Simulator boot (`xcodebuild`,
 `swift build` or `swift test`, `simctl boot`, a `gate.sh`, or an Xcode MCP
-build, test or run tool) first asks you whether to run it now or wait; in a
+build, test or run tool, or `DeviceInteractionInstallAndRun`) first asks you whether to run it now or wait; in a
 non-interactive run (`claude -p`) that question can stop the build. The same
 hook asks you before an agent creates, clones, deletes or erases a Simulator,
 shuts down every Simulator, or boots one more past the Simulator budget, as

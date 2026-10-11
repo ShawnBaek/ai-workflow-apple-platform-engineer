@@ -217,7 +217,7 @@ func simulators(cache: URL) -> Simulators? {
   var found: Simulators?
   if let all = devices(answers[0]) {
     found = Simulators(
-      booted: all.filter { $0["state"] as? String == "Booted" }
+      booted: all.filter { ["Booted", "Booting"].contains($0["state"] as? String ?? "") }
         .compactMap { $0["name"] as? String }.sorted(),
       previews: (devices(answers[1]) ?? []).compactMap { $0["name"] as? String }.sorted(),
       available: all.filter { $0["isAvailable"] as? Bool == true }.compactMap { device in
@@ -440,8 +440,18 @@ func commandWords(_ command: String) -> [[String]] {
     if !words.isEmpty { commands.append(words) }
     words = []
   }
+  var escaped = false
   for character in command {
-    if let open = quote {
+    if escaped {
+      // A backslash and newline continue the line; any other escaped character is literal.
+      if character != "\n" {
+        word.append(character)
+        inWord = true
+      }
+      escaped = false
+    } else if character == "\\" && quote != "'" {
+      escaped = true
+    } else if let open = quote {
       if character == open { quote = nil } else { word.append(character) }
     } else if character == "'" || character == "\"" {
       quote = character
@@ -484,7 +494,9 @@ func commandWords(_ command: String) -> [[String]] {
 func heavyWork(_ event: [String: Any]) -> String? {
   let tool = event["tool_name"] as? String ?? ""
   if tool.hasPrefix("mcp__"),
-    let action = (["BuildProject"] + deviceTools).first(where: {
+    let action = [
+      "BuildProject", "RunAllTests", "RunSomeTests", "RunProject", "DeviceInteractionInstallAndRun",
+    ].first(where: {
       tool.hasSuffix("__\($0)")
     })
   {
@@ -541,9 +553,6 @@ func simctlCalls(_ command: String) -> [(set: String?, subcommand: String, argum
   }
 }
 
-/// Why a tool call needs the user under the Simulator rules, one reason per rule it meets: it
-/// creates or clones a device, deletes or erases one, shuts down every device, boots one more
-/// at the budget, or starts tests or a run above it. `simulators` is read only when needed.
 /// The Xcode MCP tools that run tests or the app, or open a device session, on a Simulator
 /// they may boot.
 let deviceTools = [
@@ -551,6 +560,9 @@ let deviceTools = [
   "DeviceInteractionStartSession", "DeviceInteractionStartWorkspaceSession",
 ]
 
+/// Why a tool call needs the user under the Simulator rules, one reason per rule it meets: it
+/// creates or clones a device, deletes or erases one, shuts down every device, boots one more
+/// at the budget, or starts tests or a run above it. `simulators` is read only when needed.
 func simulatorReasons(_ event: [String: Any], simulators: () -> Simulators?) -> [String] {
   let tool = event["tool_name"] as? String ?? ""
   var reasons = [String]()
@@ -668,8 +680,9 @@ if event["hook_event_name"] as? String == "PreToolUse" {
   // reading asks `simctl` again rather than letting a second boot pass on the old count.
   let changing: Set = ["boot", "create", "clone", "delete", "erase", "shutdown"]
   let command = (event["tool_input"] as? [String: Any])?["command"] as? String ?? ""
-  if event["tool_name"] as? String == "Bash",
-    simctlCalls(command).contains(where: { changing.contains($0.subcommand) })
+  let tool = event["tool_name"] as? String ?? ""
+  if tool == "Bash" && simctlCalls(command).contains(where: { changing.contains($0.subcommand) })
+    || tool.hasPrefix("mcp__") && deviceTools.contains(where: { tool.hasSuffix("__\($0)") })
   {
     try? FileManager.default.removeItem(
       at: cache.appendingPathComponent("booted-simulators.json"))
