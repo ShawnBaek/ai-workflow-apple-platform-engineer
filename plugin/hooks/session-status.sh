@@ -4,6 +4,15 @@
 # is informational, so a failure prints nothing and never blocks the prompt.
 
 input=$(cat)
+# Before a tool call, only builds, tests and Simulator boots are checked.
+case "$input" in
+  *'"PreToolUse"'*)
+    case "$input" in
+      *xcodebuild* | *swift* | *simctl* | *gate.sh* | *'"mcp__'*) ;;
+      *) exit 0 ;;
+    esac
+    ;;
+esac
 here=$(dirname "$0")
 source="$here/session_status.swift"
 cache="${CLAUDE_PLUGIN_DATA:-$HOME/Library/Caches/apple-platform-engineer}"

@@ -55,6 +55,11 @@ final class Box<Value>: @unchecked Sendable {
     get { lock.withLock { stored } }
     set { lock.withLock { stored = newValue } }
   }
+  /// Changes the value in one locked step; `box.value[i] = x` would read, change and write
+  /// back in separate steps and lose a concurrent change.
+  func mutate(_ body: (inout Value) -> Void) {
+    lock.withLock { body(&stored) }
+  }
 }
 
 /// Runs a program by argument vector and returns its trimmed standard output, or nil when it
@@ -93,7 +98,7 @@ func runAll(_ commands: [[String]]) -> [String?] {
   let results = Box([String?](repeating: nil, count: commands.count))
   DispatchQueue.concurrentPerform(iterations: commands.count) { index in
     let value = run(commands[index])
-    results.value[index] = value
+    results.mutate { $0[index] = value }
   }
   return results.value
 }
@@ -218,7 +223,8 @@ func otherSessions(home: String, ownID: String) -> [OtherSession] {
   return found.sorted { $0.minutesAgo < $1.minutesAgo }
 }
 
-/// Processes running from a Simulator runtime, counted from the kernel's process list.
+/// Processes running from CoreSimulator or a Simulator runtime (services and booted devices),
+/// counted from the kernel's process list: a load signal, not a device count.
 func simulatorProcessCount() -> Int {
   let capacity = Int(proc_listallpids(nil, 0)) + 64
   guard capacity > 64 else { return 0 }
@@ -295,7 +301,7 @@ func lines(
   if host.isOverloaded {
     out.append(
       "WARNING Host overloaded: \(loadText), \(memoryText), "
-        + "\(host.simulatorProcesses) Simulator processes")
+        + "\(host.simulatorProcesses) CoreSimulator processes")
   }
   if host.isStorageLow, let free = host.freeBytes {
     out.append("WARNING Storage low: \(gigabytes(free)) free on \(host.volume)")
@@ -319,11 +325,11 @@ func lines(
     out.append(
       "Simulators: \(simulators.count) booted"
         + (simulators.isEmpty ? "" : " (\(simulators.joined(separator: ", ")))")
-        + ", \(host.simulatorProcesses) Simulator processes")
+        + ", \(host.simulatorProcesses) CoreSimulator processes")
   } else {
     out.append(
       "Simulators: booted list unknown (xcrun simctl did not answer), "
-        + "\(host.simulatorProcesses) Simulator processes")
+        + "\(host.simulatorProcesses) CoreSimulator processes")
   }
   let storage =
     host.freeBytes.map { free in
@@ -339,6 +345,32 @@ func lines(
   return out
 }
 
+/// What a tool call starts that an overloaded host would stall: an Xcode MCP build, test or
+/// run tool, or a Bash command running `xcodebuild`, `swift build`, `swift test`,
+/// `simctl boot` or a repository's `gate.sh`; nil for anything else.
+func heavyWork(_ event: [String: Any]) -> String? {
+  let tool = event["tool_name"] as? String ?? ""
+  if tool.hasPrefix("mcp__"),
+    let action = ["BuildProject", "RunAllTests", "RunSomeTests", "RunProject"].first(where: {
+      tool.hasSuffix("__\($0)")
+    })
+  {
+    return "Xcode \(action)"
+  }
+  guard tool == "Bash",
+    let command = (event["tool_input"] as? [String: Any])?["command"] as? String
+  else { return nil }
+  let words = command.split(whereSeparator: { " \t\n;&|()".contains($0) }).map(String.init)
+  for (index, word) in words.enumerated() {
+    let name = (word as NSString).lastPathComponent
+    let next = index + 1 < words.count ? words[index + 1] : ""
+    if name == "xcodebuild" || name == "gate.sh" { return name }
+    if name == "swift", next == "build" || next == "test" { return "swift \(next)" }
+    if name == "simctl", next == "boot" { return "simctl boot" }
+  }
+  return nil
+}
+
 let input = FileHandle.standardInput.readDataToEndOfFile()
 let event = (try? JSONSerialization.jsonObject(with: input) as? [String: Any]) ?? [:]
 let environment = ProcessInfo.processInfo.environment
@@ -348,6 +380,39 @@ let ownID = event["session_id"] as? String ?? ""
 let cache = URL(
   fileURLWithPath: environment["CLAUDE_PLUGIN_DATA"]
     ?? "\(home)/Library/Caches/apple-platform-engineer")
+
+// Before a build, test run or Simulator boot, an overloaded or full host goes to the user
+// instead of a silent wait.
+if event["hook_event_name"] as? String == "PreToolUse" {
+  if let work = heavyWork(event) {
+    let measured = host(cwd: cwd)
+    if measured.isOverloaded || measured.isStorageLow {
+      var facts = [
+        String(format: "load %.0f on %d cores", measured.load, measured.processors),
+        measured.memoryFree.map { "memory \($0)% free" } ?? "memory unknown",
+        "\(measured.simulatorProcesses) CoreSimulator processes",
+      ]
+      if measured.isStorageLow, let free = measured.freeBytes {
+        facts.append("\(gigabytes(free)) free on \(measured.volume)")
+      }
+      let reason =
+        "apple-platform-engineer: the host is "
+        + (measured.isOverloaded ? "overloaded" : "low on storage")
+        + " (\(facts.joined(separator: ", "))). Starting \(work) now may stall for many "
+        + "minutes before it makes progress. Run it now, or wait and retry later?"
+      let output: [String: Any] = [
+        "hookSpecificOutput": [
+          "hookEventName": "PreToolUse", "permissionDecision": "ask",
+          "permissionDecisionReason": reason,
+        ]
+      ]
+      if let data = try? JSONSerialization.data(withJSONObject: output) {
+        FileHandle.standardOutput.write(data + Data("\n".utf8))
+      }
+    }
+  }
+  exit(0)
+}
 
 let here = Box(Repository(path: cwd))
 let xcode = Box<[(String, Repository)]?>(nil)
@@ -364,7 +429,7 @@ concurrently {
   let documents = Box([(String, Repository)?](repeating: nil, count: paths.count))
   DispatchQueue.concurrentPerform(iterations: paths.count) { index in
     let repo = repository(at: (paths[index] as NSString).deletingLastPathComponent)
-    documents.value[index] = (paths[index], repo)
+    documents.mutate { $0[index] = (paths[index], repo) }
   }
   xcode.value = documents.value.compactMap { $0 }
 }

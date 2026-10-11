@@ -158,3 +158,72 @@ private func line(_ output: [String: Any], _ prefix: String) throws -> String? {
   let specific = try #require(output["hookSpecificOutput"] as? [String: Any])
   #expect(specific["hookEventName"] as? String == "SessionStart")
 }
+
+/// The hook's answer before a tool call: the permission decision, or nil for none.
+private func decision(_ event: [String: Any], data: URL) throws -> String? {
+  let process = Process()
+  process.executableURL = URL(fileURLWithPath: "/bin/sh")
+  process.arguments = [hook.path]
+  var environment = ProcessInfo.processInfo.environment
+  environment["CLAUDE_PLUGIN_DATA"] = data.path
+  process.environment = environment
+  let stdin = Pipe()
+  let stdout = Pipe()
+  process.standardInput = stdin
+  process.standardOutput = stdout
+  try process.run()
+  stdin.fileHandleForWriting.write(try JSONSerialization.data(withJSONObject: event))
+  try stdin.fileHandleForWriting.close()
+  let output = stdout.fileHandleForReading.readDataToEndOfFile()
+  process.waitUntilExit()
+  #expect(process.terminationStatus == 0)
+  guard !output.isEmpty else { return nil }
+  let object = try #require(JSONSerialization.jsonObject(with: output) as? [String: Any])
+  let specific = try #require(object["hookSpecificOutput"] as? [String: Any])
+  #expect(specific["hookEventName"] as? String == "PreToolUse")
+  return specific["permissionDecision"] as? String
+}
+
+@Test func heavyWorkOnAnOverloadedHostGoesToTheUser() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  func event(_ tool: String, _ command: String? = nil) -> [String: Any] {
+    var event: [String: Any] = [
+      "hook_event_name": "PreToolUse", "cwd": fixture.repository.path, "tool_name": tool,
+    ]
+    event["tool_input"] = command.map { ["command": $0] } ?? [:]
+    return event
+  }
+  // Ordinary commands never ask.
+  for command in ["ls -la", "git status", "echo swift is fun"] {
+    #expect(try decision(event("Bash", command), data: fixture.data) == nil, "\(command)")
+  }
+  // Heavy work asks exactly when the host is overloaded; near the threshold the load can move
+  // between the two readings, so only clear cases are judged.
+  var averages = [Double](repeating: 0, count: 3)
+  _ = getloadavg(&averages, 3)
+  let limit = Double(ProcessInfo.processInfo.activeProcessorCount * 2)
+  guard abs(averages[0] - limit) > limit * 0.25 else { return }
+  var level: Int32 = 100
+  var size = MemoryLayout<Int32>.size
+  _ = sysctlbyname("kern.memorystatus_level", &level, &size, nil, 0)
+  let overloaded = averages[0] > limit || level < 15
+  for heavy in [
+    event("Bash", "xcodebuild test -scheme App"), event("Bash", "swift test --parallel"),
+    event("Bash", "xcrun simctl boot ABC"), event("Bash", "cd app && scripts/gate.sh --full"),
+    event("mcp__xcode__RunAllTests"),
+  ] {
+    #expect(try decision(heavy, data: fixture.data) == (overloaded ? "ask" : nil))
+  }
+}
+
+@Test func sessionStatusIsStableAcrossRuns() throws {
+  // Concurrent Git reads must never drop an answer: a lost one shows a branch as detached or
+  // its changes as unknown.
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  for _ in 0..<20 {
+    let output = try fixture.status(cwd: fixture.repository)
+    #expect(try line(output, "Directory") == "Directory ~/app with space · main (no upstream)")
+  }
+}
