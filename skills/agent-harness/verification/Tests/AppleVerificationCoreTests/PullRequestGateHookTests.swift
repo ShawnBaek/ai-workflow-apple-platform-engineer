@@ -98,6 +98,10 @@ private func repository() throws -> (URL, String, String) {
     "git push origin v2.0:refs/heads/feature",
     "git push --prune origin 'refs/heads/*:refs/heads/*'",
     "git push --all", "gh pr create --title 'x' # comment", "gh pr create --title 'x",
+    "cat > body.md <<'X'\nWe don't need a migration.\nX\ngh pr create --body-file body.md",
+    "APE_REVIEWED_HEAD=\(short) gh pr create --body \"$(cat <<'X'\nIt's done\nX\n)\" && git push origin other",
+    "cat > b.md <<'X'\nIt's ready\nX\ngit push origin feature",
+    "cat <<EOF\n$(gh pr create)\nEOF", "cat <<-X\n\ttext\n\tX\ngit push", "cat <<< x && git push",
   ] {
     #expect(try denies(command, cwd: root), "\(command)")
   }
@@ -116,6 +120,7 @@ private func repository() throws -> (URL, String, String) {
     "APE_REVIEWED_HEAD=\(short) URL=\"$(gh pr create --fill)\"",
     "APE_REVIEWED_HEAD=\(short) gh pr create --body \"$(cat <<'X'\nit's done; git push later\nX\n)\"",
     "APE_REVIEW_OVERRIDE='the user chose to' git push --all",
+    "APE_REVIEWED_HEAD=\(short) gh pr create --body-file - <<'X'\nRun `git push` later, it's fine\nX",
   ] {
     #expect(try !denies(command, cwd: root), "\(command)")
   }
@@ -130,6 +135,7 @@ private func repository() throws -> (URL, String, String) {
     "git push --delete origin old", "git push origin :old",
     "echo 'how to gh pr create'", "grep -n \"git push\" README.md",
     "git log --oneline | grep push", "\"APE_REVIEW_OVERRIDE=x\" gh pr create",
+    "cat <<'EOF'\n$(gh pr create)\nEOF", "cat <<< \"don't\" && echo ok",
   ] {
     #expect(try !denies(command, cwd: root), "\(command)")
   }

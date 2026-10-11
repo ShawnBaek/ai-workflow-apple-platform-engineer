@@ -16,16 +16,97 @@ struct Word {
   var substitutions = [String]()
 }
 
-/// Reads a `$(…)` body after its opening parenthesis, through the matching one.
+/// A here-document waiting for its body: the delimiter, whether the body expands (the
+/// delimiter was not quoted), and whether `<<-` strips leading tabs.
+struct Heredoc {
+  var delimiter: String
+  var expands: Bool
+  var stripsTabs: Bool
+}
+
+/// Reads the delimiter word after `<<` or `<<-`, removing its quotes.
+func heredocDelimiter(_ characters: inout ArraySlice<Character>) -> Heredoc {
+  let stripsTabs = characters.first == "-"
+  if stripsTabs { characters.removeFirst() }
+  while let next = characters.first, next == " " || next == "\t" { characters.removeFirst() }
+  var delimiter = ""
+  var quoted = false
+  while let next = characters.first, !" \t\n;&|<>()".contains(next) {
+    characters.removeFirst()
+    if next == "'" || next == "\"" {
+      quoted = true
+      while let inner = characters.popFirst(), inner != next { delimiter.append(inner) }
+    } else if next == "\\" {
+      quoted = true
+      if let escaped = characters.popFirst() { delimiter.append(escaped) }
+    } else {
+      delimiter.append(next)
+    }
+  }
+  return Heredoc(delimiter: delimiter, expands: !quoted, stripsTabs: stripsTabs)
+}
+
+/// Reads one here-document body after its command line, through the delimiter line (or the end
+/// of the input, as the shell does). Returns the body and the delimiter line as read.
+func heredocBody(_ characters: inout ArraySlice<Character>, _ heredoc: Heredoc) -> (
+  body: String, end: String
+) {
+  var body = ""
+  while !characters.isEmpty {
+    var line = ""
+    while let next = characters.popFirst(), next != "\n" { line.append(next) }
+    let compared = heredoc.stripsTabs ? String(line.drop(while: { $0 == "\t" })) : line
+    if compared == heredoc.delimiter { return (body, line) }
+    body += line + "\n"
+  }
+  return (body, "")
+}
+
+/// The command substitutions an expanding here-document body runs.
+func expansions(in body: String) -> [String] {
+  var found = [String]()
+  var characters = Array(body)[...]
+  while let next = characters.popFirst() {
+    if next == "\\" {
+      _ = characters.popFirst()
+    } else if next == "$", characters.first == "(" {
+      characters.removeFirst()
+      found.append(substitution(&characters))
+    } else if next == "`" {
+      found.append(backtick(&characters))
+    }
+  }
+  return found
+}
+
+/// Reads a `$(…)` body after its opening parenthesis, through the matching one. A
+/// here-document inside is copied whole, so its text cannot open or close anything.
 func substitution(_ characters: inout ArraySlice<Character>) -> String {
   var body = ""
   var depth = 1
   var quote: Character?
+  var pending = [Heredoc]()
   while let next = characters.popFirst() {
     if let open = quote {
       if next == open { quote = nil }
     } else if next == "'" || next == "\"" {
       quote = next
+    } else if next == "<", characters.first == "<", characters.dropFirst().first != "<" {
+      characters.removeFirst()
+      let heredoc = heredocDelimiter(&characters)
+      pending.append(heredoc)
+      body +=
+        "<<" + (heredoc.stripsTabs ? "-" : "")
+        + (heredoc.expands ? heredoc.delimiter : "'\(heredoc.delimiter)'")
+      continue
+    } else if next == "\n", !pending.isEmpty {
+      body.append(next)
+      for heredoc in pending {
+        let (text, end) = heredocBody(&characters, heredoc)
+        body += text + end + "\n"
+      }
+      pending = []
+      continue
     } else if next == "(" {
       depth += 1
     } else if next == ")" {
@@ -52,6 +133,7 @@ func simpleCommands(_ source: String) -> [[Word]] {
   var words = [Word]()
   var word: Word?
   var dropNextWord = false
+  var pending = [Heredoc]()
   var characters = Array(source)[...]
   func endWord() {
     if let finished = word {
@@ -130,6 +212,11 @@ func simpleCommands(_ source: String) -> [[Word]] {
       word!.substitutions.append(backtick(&characters))
     case "#" where word == nil:
       while let next = characters.first, next != "\n" { characters.removeFirst() }
+    case "<" where characters.first == "<" && characters.dropFirst().first != "<":
+      characters.removeFirst()
+      if let current = word, !current.quoted, current.text.allSatisfy(\.isNumber) { word = nil }
+      endWord()
+      pending.append(heredocDelimiter(&characters))
     case ">", "<":
       redirect()
     case "&" where characters.first == ">":
@@ -137,6 +224,20 @@ func simpleCommands(_ source: String) -> [[Word]] {
       redirect()
     case " ", "\t":
       endWord()
+    case "\n" where !pending.isEmpty:
+      // The bodies follow this line. They are data; only an expanding body's command
+      // substitutions run, as part of this command.
+      endWord()
+      var runs = [String]()
+      for heredoc in pending {
+        let (body, _) = heredocBody(&characters, heredoc)
+        if heredoc.expands { runs += expansions(in: body) }
+      }
+      pending = []
+      if !runs.isEmpty {
+        words.append(Word(text: "", quoted: true, quotedName: true, substitutions: runs))
+      }
+      endCommand()
     case "\n", ";", "&", "|", "(", ")", "{", "}":
       endCommand()
     default:
