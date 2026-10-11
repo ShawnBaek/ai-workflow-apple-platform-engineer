@@ -178,7 +178,12 @@ claude plugin install apple-platform-engineer@apple-platform-engineer
 The plugin also installs a PR gate hook that holds pull-request publication
 until `code-review` approved the exact head, as
 [PR delivery](../../git-workflow/references/pr-delivery.md) describes; Skills
-CLI installs have no such hook. Skills load as `/apple-platform-engineer:<skill>`; a bare name works unless
+CLI installs have no such hook. A session status hook shows you, and gives the
+agent, the working directory's branch, upstream and worktree, each workspace or
+project open in Xcode with its branch, the booted Simulators and the other
+Claude sessions active in the last 30 minutes, at session start and with every
+prompt; it reads Xcode through Automation, so allow that once when macOS asks.
+Skills load as `/apple-platform-engineer:<skill>`; a bare name works unless
 another command owns it, so review is `/apple-platform-engineer:code-review`.
 Pass `--scope project` to record the install in a project's
 `.claude/settings.json` instead of for your user. Inside a session, use

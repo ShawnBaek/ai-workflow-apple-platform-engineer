@@ -6,6 +6,13 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ### Added
 
+- **Session status hook in the Claude Code plugin.** At session start and with every prompt, a Swift hook shows you (`systemMessage`) and gives the agent (`additionalContext`) a short status:
+  - the working directory's branch, upstream with ahead/behind, changed-file count and worktree;
+  - each workspace or project open in Xcode, with its branch and worktree (read through Automation);
+  - the booted Simulators, cached for a minute;
+  - the other Claude sessions active in the last 30 minutes, with their directory and branch.
+
+  The agent is told to stop and ask when the target checkout differs, or another session works in it. Git calls run concurrently (about 0.7 s with four open Xcode projects), and a failure prints nothing and never blocks the prompt ([updating](skills/apple-platform-setup/references/updating.md#claude-code-plugin)).
 - **PR gate hook in the Claude Code plugin.** A `PreToolUse` hook denies `gh pr create`, `gh pr ready`, `gh pr edit --base` and a branch `git push`, including inside `sh -c`, `env` or compound commands, unless that command's own `APE_REVIEWED_HEAD=<sha>` assignment names the commit it publishes or its `APE_REVIEW_OVERRIDE` records the user's explicit decision. It holds even when the agent never loaded `git-workflow` or lost it to context compaction, which let one app session open thirteen pull requests without the review loop. Tag pushes, deletions and text that only mentions these commands pass. A small `sh` wrapper passes unrelated commands at once and runs the Swift gate, compiled once per revision into the plugin's data folder ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
 
 ### Changed
