@@ -62,10 +62,15 @@ final class Box<Value>: @unchecked Sendable {
   }
 }
 
+/// How long one Git, `osascript` or `pgrep` call may take: `APE_STATUS_TIMEOUT` seconds, else 8,
+/// which a heavily loaded host needs.
+let commandTimeout =
+  ProcessInfo.processInfo.environment["APE_STATUS_TIMEOUT"].flatMap(TimeInterval.init) ?? 8
+
 /// Runs a program by argument vector and returns its trimmed standard output, or nil when it
 /// cannot start, fails or outlives `timeout`. Git runs without optional locks, so a status
 /// never rewrites the index another process may be using.
-func run(_ argv: [String], timeout: TimeInterval = 4) -> String? {
+func run(_ argv: [String], timeout: TimeInterval = commandTimeout) -> String? {
   let process = Process()
   process.executableURL = URL(fileURLWithPath: argv[0])
   process.arguments = Array(argv.dropFirst())

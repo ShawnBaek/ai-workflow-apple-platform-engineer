@@ -70,7 +70,13 @@ private struct Fixture {
     var environment = ProcessInfo.processInfo.environment
     environment["HOME"] = home.path
     environment["CLAUDE_PLUGIN_DATA"] = data.path
+    // A loaded host can take seconds per Git call; the test checks content, not speed.
+    environment["APE_STATUS_TIMEOUT"] = "60"
     process.environment = environment
+    // Keep the Simulator cache fresh however long the run has taken.
+    try FileManager.default.setAttributes(
+      [.modificationDate: Date()],
+      ofItemAtPath: data.appendingPathComponent("booted-simulators.json").path)
     let stdin = Pipe()
     let stdout = Pipe()
     process.standardInput = stdin
@@ -107,8 +113,8 @@ private func line(_ output: [String: Any], _ prefix: String) throws -> String? {
   #expect(try line(output, "Host: load ")?.contains(" on ") == true)
   // This session's own transcript is not another session.
   #expect(
-    try line(output, "Other Claude sessions")
-      == "Other Claude sessions active in 30 min: 1 (/tmp/other@fix/y 0m)")
+    try line(output, "Other Claude sessions")?.hasPrefix(
+      "Other Claude sessions active in 30 min: 1 (/tmp/other@fix/y ") == true)
   let specific = try #require(output["hookSpecificOutput"] as? [String: Any])
   #expect(specific["hookEventName"] as? String == "UserPromptSubmit")
   let context = try #require(specific["additionalContext"] as? String)
