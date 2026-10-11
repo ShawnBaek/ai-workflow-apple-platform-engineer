@@ -169,6 +169,13 @@ private func line(_ output: [String: Any], _ prefix: String) throws -> String? {
 
 /// The hook's answer before a tool call: the permission decision, or nil for none.
 private func decision(_ event: [String: Any], data: URL) throws -> String? {
+  try answer(event, data: data).decision
+}
+
+/// The hook's permission decision and reason before a tool call; both nil when it says nothing.
+private func answer(_ event: [String: Any], data: URL) throws -> (
+  decision: String?, reason: String?
+) {
   let process = Process()
   process.executableURL = URL(fileURLWithPath: "/bin/sh")
   process.arguments = [hook.path]
@@ -185,11 +192,13 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
   let output = stdout.fileHandleForReading.readDataToEndOfFile()
   process.waitUntilExit()
   #expect(process.terminationStatus == 0)
-  guard !output.isEmpty else { return nil }
+  guard !output.isEmpty else { return (nil, nil) }
   let object = try #require(JSONSerialization.jsonObject(with: output) as? [String: Any])
   let specific = try #require(object["hookSpecificOutput"] as? [String: Any])
   #expect(specific["hookEventName"] as? String == "PreToolUse")
-  return specific["permissionDecision"] as? String
+  return (
+    specific["permissionDecision"] as? String, specific["permissionDecisionReason"] as? String
+  )
 }
 
 @Test func heavyWorkOnAnOverloadedHostGoesToTheUser() throws {
@@ -255,4 +264,85 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
     try line(output, "Directory")
       == "Directory ~/app with space · Git state unknown (no answer in time)")
   #expect(try line(output, "Host: load ") != nil)
+}
+
+/// Writes a fresh Simulator cache: booted default-set names, booted Xcode Preview names and the
+/// available devices with their types.
+private func cacheSimulators(
+  _ data: URL, booted: [String], previews: [String] = [],
+  available: [(String, String)] = []
+) throws {
+  try JSONSerialization.data(withJSONObject: [
+    "names": booted, "previews": previews,
+    "available": available.map { ["name": $0.0, "type": $0.1] },
+  ]).write(to: data.appendingPathComponent("booted-simulators.json"))
+}
+
+@Test func sessionStatusCountsXcodePreviewSimulatorsAgainstTheBudget() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  try cacheSimulators(fixture.data, booted: ["Gate"], previews: ["iPhone Air", "iPad Air"])
+  let output = try fixture.status(cwd: fixture.repository)
+  #expect(
+    try line(output, "Simulators: ")?.hasPrefix(
+      "Simulators: 1 booted (Gate), 2 Xcode Preview booted (iPhone Air, iPad Air), ") == true)
+  #expect(
+    try line(output, "WARNING Simulators over budget")
+      == "WARNING Simulators over budget: 3 booted (1 + 2 Xcode Preview), budget 2")
+}
+
+@Test func simulatorRulesGoToTheUser() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  func ask(_ command: String, tool: String = "Bash") throws -> String? {
+    var event: [String: Any] = [
+      "hook_event_name": "PreToolUse", "cwd": fixture.repository.path, "tool_name": tool,
+    ]
+    event["tool_input"] = ["command": command]
+    let (decision, reason) = try answer(event, data: fixture.data)
+    #expect(decision == (reason == nil ? nil : "ask"), "\(command)")
+    return reason
+  }
+  let phone = "com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro"
+  try cacheSimulators(
+    fixture.data, booted: ["Gate"],
+    available: [("Gate", phone), ("Old Phone", phone), ("iPad", "com.apple.iPad-Air")])
+
+  // Creating or cloning always asks and names the devices of the same type to reuse.
+  let create = try #require(
+    try ask(
+      "xcrun simctl create 'Agent Phone' \(phone) com.apple.CoreSimulator.SimRuntime.iOS-27-2"))
+  #expect(create.contains("`simctl create` adds a Simulator"))
+  #expect(create.contains("Existing devices to reuse: Gate, Old Phone."))
+  #expect(try ask("cd app && /usr/bin/xcrun simctl clone ABC copy")?.contains("clone") == true)
+  // Removing devices or data, or stopping every device, asks.
+  for command in [
+    "xcrun simctl delete unavailable", "xcrun simctl erase ABC", "xcrun simctl shutdown all",
+    "xcrun simctl --set previews shutdown all",
+  ] {
+    #expect(try ask(command) != nil, "\(command)")
+  }
+  #expect(try ask("xcrun simctl --set previews shutdown all")?.contains("Xcode Preview") == true)
+  // Reading, or stopping one named device, never asks for a Simulator rule.
+  for command in [
+    "xcrun simctl list devices", "xcrun simctl shutdown ABC", "echo simctl create x",
+    "git commit -m 'simctl delete docs'",
+  ] {
+    #expect(try ask(command)?.contains("Simulator") != true, "\(command)")
+  }
+  // Under the budget a boot or test run passes the Simulator rules.
+  #expect(try ask("xcrun simctl boot ABC")?.contains("budget") != true)
+  // At the budget another boot asks; tests and runs ask only above it.
+  try cacheSimulators(fixture.data, booted: ["Gate"], previews: ["Preview"])
+  #expect(try ask("xcrun simctl boot ABC")?.contains("the budget is 2") == true)
+  #expect(try ask("xcodebuild test -scheme App")?.contains("budget") != true)
+  try cacheSimulators(fixture.data, booted: ["Gate", "Other"], previews: ["Preview"])
+  for (command, tool) in [
+    ("xcodebuild test -scheme App", "Bash"), ("sh scripts/gate.sh", "Bash"),
+    ("", "mcp__xcode__RunAllTests"),
+  ] {
+    #expect(
+      try ask(command, tool: tool)?.contains("over the budget of 2") == true, "\(tool) \(command)")
+  }
+  #expect(try ask("xcodebuild build -scheme App")?.contains("budget") != true)
 }

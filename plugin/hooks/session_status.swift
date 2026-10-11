@@ -3,10 +3,12 @@ import Foundation
 
 // Claude Code SessionStart and UserPromptSubmit hook. Collects, read-only, where this session
 // works and what else is running: the directory's Git branch, upstream and worktree, every
-// workspace or project open in Xcode with its branch, the booted Simulators, the other Claude
-// sessions active in the last 30 minutes, the host's load and memory, and the free storage of
-// the working volume. It shows them to the person (`systemMessage`) and gives them to the agent
-// (`additionalContext`). A failure only leaves a fact out or marks it unknown.
+// workspace or project open in Xcode with its branch, the booted Simulators and Xcode Preview
+// devices, the other Claude sessions active in the last 30 minutes, the host's load and memory,
+// and the free storage of the working volume. It shows them to the person (`systemMessage`) and
+// gives them to the agent (`additionalContext`). A failure only leaves a fact out or marks it
+// unknown. Before a tool call (PreToolUse) it instead asks the user when the call would stall
+// an overloaded host or break the Simulator rules.
 
 struct Repository {
   var path: String
@@ -168,9 +170,25 @@ func xcodeDocuments() -> [String]? {
     .filter { $0.hasPrefix("/") }
 }
 
-/// Booted Simulator names, cached for a minute because `simctl` is slow. An unknown answer is
-/// cached too, so a stuck CoreSimulator costs one wait a minute; nil when unknown.
-func bootedSimulators(cache: URL) -> [String]? {
+struct Simulators {
+  /// Booted devices of the default set, by name.
+  var booted: [String]
+  /// Booted devices of Xcode Previews' own set, which `simctl list` alone never shows.
+  var previews: [String]
+  /// Available devices of the default set: name and device type identifier.
+  var available: [(name: String, type: String)]
+
+  var bootedCount: Int { booted.count + previews.count }
+}
+
+/// How many booted Simulators, Xcode Preview devices included, the host keeps before another
+/// boot, test or run needs the user: `APE_SIMULATOR_BUDGET`, else 2.
+let simulatorBudget =
+  ProcessInfo.processInfo.environment["APE_SIMULATOR_BUDGET"].flatMap(Int.init) ?? 2
+
+/// The Simulators, cached for a minute because `simctl` is slow. An unknown answer is cached
+/// too, so a stuck CoreSimulator costs one wait a minute; nil when unknown.
+func simulators(cache: URL) -> Simulators? {
   let file = cache.appendingPathComponent("booted-simulators.json")
   if let attributes = try? FileManager.default.attributesOfItem(atPath: file.path),
     let modified = attributes[.modificationDate] as? Date,
@@ -178,21 +196,48 @@ func bootedSimulators(cache: URL) -> [String]? {
     let data = try? Data(contentsOf: file),
     let cached = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
   {
-    return cached["names"] as? [String]
+    guard let booted = cached["names"] as? [String] else { return nil }
+    let available = (cached["available"] as? [[String: String]] ?? []).compactMap { device in
+      device["name"].map { (name: $0, type: device["type"] ?? "") }
+    }
+    return Simulators(
+      booted: booted, previews: cached["previews"] as? [String] ?? [], available: available)
   }
-  var names: [String]?
-  if let json = run(["/usr/bin/xcrun", "simctl", "list", "devices", "booted", "-j"], timeout: 8),
-    let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
-    let devices = object["devices"] as? [String: [[String: Any]]]
-  {
-    names = devices.values.flatMap { $0 }.compactMap { $0["name"] as? String }.sorted()
+  let answers = runAll([
+    ["/usr/bin/xcrun", "simctl", "list", "devices", "-j"],
+    ["/usr/bin/xcrun", "simctl", "--set", "previews", "list", "devices", "booted", "-j"],
+  ])
+  func devices(_ json: String?) -> [[String: Any]]? {
+    guard let json,
+      let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
+      let devices = object["devices"] as? [String: [[String: Any]]]
+    else { return nil }
+    return devices.values.flatMap { $0 }
+  }
+  var found: Simulators?
+  if let all = devices(answers[0]) {
+    found = Simulators(
+      booted: all.filter { $0["state"] as? String == "Booted" }
+        .compactMap { $0["name"] as? String }.sorted(),
+      previews: (devices(answers[1]) ?? []).compactMap { $0["name"] as? String }.sorted(),
+      available: all.filter { $0["isAvailable"] as? Bool == true }.compactMap { device in
+        (device["name"] as? String).map {
+          (name: $0, type: device["deviceTypeIdentifier"] as? String ?? "")
+        }
+      })
   }
   try? FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
-  let record: [String: Any] = names.map { ["names": $0] } ?? [:]
+  let record: [String: Any] =
+    found.map {
+      [
+        "names": $0.booted, "previews": $0.previews,
+        "available": $0.available.map { ["name": $0.name, "type": $0.type] },
+      ]
+    } ?? [:]
   if let data = try? JSONSerialization.data(withJSONObject: record) {
     try? data.write(to: file, options: .atomic)
   }
-  return names
+  return found
 }
 
 /// The last `cwd` and `gitBranch` a transcript recorded, reading its tail.
@@ -311,7 +356,7 @@ func gigabytes(_ bytes: Int64) -> String {
 
 /// The status lines, warnings first.
 func lines(
-  here: Repository, xcode: [(String, Repository)]?, simulators: [String]?,
+  here: Repository, xcode: [(String, Repository)]?, simulators: Simulators?,
   sessions: [OtherSession], host: Host, home: String
 ) -> [String] {
   var out = [String]()
@@ -321,6 +366,12 @@ func lines(
     out.append(
       "WARNING Host overloaded: \(loadText), \(memoryText), "
         + "\(host.simulatorProcesses) CoreSimulator processes")
+  }
+  if let simulators, simulators.bootedCount > simulatorBudget {
+    out.append(
+      "WARNING Simulators over budget: \(simulators.bootedCount) booted "
+        + "(\(simulators.booted.count) + \(simulators.previews.count) Xcode Preview), "
+        + "budget \(simulatorBudget)")
   }
   if host.isStorageLow, let free = host.freeBytes {
     out.append("WARNING Storage low: \(gigabytes(free)) free on \(host.volume)")
@@ -341,9 +392,14 @@ func lines(
     }
   }
   if let simulators {
+    func listed(_ names: [String]) -> String {
+      names.isEmpty ? "" : " (\(names.joined(separator: ", ")))"
+    }
     out.append(
-      "Simulators: \(simulators.count) booted"
-        + (simulators.isEmpty ? "" : " (\(simulators.joined(separator: ", ")))")
+      "Simulators: \(simulators.booted.count) booted" + listed(simulators.booted)
+        + (simulators.previews.isEmpty
+          ? ""
+          : ", \(simulators.previews.count) Xcode Preview booted" + listed(simulators.previews))
         + ", \(host.simulatorProcesses) CoreSimulator processes")
   } else {
     out.append(
@@ -386,7 +442,8 @@ func commandWords(_ command: String) -> [[String]] {
     // Assignments and the wrappers that run the next word as the command.
     while let first = words.first,
       first.contains("=") && !first.hasPrefix("-")
-        || ["env", "sudo", "time", "nohup", "command", "exec", "nice", "xcrun"].contains(first)
+        || ["env", "sudo", "time", "nohup", "command", "exec", "nice", "xcrun"].contains(
+          (first as NSString).lastPathComponent)
     {
       words.removeFirst()
     }
@@ -438,6 +495,96 @@ func heavyWork(_ event: [String: Any]) -> String? {
   return nil
 }
 
+/// Each `simctl` call in a Bash command line: its device set, subcommand and remaining words.
+func simctlCalls(_ command: String) -> [(set: String?, subcommand: String, arguments: [String])] {
+  commandWords(command).compactMap { words in
+    guard let program = words.first, (program as NSString).lastPathComponent == "simctl" else {
+      return nil
+    }
+    var rest = Array(words.dropFirst())
+    var set: String?
+    while let first = rest.first, first.hasPrefix("-") {
+      rest.removeFirst()
+      if first == "--set", !rest.isEmpty { set = rest.removeFirst() }
+    }
+    guard let subcommand = rest.first else { return nil }
+    return (set, subcommand, Array(rest.dropFirst()))
+  }
+}
+
+/// Why a tool call needs the user under the Simulator rules, one reason per rule it meets: it
+/// creates or clones a device, deletes or erases one, shuts down every device, boots one more
+/// at the budget, or starts tests or a run above it. `simulators` is read only when needed.
+func simulatorReasons(_ event: [String: Any], simulators: () -> Simulators?) -> [String] {
+  let tool = event["tool_name"] as? String ?? ""
+  var reasons = [String]()
+  var startsTestsOrRun =
+    tool.hasPrefix("mcp__")
+    && ["RunAllTests", "RunSomeTests", "RunProject"].contains { tool.hasSuffix("__\($0)") }
+  let command =
+    tool == "Bash" ? (event["tool_input"] as? [String: Any])?["command"] as? String ?? "" : ""
+  for words in commandWords(command) {
+    let names = words.prefix(2).map { ($0 as NSString).lastPathComponent }
+    let isGate =
+      names.first == "gate.sh"
+      || ["sh", "bash", "zsh"].contains(names.first ?? "")
+        && names.dropFirst().first == "gate.sh"
+    if isGate
+      || names.first == "xcodebuild"
+        && words.contains(where: { $0 == "test" || $0 == "test-without-building" })
+    {
+      startsTestsOrRun = true
+    }
+  }
+  for call in simctlCalls(command) {
+    switch call.subcommand {
+    case "create", "clone":
+      var reason =
+        "`simctl \(call.subcommand)` adds a Simulator. Reuse an existing device first; create one "
+        + "only when the user approves, name it agent-<task-id> and delete it when the task ends."
+      if let available = simulators()?.available, !available.isEmpty {
+        let sameType = available.filter { device in
+          call.arguments.contains {
+            device.type == $0
+              || device.type.hasSuffix("." + $0.replacingOccurrences(of: " ", with: "-"))
+          }
+        }
+        let names = (sameType.isEmpty ? available : sameType).map(\.name)
+        reason +=
+          " Existing devices to reuse: \(names.prefix(6).joined(separator: ", "))"
+          + (names.count > 6 ? " (+\(names.count - 6) more)." : ".")
+      }
+      reasons.append(reason)
+    case "delete", "erase":
+      reasons.append(
+        "`simctl \(call.subcommand)` permanently removes Simulator devices or their data, which "
+          + "may belong to another session or to the user. Name the exact devices to the user "
+          + "first.")
+    case "shutdown" where call.arguments.first == "all":
+      reasons.append(
+        "`simctl shutdown all` stops every "
+          + (call.set == "previews" ? "Xcode Preview " : "")
+          + "Simulator, including devices other sessions are using.")
+    case "boot":
+      if let found = simulators(), found.bootedCount >= simulatorBudget {
+        reasons.append(
+          "\(found.bootedCount) Simulators are already booted (\(found.booted.count) + "
+            + "\(found.previews.count) Xcode Preview); the budget is \(simulatorBudget). "
+            + "Reuse a booted device, or have the user shut one down first.")
+      }
+    default:
+      break
+    }
+  }
+  if startsTestsOrRun, let found = simulators(), found.bootedCount > simulatorBudget {
+    reasons.append(
+      "\(found.bootedCount) Simulators are booted (\(found.booted.count) + "
+        + "\(found.previews.count) Xcode Preview), over the budget of \(simulatorBudget). "
+        + "Run on an already booted device, or have the user shut one down first.")
+  }
+  return reasons
+}
+
 let input = FileHandle.standardInput.readDataToEndOfFile()
 let event = (try? JSONSerialization.jsonObject(with: input) as? [String: Any]) ?? [:]
 let environment = ProcessInfo.processInfo.environment
@@ -449,8 +596,9 @@ let cache = URL(
     ?? "\(home)/Library/Caches/apple-platform-engineer")
 
 // Before a build, test run or Simulator boot, an overloaded or full host goes to the user
-// instead of a silent wait.
+// instead of a silent wait; so does a call that breaks the Simulator rules.
 if event["hook_event_name"] as? String == "PreToolUse" {
+  var reasons = [String]()
   if let work = heavyWork(event) {
     let measured = host(cwd: cwd)
     if measured.isOverloaded || measured.isStorageLow {
@@ -462,20 +610,26 @@ if event["hook_event_name"] as? String == "PreToolUse" {
       if measured.isStorageLow, let free = measured.freeBytes {
         facts.append("\(gigabytes(free)) free on \(measured.volume)")
       }
-      let reason =
-        "apple-platform-engineer: the host is "
-        + (measured.isOverloaded ? "overloaded" : "low on storage")
-        + " (\(facts.joined(separator: ", "))). Starting \(work) now may stall for many "
-        + "minutes before it makes progress. Run it now, or wait and retry later?"
-      let output: [String: Any] = [
-        "hookSpecificOutput": [
-          "hookEventName": "PreToolUse", "permissionDecision": "ask",
-          "permissionDecisionReason": reason,
-        ]
+      reasons.append(
+        "The host is " + (measured.isOverloaded ? "overloaded" : "low on storage")
+          + " (\(facts.joined(separator: ", "))). Starting \(work) now may stall for many "
+          + "minutes before it makes progress. Run it now, or wait and retry later?")
+    }
+  }
+  var read: Simulators??
+  reasons += simulatorReasons(event) {
+    if read == nil { read = .some(simulators(cache: cache)) }
+    return read!
+  }
+  if !reasons.isEmpty {
+    let output: [String: Any] = [
+      "hookSpecificOutput": [
+        "hookEventName": "PreToolUse", "permissionDecision": "ask",
+        "permissionDecisionReason": "apple-platform-engineer: " + reasons.joined(separator: " "),
       ]
-      if let data = try? JSONSerialization.data(withJSONObject: output) {
-        FileHandle.standardOutput.write(data + Data("\n".utf8))
-      }
+    ]
+    if let data = try? JSONSerialization.data(withJSONObject: output) {
+      FileHandle.standardOutput.write(data + Data("\n".utf8))
     }
   }
   exit(0)
@@ -483,7 +637,7 @@ if event["hook_event_name"] as? String == "PreToolUse" {
 
 let here = Box(Repository(path: cwd))
 let xcode = Box<[(String, Repository)]?>(nil)
-let simulators = Box<[String]?>(nil)
+let simulatorState = Box<Simulators?>(nil)
 let sessions = Box([OtherSession]())
 let machine = Box<Host?>(nil)
 let group = DispatchGroup()
@@ -500,7 +654,7 @@ concurrently {
   }
   xcode.value = documents.value.compactMap { $0 }
 }
-concurrently { simulators.value = bootedSimulators(cache: cache) }
+concurrently { simulatorState.value = simulators(cache: cache) }
 concurrently { sessions.value = otherSessions(home: home, ownID: ownID) }
 concurrently { machine.value = host(cwd: cwd) }
 // Whatever is not in by the deadline stays unknown; the status never outlives its budget.
@@ -510,12 +664,14 @@ let measured =
   machine.value
   ?? Host(load: 0, processors: 1, memoryFree: nil, simulatorProcesses: 0, volume: "volume")
 let shown = lines(
-  here: here.value, xcode: xcode.value, simulators: simulators.value, sessions: sessions.value,
+  here: here.value, xcode: xcode.value, simulators: simulatorState.value, sessions: sessions.value,
   host: measured, home: home)
 var guidance =
   "Live session environment, read just now. Before editing, building, testing, committing or "
   + "publishing, confirm the target directory, Xcode container, branch and worktree match the "
-  + "task; on a mismatch, or another session working in the same checkout, stop and ask."
+  + "task; on a mismatch, or another session working in the same checkout, stop and ask. "
+  + "Reuse a booted or existing Simulator; never create, delete, erase or shut down every "
+  + "Simulator without the user's approval."
 if measured.isOverloaded || measured.isStorageLow {
   guidance +=
     " The host is overloaded or low on storage: before starting a build, test run or Simulator, "
