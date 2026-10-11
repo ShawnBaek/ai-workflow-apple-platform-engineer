@@ -63,7 +63,7 @@ private struct Fixture {
   /// Runs the hook from `cwd` and returns its decoded output.
   func status(
     cwd: URL, event: String = "UserPromptSubmit", sessionID: String = "own-session",
-    budget: String? = nil
+    budget: String? = nil, gh: String = "/usr/bin/false"
   ) throws -> [String: Any] {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -74,6 +74,8 @@ private struct Fixture {
     // A loaded host can take seconds per Git call; the test checks content, not speed.
     environment["APE_STATUS_TIMEOUT"] = "60"
     environment["APE_SIMULATOR_BUDGET"] = "2"
+    // A failing `gh` keeps pull requests unknown unless a test supplies its own.
+    environment["APE_GH"] = gh
     if let budget { environment["APE_STATUS_BUDGET"] = budget }
     process.environment = environment
     // Keep the Simulator cache fresh however long the run has taken.
@@ -381,5 +383,74 @@ private func cacheSimulators(
         "tool_input": ["command": command],
       ], data: fixture.data)
     #expect(FileManager.default.fileExists(atPath: file.path) == !drops, "\(command)")
+  }
+}
+
+/// A stand-in `gh` that prints `pullRequests` as `gh pr list --json` would.
+private func fakeGitHub(in home: URL, _ pullRequests: [[String: Any]]) throws -> String {
+  let json = home.appendingPathComponent("pull-requests.json")
+  try JSONSerialization.data(withJSONObject: pullRequests).write(to: json)
+  let script = home.appendingPathComponent("gh")
+  try Data("#!/bin/sh\ncat '\(json.path)'\n".utf8).write(to: script)
+  try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+  return script.path
+}
+
+private func pullRequest(
+  _ number: Int, _ head: String, _ state: String, base: String = "main", fork: Bool = false
+) -> [String: Any] {
+  [
+    "number": number, "headRefName": head, "baseRefName": base, "state": state,
+    "isCrossRepository": fork,
+  ]
+}
+
+@Test func sessionStatusFlagsWhatMergedPullRequestsLeft() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  for branch in ["fix/old", "feature/reused", "release/2", "patch-1"] {
+    try fixture.git(["branch", branch], in: fixture.repository)
+  }
+  try fixture.git(
+    ["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"],
+    in: fixture.repository)
+  let gh = try fakeGitHub(
+    in: fixture.home,
+    [
+      // feature/x (the linked worktree) merged after an earlier closed PR; fix/old merged.
+      pullRequest(4, "feature/x", "CLOSED"), pullRequest(7, "feature/x", "MERGED"),
+      pullRequest(3, "fix/old", "MERGED"),
+      // Merged once, open again: its latest PR is open.
+      pullRequest(5, "feature/reused", "MERGED"), pullRequest(9, "feature/reused", "OPEN"),
+      // A back-merge from the default branch and a fork's PR never count.
+      pullRequest(6, "main", "MERGED", base: "release/2"),
+      pullRequest(8, "patch-1", "MERGED", fork: true),
+      // A merged release branch that an open PR still targets is still in use.
+      pullRequest(10, "release/2", "MERGED"),
+      pullRequest(11, "feature/next", "OPEN", base: "release/2"),
+    ])
+  let main = try fixture.status(cwd: fixture.repository, gh: gh)
+  #expect(try line(main, "WARNING Branch") == nil)
+  #expect(
+    try line(main, "Cleanup")
+      == "Cleanup: 2 local branches and 1 worktree from merged PRs (git-workflow branch hygiene)")
+  let worktree = try fixture.status(cwd: fixture.worktree, gh: gh)
+  #expect(
+    try line(worktree, "WARNING Branch")
+      == "WARNING Branch feature/x belongs to merged PR #7: start new work on a new branch from "
+      + "the refreshed base")
+  let context = try #require(
+    (worktree["hookSpecificOutput"] as? [String: Any])?["additionalContext"] as? String)
+  #expect(context.contains("follow git-workflow branch hygiene"))
+}
+
+@Test func sessionStatusWithoutPullRequestsShowsNoCleanup() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  for gh in [try fakeGitHub(in: fixture.home, []), "/usr/bin/false"] {
+    try? FileManager.default.removeItem(at: fixture.data.appendingPathComponent("pull-requests"))
+    let output = try fixture.status(cwd: fixture.repository, gh: gh)
+    #expect(try line(output, "Cleanup") == nil)
+    #expect(try line(output, "WARNING Branch") == nil)
   }
 }
