@@ -1,11 +1,13 @@
+import CryptoKit
 import Darwin
 import Foundation
 
 // Claude Code SessionStart and UserPromptSubmit hook. Collects, read-only, where this session
-// works and what else is running: the directory's Git branch, upstream and worktree, every
-// workspace or project open in Xcode with its branch, the booted Simulators and Xcode Preview
-// devices, the other Claude sessions active in the last 30 minutes, the host's load and memory,
-// and the free storage of the working volume. It shows them to the person (`systemMessage`) and
+// works and what else is running: the directory's Git branch, upstream and worktree, the
+// branches and worktrees that merged pull requests left there, every workspace or project open
+// in Xcode with its branch, the booted Simulators and Xcode Preview devices, the other Claude
+// sessions active in the last 30 minutes, the host's load and memory, and the free storage of
+// the working volume. It shows them to the person (`systemMessage`) and
 // gives them to the agent (`additionalContext`). A failure only leaves a fact out or marks it
 // unknown. Before a tool call (PreToolUse) it instead asks the user when the call would stall
 // an overloaded host or break the Simulator rules.
@@ -79,12 +81,15 @@ let deadline = Date().addingTimeInterval(
 /// Runs a program by argument vector and returns its trimmed standard output, or nil when it
 /// cannot start, fails or outlives `timeout`. Git runs without optional locks, so a status
 /// never rewrites the index another process may be using.
-func run(_ argv: [String], timeout: TimeInterval = commandTimeout) -> String? {
+func run(
+  _ argv: [String], in directory: String? = nil, timeout: TimeInterval = commandTimeout
+) -> String? {
   let timeout = min(timeout, deadline.timeIntervalSinceNow)
   guard timeout > 0 else { return nil }
   let process = Process()
   process.executableURL = URL(fileURLWithPath: argv[0])
   process.arguments = Array(argv.dropFirst())
+  if let directory { process.currentDirectoryURL = URL(fileURLWithPath: directory) }
   var environment = ProcessInfo.processInfo.environment
   environment["GIT_OPTIONAL_LOCKS"] = "0"
   process.environment = environment
@@ -320,6 +325,113 @@ func host(cwd: String) -> Host {
     totalBytes: values?.volumeTotalCapacity.map(Int64.init))
 }
 
+/// What merged pull requests left in a repository: the merged PR the checked-out branch
+/// belongs to, and the local branches and linked worktrees whose latest PR merged.
+struct Leftovers {
+  var currentPullRequest: Int?
+  var branches = 0
+  var worktrees = 0
+}
+
+/// The `gh` to ask: `APE_GH`, else Homebrew's or /usr/local's, else the one on PATH, which a
+/// hook started by an app often lacks.
+let ghCommand: [String] = {
+  if let path = ProcessInfo.processInfo.environment["APE_GH"] { return [path] }
+  for path in ["/opt/homebrew/bin/gh", "/usr/local/bin/gh"]
+  where FileManager.default.isExecutableFile(atPath: path) {
+    return [path]
+  }
+  return ["/usr/bin/env", "gh"]
+}()
+
+/// The latest pull request of each head branch of the repository whose Git common directory is
+/// `common`, by number, and whether it merged. A pull request from a fork, and a branch that an
+/// open pull request still targets, never count. Asked of `gh` in `top` and cached for ten
+/// minutes per repository; an unknown answer is cached for one minute. Nil when unknown.
+func pullRequests(common: String, top: String, cache: URL) -> [String: (number: Int, merged: Bool)]?
+{
+  let folder = cache.appendingPathComponent("pull-requests")
+  let key = SHA256.hash(data: Data(common.utf8)).map { String(format: "%02x", $0) }.joined()
+  let file = folder.appendingPathComponent(key + ".json")
+  func decode(_ heads: [String: [String: Any]]) -> [String: (number: Int, merged: Bool)] {
+    heads.compactMapValues { pr in
+      (pr["number"] as? Int).map { (number: $0, merged: pr["state"] as? String == "MERGED") }
+    }
+  }
+  if let attributes = try? FileManager.default.attributesOfItem(atPath: file.path),
+    let modified = attributes[.modificationDate] as? Date,
+    let data = try? Data(contentsOf: file),
+    let cached = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+  {
+    let heads = cached["heads"] as? [String: [String: Any]]
+    if Date().timeIntervalSince(modified) < (heads == nil ? 60 : 600) { return heads.map(decode) }
+  }
+  var heads: [String: [String: Any]]?
+  if let json = run(
+    ghCommand + [
+      "pr", "list", "--state", "all", "--limit", "300", "--json",
+      "number,headRefName,baseRefName,state,isCrossRepository",
+    ], in: top, timeout: min(commandTimeout, 4)),
+    let list = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [[String: Any]]
+  {
+    let ownPullRequests = list.filter { $0["isCrossRepository"] as? Bool != true }
+    let targeted = Set(
+      ownPullRequests.filter { $0["state"] as? String == "OPEN" }
+        .compactMap { $0["baseRefName"] as? String })
+    var latest = [String: [String: Any]]()
+    for pr in ownPullRequests {
+      guard let head = pr["headRefName"] as? String, !targeted.contains(head),
+        let number = pr["number"] as? Int
+      else { continue }
+      if number > (latest[head]?["number"] as? Int ?? 0) {
+        latest[head] = ["number": number, "state": pr["state"] as? String ?? ""]
+      }
+    }
+    heads = latest
+  }
+  try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+  let record: [String: Any] = heads.map { ["heads": $0] } ?? [:]
+  if let data = try? JSONSerialization.data(withJSONObject: record) {
+    try? data.write(to: file, options: .atomic)
+  }
+  return heads.map(decode)
+}
+
+/// The leftovers of merged pull requests in `repo`; the remote's default branch never counts.
+/// Nil when unknown.
+func leftovers(of repo: Repository, cache: URL) -> Leftovers? {
+  guard let top = repo.top,
+    let found = pullRequests(common: repo.worktreeOf ?? top, top: top, cache: cache)
+  else { return nil }
+  let git = ["/usr/bin/git", "--no-optional-locks", "-C", top]
+  let answers = runAll([
+    git + ["for-each-ref", "--format=%(refname:short)", "refs/heads"],
+    git + ["worktree", "list", "--porcelain"],
+    git + ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+  ])
+  let defaultBranch = answers[2].map { $0.hasPrefix("origin/") ? String($0.dropFirst(7)) : $0 }
+  func merged(_ branch: String) -> Bool {
+    branch != defaultBranch && found[branch]?.merged == true
+  }
+  var result = Leftovers()
+  if !repo.isDetached, let branch = repo.branch, merged(branch) {
+    result.currentPullRequest = found[branch]?.number
+  }
+  result.branches = (answers[0] ?? "").split(separator: "\n").filter { merged(String($0)) }.count
+  // The first entry is the main worktree; the others are linked worktrees.
+  result.worktrees =
+    (answers[1] ?? "").components(separatedBy: "\n\n").dropFirst().filter { entry in
+      entry.split(separator: "\n").contains {
+        $0.hasPrefix("branch refs/heads/") && merged(String($0.dropFirst(18)))
+      }
+    }.count
+  return result
+}
+
+func plural(_ count: Int, _ noun: String, _ plural: String) -> String {
+  "\(count) \(count == 1 ? noun : plural)"
+}
+
 func tilde(_ path: String, _ home: String) -> String {
   !home.isEmpty && path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
 }
@@ -356,8 +468,8 @@ func gigabytes(_ bytes: Int64) -> String {
 
 /// The status lines, warnings first.
 func lines(
-  here: Repository, xcode: [(String, Repository)]?, simulators: Simulators?,
-  sessions: [OtherSession], host: Host, home: String
+  here: Repository, leftovers: Leftovers?, xcode: [(String, Repository)]?,
+  simulators: Simulators?, sessions: [OtherSession], host: Host, home: String
 ) -> [String] {
   var out = [String]()
   let loadText = String(format: "load %.0f on %d cores", host.load, host.processors)
@@ -376,9 +488,20 @@ func lines(
   if host.isStorageLow, let free = host.freeBytes {
     out.append("WARNING Storage low: \(gigabytes(free)) free on \(host.volume)")
   }
+  if let number = leftovers?.currentPullRequest, let branch = here.branch {
+    out.append(
+      "WARNING Branch \(branch) belongs to merged PR #\(number): start new work on a new branch "
+        + "from the refreshed base")
+  }
   out.append(
     "Directory \(tilde(here.top ?? here.path, home)) · \(branchText(here))"
       + worktreeText(here, home))
+  if let leftovers, leftovers.branches + leftovers.worktrees > 0 {
+    out.append(
+      "Cleanup: \(plural(leftovers.branches, "local branch", "local branches")) and "
+        + "\(plural(leftovers.worktrees, "worktree", "worktrees")) from merged PRs "
+        + "(git-workflow branch hygiene)")
+  }
   switch xcode {
   case nil:
     out.append("Xcode: open workspace unknown (allow Automation for Xcode to show it)")
@@ -489,7 +612,7 @@ func commandWords(_ command: String) -> [[String]] {
 }
 
 /// What a tool call starts that an overloaded host would stall: an Xcode MCP build, test or
-/// run tool, or a Bash command that runs `xcodebuild` (other than a query such as `-version`),
+/// run tool or `DeviceInteractionInstallAndRun`, or a Bash command that runs `xcodebuild` (other than a query such as `-version`),
 /// `swift build`, `swift test`, `simctl boot` or a repository's `gate.sh`; nil otherwise.
 func heavyWork(_ event: [String: Any]) -> String? {
   let tool = event["tool_name"] as? String ?? ""
@@ -702,6 +825,7 @@ if event["hook_event_name"] as? String == "PreToolUse" {
 }
 
 let here = Box(Repository(path: cwd))
+let leftoverState = Box<Leftovers?>(nil)
 let xcode = Box<[(String, Repository)]?>(nil)
 let simulatorState = Box<Simulators?>(nil)
 let sessions = Box([OtherSession]())
@@ -710,7 +834,11 @@ let group = DispatchGroup()
 func concurrently(_ work: @escaping @Sendable () -> Void) {
   DispatchQueue.global().async(group: group, execute: work)
 }
-concurrently { here.value = repository(at: cwd) }
+concurrently {
+  let repo = repository(at: cwd)
+  here.value = repo
+  leftoverState.value = leftovers(of: repo, cache: cache)
+}
 concurrently {
   guard let paths = xcodeDocuments() else { return }
   let documents = Box([(String, Repository)?](repeating: nil, count: paths.count))
@@ -730,14 +858,21 @@ let measured =
   machine.value
   ?? Host(load: 0, processors: 1, memoryFree: nil, simulatorProcesses: 0, volume: "volume")
 let shown = lines(
-  here: here.value, xcode: xcode.value, simulators: simulatorState.value, sessions: sessions.value,
-  host: measured, home: home)
+  here: here.value, leftovers: leftoverState.value, xcode: xcode.value,
+  simulators: simulatorState.value, sessions: sessions.value, host: measured, home: home)
 var guidance =
   "Live session environment, read just now. Before editing, building, testing, committing or "
   + "publishing, confirm the target directory, Xcode container, branch and worktree match the "
   + "task; on a mismatch, or another session working in the same checkout, stop and ask. "
   + "Reuse a booted or existing Simulator; never create, delete, erase or shut down every "
   + "Simulator without the user's approval."
+if let found = leftoverState.value,
+  found.currentPullRequest != nil || found.branches + found.worktrees > 0
+{
+  guidance +=
+    " Merged pull requests left branches or worktrees here: follow git-workflow branch "
+    + "hygiene, start new work on a new branch, and remove only what this task created."
+}
 if measured.isOverloaded || measured.isStorageLow {
   guidance +=
     " The host is overloaded or low on storage: before starting a build, test run or Simulator, "

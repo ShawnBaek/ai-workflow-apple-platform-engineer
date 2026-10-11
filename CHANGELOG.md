@@ -16,6 +16,7 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
   Quoted words now count as command words, and `xcrun` options and `simctl --profiles` are skipped, so `xcrun --sdk iphonesimulator simctl delete …` or `simctl shutdown "all"` is seen; a wrapper given by full path, such as `/usr/bin/xcrun`, is recognized.
 
   The [xcodebuild](skills/xcodebuild/SKILL.md) skill names the Preview set and the hook.
+- **Clean up after a merge** ([git-workflow](skills/git-workflow/references/branch-hygiene.md)). Agents kept working on branches whose PR had merged, merged `main` into them, and left worktrees and local branches behind; one checkout held 29 local branches from merged PRs. Once a PR merges, follow-up work starts a new branch from the refreshed base; the task removes only the worktree, local branch and (by policy or approval) remote branch it created; older leftovers go into a read-only sweep report and are removed only from an approved list. The Claude Code session status warns when the session's branch belongs to a merged PR and counts the local branches and worktrees whose latest PR merged (`gh pr list`, cached ten minutes per repository; fork pull requests, the default branch and a branch an open pull request targets never count).
 
 ## [2.1] - 2026-10-11
 

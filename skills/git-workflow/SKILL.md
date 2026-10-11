@@ -75,6 +75,10 @@ Keep the PR sequence explicit: inspect scope and status, implement, select minim
 
 Use exact repository-relative paths after `--` for file-specific operations. Record what was verified, what was intentionally not run, and any remaining risk. Read [PR delivery](references/pr-delivery.md) when opening or updating a PR.
 
+## Clean up after a merge
+
+Once a PR merges, its branch is finished: start follow-up work on a new branch from the refreshed intended base, never by merging the base into the merged branch. Remove the worktree, local branch and remote branch this task created, and nothing another session or the user is using, as [branch hygiene](references/branch-hygiene.md) describes; it also covers the approval-gated sweep of older leftovers.
+
 ## Sources
 
 - [Git worktree documentation](https://git-scm.com/docs/git-worktree.html)

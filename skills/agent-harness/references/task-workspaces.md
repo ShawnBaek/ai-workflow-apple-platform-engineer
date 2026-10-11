@@ -86,5 +86,6 @@ each concurrent producer its own output path. Declare build outputs and cache
 paths in the build tuple, following [host resources](host-resources.md); avoid
 copying package caches into every task folder. Clean only task-owned output
 within the agreed retention scope after its processes and dependants finish.
-Worktree removal follows Git ownership/dirty-state checks and cleanup authority;
-it is not ordinary scratch deletion.
+Worktree removal follows the ownership and dirty-state checks of
+[branch hygiene](../../git-workflow/references/branch-hygiene.md); it is not
+ordinary scratch deletion.
