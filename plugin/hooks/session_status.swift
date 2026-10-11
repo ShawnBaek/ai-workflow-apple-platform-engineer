@@ -19,6 +19,8 @@ struct Repository {
   /// Changed paths; nil when `git status` did not answer in time.
   var dirty: Int?
   var worktreeOf: String?
+  /// Git did not answer before the deadline, so nothing is known about the folder.
+  var isUnread = false
 }
 
 struct OtherSession {
@@ -67,10 +69,17 @@ final class Box<Value>: @unchecked Sendable {
 let commandTimeout =
   ProcessInfo.processInfo.environment["APE_STATUS_TIMEOUT"].flatMap(TimeInterval.init) ?? 8
 
+/// When the whole status must be ready: `APE_STATUS_BUDGET` seconds after start, else 15, inside
+/// the hook's 20 s timeout. Calls still running then are left out and shown as unknown.
+let deadline = Date().addingTimeInterval(
+  ProcessInfo.processInfo.environment["APE_STATUS_BUDGET"].flatMap(TimeInterval.init) ?? 15)
+
 /// Runs a program by argument vector and returns its trimmed standard output, or nil when it
 /// cannot start, fails or outlives `timeout`. Git runs without optional locks, so a status
 /// never rewrites the index another process may be using.
 func run(_ argv: [String], timeout: TimeInterval = commandTimeout) -> String? {
+  let timeout = min(timeout, deadline.timeIntervalSinceNow)
+  guard timeout > 0 else { return nil }
   let process = Process()
   process.executableURL = URL(fileURLWithPath: argv[0])
   process.arguments = Array(argv.dropFirst())
@@ -111,7 +120,10 @@ func runAll(_ commands: [[String]]) -> [String?] {
 func repository(at path: String) -> Repository {
   var repo = Repository(path: path)
   let git = ["/usr/bin/git", "--no-optional-locks", "-C"]
-  guard let top = run(git + [path, "rev-parse", "--show-toplevel"]) else { return repo }
+  guard let top = run(git + [path, "rev-parse", "--show-toplevel"]) else {
+    repo.isUnread = deadline.timeIntervalSinceNow <= 0
+    return repo
+  }
   repo.top = top
   let prefix = git + [top]
   let results = runAll([
@@ -268,7 +280,9 @@ func tilde(_ path: String, _ home: String) -> String {
 }
 
 func branchText(_ repo: Repository) -> String {
-  guard repo.top != nil else { return "not a Git repository" }
+  guard repo.top != nil else {
+    return repo.isUnread ? "Git state unknown (no answer in time)" : "not a Git repository"
+  }
   var parts = [
     repo.isDetached ? "(detached \(repo.branch ?? "HEAD"))" : (repo.branch ?? "(unknown branch)")
   ]
@@ -409,6 +423,10 @@ func heavyWork(_ event: [String: Any]) -> String? {
       return "xcodebuild"
     case "gate.sh":
       return "gate.sh"
+    case _
+    where ["sh", "bash", "zsh"].contains(program)
+      && arguments.first.map({ ($0 as NSString).lastPathComponent == "gate.sh" }) == true:
+      return "gate.sh"
     case "swift" where arguments.first == "build" || arguments.first == "test":
       return "swift \(arguments.first!)"
     case "simctl" where arguments.first == "boot":
@@ -485,7 +503,8 @@ concurrently {
 concurrently { simulators.value = bootedSimulators(cache: cache) }
 concurrently { sessions.value = otherSessions(home: home, ownID: ownID) }
 concurrently { machine.value = host(cwd: cwd) }
-group.wait()
+// Whatever is not in by the deadline stays unknown; the status never outlives its budget.
+_ = group.wait(timeout: .now() + max(0, deadline.timeIntervalSinceNow) + 0.5)
 
 let measured =
   machine.value

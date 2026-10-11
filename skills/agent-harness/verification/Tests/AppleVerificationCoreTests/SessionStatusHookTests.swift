@@ -62,7 +62,8 @@ private struct Fixture {
 
   /// Runs the hook from `cwd` and returns its decoded output.
   func status(
-    cwd: URL, event: String = "UserPromptSubmit", sessionID: String = "own-session"
+    cwd: URL, event: String = "UserPromptSubmit", sessionID: String = "own-session",
+    budget: String? = nil
   ) throws -> [String: Any] {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -72,6 +73,7 @@ private struct Fixture {
     environment["CLAUDE_PLUGIN_DATA"] = data.path
     // A loaded host can take seconds per Git call; the test checks content, not speed.
     environment["APE_STATUS_TIMEOUT"] = "60"
+    if let budget { environment["APE_STATUS_BUDGET"] = budget }
     process.environment = environment
     // Keep the Simulator cache fresh however long the run has taken.
     try FileManager.default.setAttributes(
@@ -204,7 +206,7 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
   for command in [
     "ls -la", "git status", "echo swift is fun", "grep -rn xcodebuild skills",
     "git commit -m \"bump xcodebuild flags\"", "cat scripts/gate.sh", "xcodebuild -version",
-    "xcrun simctl list", "swift --version",
+    "xcrun simctl list", "swift --version", "sh -c 'echo hi'", "bash",
   ] {
     #expect(try decision(event("Bash", command), data: fixture.data) == nil, "\(command)")
   }
@@ -222,6 +224,7 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
     event("Bash", "xcodebuild test -scheme App"), event("Bash", "swift test --parallel"),
     event("Bash", "xcrun simctl boot ABC"), event("Bash", "cd app && scripts/gate.sh --full"),
     event("Bash", "env CI=1 xcodebuild build -scheme App 2>&1 | tail"),
+    event("Bash", "bash scripts/gate.sh --dry-run"),
     event("mcp__xcode__RunAllTests"),
   ] {
     #expect(try decision(heavy, data: fixture.data) == (overloaded ? "ask" : nil))
@@ -237,4 +240,19 @@ private func decision(_ event: [String: Any], data: URL) throws -> String? {
     let output = try fixture.status(cwd: fixture.repository)
     #expect(try line(output, "Directory") == "Directory ~/app with space · main (no upstream)")
   }
+}
+
+@Test func sessionStatusAnswersWithinItsBudget() throws {
+  // With almost no budget left, every slow call is skipped and the status still answers at
+  // once, marking what it could not read.
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  _ = try fixture.status(cwd: fixture.repository)  // compiles the binary first
+  let started = Date()
+  let output = try fixture.status(cwd: fixture.repository, budget: "0.001")
+  #expect(Date().timeIntervalSince(started) < 10)
+  #expect(
+    try line(output, "Directory")
+      == "Directory ~/app with space · Git state unknown (no answer in time)")
+  #expect(try line(output, "Host: load ") != nil)
 }
