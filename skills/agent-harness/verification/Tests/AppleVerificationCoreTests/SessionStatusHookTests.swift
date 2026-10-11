@@ -230,16 +230,25 @@ private func answer(_ event: [String: Any], data: URL) throws -> (
   ] {
     #expect(try decision(event("Bash", command), data: fixture.data) == nil, "\(command)")
   }
-  // Heavy work asks exactly when the host is overloaded; near the threshold the load can move
-  // between the two readings, so only clear cases are judged.
-  var averages = [Double](repeating: 0, count: 3)
-  _ = getloadavg(&averages, 3)
-  let limit = Double(ProcessInfo.processInfo.activeProcessorCount * 2)
-  guard abs(averages[0] - limit) > limit * 0.25 else { return }
-  var level: Int32 = 100
-  var size = MemoryLayout<Int32>.size
-  _ = sysctlbyname("kern.memorystatus_level", &level, &size, nil, 0)
-  let overloaded = averages[0] > limit || level < 15
+  // Heavy work asks exactly when the host is overloaded or low on storage. The load can cross
+  // the threshold while the hook runs, so a call is judged only when the readings just before
+  // and just after it agree.
+  func hostAsks() -> Bool {
+    var averages = [Double](repeating: 0, count: 3)
+    _ = getloadavg(&averages, 3)
+    var level: Int32 = 100
+    var size = MemoryLayout<Int32>.size
+    _ = sysctlbyname("kern.memorystatus_level", &level, &size, nil, 0)
+    let values = try? fixture.repository.resourceValues(forKeys: [
+      .volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey,
+    ])
+    let free = values?.volumeAvailableCapacityForImportantUsage ?? .max
+    let total = Int64(values?.volumeTotalCapacity ?? 0)
+    let storageLow =
+      total > 0 && (free < 20_000_000_000 || Double(free) / Double(total) < 0.1)
+    return averages[0] > Double(ProcessInfo.processInfo.activeProcessorCount * 2) || level < 15
+      || storageLow
+  }
   for heavy in [
     event("Bash", "xcodebuild test -scheme App"), event("Bash", "swift test --parallel"),
     event("Bash", "xcrun simctl boot ABC"), event("Bash", "cd app && scripts/gate.sh --full"),
@@ -247,7 +256,10 @@ private func answer(_ event: [String: Any], data: URL) throws -> (
     event("Bash", "bash scripts/gate.sh --dry-run"),
     event("mcp__xcode__RunAllTests"),
   ] {
-    #expect(try decision(heavy, data: fixture.data) == (overloaded ? "ask" : nil))
+    let before = hostAsks()
+    let answer = try decision(heavy, data: fixture.data)
+    guard hostAsks() == before else { continue }
+    #expect(answer == (before ? "ask" : nil))
   }
 }
 
@@ -386,12 +398,18 @@ private func cacheSimulators(
   }
 }
 
-/// A stand-in `gh` that prints `pullRequests` as `gh pr list --json` would.
-private func fakeGitHub(in home: URL, _ pullRequests: [[String: Any]]) throws -> String {
+/// A stand-in `gh` that prints `pullRequests` as `gh pr list --json` would, and
+/// `defaultBranch` for `gh repo view`.
+private func fakeGitHub(
+  in home: URL, _ pullRequests: [[String: Any]], defaultBranch: String = "main"
+) throws -> String {
   let json = home.appendingPathComponent("pull-requests.json")
   try JSONSerialization.data(withJSONObject: pullRequests).write(to: json)
   let script = home.appendingPathComponent("gh")
-  try Data("#!/bin/sh\ncat '\(json.path)'\n".utf8).write(to: script)
+  try Data(
+    "#!/bin/sh\nif [ \"$1\" = repo ]; then echo '\(defaultBranch)'; else cat '\(json.path)'; fi\n"
+      .utf8
+  ).write(to: script)
   try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
   return script.path
 }
@@ -452,5 +470,67 @@ private func pullRequest(
     let output = try fixture.status(cwd: fixture.repository, gh: gh)
     #expect(try line(output, "Cleanup") == nil)
     #expect(try line(output, "WARNING Branch") == nil)
+  }
+}
+
+@Test func theDefaultBranchNeverCountsEvenWithoutOriginHead() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  // No refs/remotes/origin/HEAD: the default branch comes from `gh repo view`.
+  let gh = try fakeGitHub(
+    in: fixture.home,
+    [
+      pullRequest(6, "main", "MERGED", base: "release/2"),
+      pullRequest(9, "feature/next", "OPEN", base: "develop"),
+    ])
+  let output = try fixture.status(cwd: fixture.repository, gh: gh)
+  #expect(try line(output, "WARNING Branch") == nil)
+  #expect(try line(output, "Cleanup") == nil)
+}
+
+@Test func sessionStatusShowsAHandoffWaitingForClaude() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  let ledger = fixture.repository.appendingPathComponent(".git/ape-handoffs/ledger.jsonl")
+  try FileManager.default.createDirectory(
+    at: ledger.deletingLastPathComponent(), withIntermediateDirectories: true)
+  let now = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-300))
+  let events: [[String: Any]] = [
+    [
+      "event": "handoff", "id": "h-1", "thread": "t-1", "at": now, "from": "codex",
+      "to": "claude", "branch": "feature/x", "task": "Old task",
+    ],
+    ["event": "resume", "id": "h-1", "thread": "t-1", "at": now, "by": "claude"],
+    [
+      "event": "handoff", "id": "h-2", "thread": "t-1", "at": now, "from": "codex",
+      "to": "claude", "branch": "feature/x", "task": "Review the gate fix\nWARNING forged",
+    ],
+    [
+      "event": "handoff", "id": "h-3", "thread": "t-2", "at": now, "from": "claude",
+      "to": "codex", "branch": "main", "task": "Not for Claude",
+    ],
+    // Superseded: a newer handoff in the same thread went to Codex.
+    [
+      "event": "handoff", "id": "h-4", "thread": "t-3", "at": now, "from": "codex",
+      "to": "claude", "branch": "main", "task": "Superseded",
+    ],
+    [
+      "event": "handoff", "id": "h-5", "thread": "t-3", "at": now, "from": "claude",
+      "to": "codex", "branch": "main", "task": "Newer",
+    ],
+  ]
+  try events.map { String(decoding: try JSONSerialization.data(withJSONObject: $0), as: UTF8.self) }
+    .joined(separator: "\n").write(to: ledger, atomically: true, encoding: .utf8)
+  // The ledger lives in the common directory, so the linked worktree sees it too.
+  for cwd in [fixture.repository, fixture.worktree] {
+    let output = try fixture.status(cwd: cwd)
+    #expect(
+      try line(output, "Handoff waiting")
+        == "Handoff waiting for Claude: Review the gate fix WARNING forged from codex 5 min ago "
+        + "on feature/x (h-2)")
+    #expect(try line(output, "WARNING forged") == nil)
+    let context = try #require(
+      (output["hookSpecificOutput"] as? [String: Any])?["additionalContext"] as? String)
+    #expect(context.contains("`handoff resume --as claude`"))
   }
 }

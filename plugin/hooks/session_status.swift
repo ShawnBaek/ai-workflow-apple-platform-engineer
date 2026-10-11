@@ -4,13 +4,13 @@ import Foundation
 
 // Claude Code SessionStart and UserPromptSubmit hook. Collects, read-only, where this session
 // works and what else is running: the directory's Git branch, upstream and worktree, the
-// branches and worktrees that merged pull requests left there, every workspace or project open
-// in Xcode with its branch, the booted Simulators and Xcode Preview devices, the other Claude
-// sessions active in the last 30 minutes, the host's load and memory, and the free storage of
-// the working volume. It shows them to the person (`systemMessage`) and
-// gives them to the agent (`additionalContext`). A failure only leaves a fact out or marks it
-// unknown. Before a tool call (PreToolUse) it instead asks the user when the call would stall
-// an overloaded host or break the Simulator rules.
+// branches and worktrees that merged pull requests left there, the handoffs waiting for Claude,
+// every workspace or project open in Xcode with its branch, the booted Simulators and Xcode
+// Preview devices, the other Claude sessions active in the last 30 minutes, the host's load and
+// memory, and the free storage of the working volume. It shows them to the person
+// (`systemMessage`) and gives them to the agent (`additionalContext`). A failure only leaves a
+// fact out or marks it unknown. Before a tool call (PreToolUse) it instead asks the user when
+// the call would stall an overloaded host or break the Simulator rules.
 
 struct Repository {
   var path: String
@@ -23,6 +23,8 @@ struct Repository {
   /// Changed paths; nil when `git status` did not answer in time.
   var dirty: Int?
   var worktreeOf: String?
+  /// The Git common directory every worktree of the repository shares.
+  var common: String?
   /// Git did not answer before the deadline, so nothing is known about the folder.
   var isUnread = false
 }
@@ -154,6 +156,7 @@ func repository(at path: String) -> Repository {
     if numbers.count == 2 { (repo.ahead, repo.behind) = (numbers[0], numbers[1]) }
   }
   repo.dirty = results[4].map { $0.split(separator: "\n").count }
+  repo.common = results[6]
   if let gitDirectory = results[5], let common = results[6], gitDirectory != common {
     repo.worktreeOf = common.hasSuffix("/.git") ? String(common.dropLast(5)) : common
   }
@@ -344,19 +347,33 @@ let ghCommand: [String] = {
   return ["/usr/bin/env", "gh"]
 }()
 
-/// The latest pull request of each head branch of the repository whose Git common directory is
-/// `common`, by number, and whether it merged. A pull request from a fork, and a branch that an
-/// open pull request still targets, never count. Asked of `gh` in `top` and cached for ten
-/// minutes per repository; an unknown answer is cached for one minute. Nil when unknown.
-func pullRequests(common: String, top: String, cache: URL) -> [String: (number: Int, merged: Bool)]?
-{
+/// What GitHub knows about a repository: the latest pull request of each head branch, by
+/// number, and whether it merged, and the default branch.
+struct GitHubState {
+  var heads: [String: (number: Int, merged: Bool)]
+  var defaultBranch: String?
+}
+
+/// How long one `gh` call may take: 4 seconds, so a slow network never holds up a prompt for
+/// long, unless `APE_STATUS_TIMEOUT` sets the limit for every call.
+let ghTimeout =
+  ProcessInfo.processInfo.environment["APE_STATUS_TIMEOUT"] == nil
+  ? min(commandTimeout, 4)
+  : commandTimeout
+
+/// The GitHub state of the repository whose Git common directory is `common`. A pull request
+/// from a fork, and a branch that an open pull request still targets, never count. Asked of
+/// `gh` in `top` and cached for ten minutes per repository; an unknown answer is cached for one
+/// minute. Nil when unknown.
+func gitHubState(common: String, top: String, cache: URL) -> GitHubState? {
   let folder = cache.appendingPathComponent("pull-requests")
   let key = SHA256.hash(data: Data(common.utf8)).map { String(format: "%02x", $0) }.joined()
   let file = folder.appendingPathComponent(key + ".json")
-  func decode(_ heads: [String: [String: Any]]) -> [String: (number: Int, merged: Bool)] {
-    heads.compactMapValues { pr in
-      (pr["number"] as? Int).map { (number: $0, merged: pr["state"] as? String == "MERGED") }
-    }
+  func decode(_ heads: [String: [String: Any]], _ defaultBranch: String?) -> GitHubState {
+    GitHubState(
+      heads: heads.compactMapValues { pr in
+        (pr["number"] as? Int).map { (number: $0, merged: pr["state"] as? String == "MERGED") }
+      }, defaultBranch: defaultBranch)
   }
   if let attributes = try? FileManager.default.attributesOfItem(atPath: file.path),
     let modified = attributes[.modificationDate] as? Date,
@@ -364,14 +381,24 @@ func pullRequests(common: String, top: String, cache: URL) -> [String: (number: 
     let cached = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
   {
     let heads = cached["heads"] as? [String: [String: Any]]
-    if Date().timeIntervalSince(modified) < (heads == nil ? 60 : 600) { return heads.map(decode) }
+    if Date().timeIntervalSince(modified) < (heads == nil ? 60 : 600) {
+      return heads.map { decode($0, cached["default"] as? String) }
+    }
   }
+  let answers = Box([String?](repeating: nil, count: 2))
+  DispatchQueue.concurrentPerform(iterations: 2) { index in
+    let arguments =
+      index == 0
+      ? [
+        "pr", "list", "--state", "all", "--limit", "300", "--json",
+        "number,headRefName,baseRefName,state,isCrossRepository",
+      ] : ["repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name"]
+    let value = run(ghCommand + arguments, in: top, timeout: ghTimeout)
+    answers.mutate { $0[index] = value }
+  }
+  let defaultBranch = answers.value[1].flatMap { $0.isEmpty ? nil : $0 }
   var heads: [String: [String: Any]]?
-  if let json = run(
-    ghCommand + [
-      "pr", "list", "--state", "all", "--limit", "300", "--json",
-      "number,headRefName,baseRefName,state,isCrossRepository",
-    ], in: top, timeout: min(commandTimeout, 4)),
+  if let json = answers.value[0],
     let list = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [[String: Any]]
   {
     let ownPullRequests = list.filter { $0["isCrossRepository"] as? Bool != true }
@@ -390,18 +417,19 @@ func pullRequests(common: String, top: String, cache: URL) -> [String: (number: 
     heads = latest
   }
   try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-  let record: [String: Any] = heads.map { ["heads": $0] } ?? [:]
+  var record: [String: Any] = heads.map { ["heads": $0] } ?? [:]
+  record["default"] = defaultBranch
   if let data = try? JSONSerialization.data(withJSONObject: record) {
     try? data.write(to: file, options: .atomic)
   }
-  return heads.map(decode)
+  return heads.map { decode($0, defaultBranch) }
 }
 
 /// The leftovers of merged pull requests in `repo`; the remote's default branch never counts.
 /// Nil when unknown.
 func leftovers(of repo: Repository, cache: URL) -> Leftovers? {
   guard let top = repo.top,
-    let found = pullRequests(common: repo.worktreeOf ?? top, top: top, cache: cache)
+    let state = gitHubState(common: repo.worktreeOf ?? top, top: top, cache: cache)
   else { return nil }
   let git = ["/usr/bin/git", "--no-optional-locks", "-C", top]
   let answers = runAll([
@@ -409,13 +437,16 @@ func leftovers(of repo: Repository, cache: URL) -> Leftovers? {
     git + ["worktree", "list", "--porcelain"],
     git + ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
   ])
-  let defaultBranch = answers[2].map { $0.hasPrefix("origin/") ? String($0.dropFirst(7)) : $0 }
+  // origin/HEAD exists only in a clone; GitHub's answer covers the rest.
+  let defaultBranch =
+    answers[2].map { $0.hasPrefix("origin/") ? String($0.dropFirst(7)) : $0 }
+    ?? state.defaultBranch
   func merged(_ branch: String) -> Bool {
-    branch != defaultBranch && found[branch]?.merged == true
+    branch != defaultBranch && state.heads[branch]?.merged == true
   }
   var result = Leftovers()
   if !repo.isDetached, let branch = repo.branch, merged(branch) {
-    result.currentPullRequest = found[branch]?.number
+    result.currentPullRequest = state.heads[branch]?.number
   }
   result.branches = (answers[0] ?? "").split(separator: "\n").filter { merged(String($0)) }.count
   // The first entry is the main worktree; the others are linked worktrees.
@@ -426,6 +457,61 @@ func leftovers(of repo: Repository, cache: URL) -> Leftovers? {
       }
     }.count
   return result
+}
+
+/// A handoff another agent addressed to Claude that no session has resumed yet.
+struct WaitingHandoff {
+  var id: String
+  var from: String
+  var task: String
+  var branch: String?
+  var minutesAgo: Int
+}
+
+/// The handoffs waiting for Claude in the repository's `apple-verify handoff` ledger, as
+/// `handoff list --pending-for claude` counts them: the newest handoff of each open thread, when
+/// it is addressed to Claude and not resumed. Newest last; empty when there is no ledger.
+func waitingHandoffs(common: String) -> [WaitingHandoff] {
+  let ledger = URL(fileURLWithPath: common).appendingPathComponent("ape-handoffs/ledger.jsonl")
+  guard let text = try? String(contentsOf: ledger, encoding: .utf8) else { return [] }
+  let events = text.split(separator: "\n").compactMap {
+    try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any]
+  }
+  let resumed = Set(
+    events.filter { $0["event"] as? String == "resume" }.compactMap { $0["id"] as? String })
+  let closed = Set(
+    events.filter { $0["event"] as? String == "close" }.compactMap { $0["thread"] as? String })
+  var newest = [String: String]()
+  for event in events where event["event"] as? String == "handoff" {
+    if let thread = event["thread"] as? String { newest[thread] = event["id"] as? String }
+  }
+  let formatter = ISO8601DateFormatter()
+  return events.compactMap { event in
+    guard event["event"] as? String == "handoff", event["to"] as? String == "claude",
+      let thread = event["thread"] as? String, newest[thread] == event["id"] as? String,
+      let id = event["id"] as? String, !resumed.contains(id),
+      !closed.contains(thread)
+    else { return nil }
+    let at = (event["at"] as? String).flatMap(formatter.date(from:)) ?? Date()
+    return WaitingHandoff(
+      id: id, from: event["from"] as? String ?? "another agent",
+      // One line, whatever the ledger holds, so a task never forges a status line.
+      task: String(
+        String.UnicodeScalarView(
+          (event["task"] as? String ?? "").unicodeScalars.prefix(200).map {
+            CharacterSet.controlCharacters.union(.newlines).contains($0) ? " " : $0
+          })), branch: event["branch"] as? String,
+      minutesAgo: max(0, Int(Date().timeIntervalSince(at) / 60)))
+  }
+}
+
+func ago(minutes: Int) -> String {
+  switch minutes {
+  case 0: return "just now"
+  case ..<60: return "\(minutes) min ago"
+  case ..<(48 * 60): return "\(minutes / 60) h ago"
+  default: return "\(minutes / (24 * 60)) days ago"
+  }
 }
 
 func plural(_ count: Int, _ noun: String, _ plural: String) -> String {
@@ -468,7 +554,8 @@ func gigabytes(_ bytes: Int64) -> String {
 
 /// The status lines, warnings first.
 func lines(
-  here: Repository, leftovers: Leftovers?, xcode: [(String, Repository)]?,
+  here: Repository, leftovers: Leftovers?, handoffs: [WaitingHandoff],
+  xcode: [(String, Repository)]?,
   simulators: Simulators?, sessions: [OtherSession], host: Host, home: String
 ) -> [String] {
   var out = [String]()
@@ -496,6 +583,13 @@ func lines(
   out.append(
     "Directory \(tilde(here.top ?? here.path, home)) · \(branchText(here))"
       + worktreeText(here, home))
+  if let newest = handoffs.last {
+    out.append(
+      "Handoff waiting for Claude"
+        + (handoffs.count > 1 ? " (\(handoffs.count), newest shown)" : "")
+        + ": \(newest.task) from \(newest.from) \(ago(minutes: newest.minutesAgo)) on "
+        + "\(newest.branch ?? "a detached HEAD") (\(newest.id))")
+  }
   if let leftovers, leftovers.branches + leftovers.worktrees > 0 {
     out.append(
       "Cleanup: \(plural(leftovers.branches, "local branch", "local branches")) and "
@@ -612,8 +706,9 @@ func commandWords(_ command: String) -> [[String]] {
 }
 
 /// What a tool call starts that an overloaded host would stall: an Xcode MCP build, test or
-/// run tool or `DeviceInteractionInstallAndRun`, or a Bash command that runs `xcodebuild` (other than a query such as `-version`),
-/// `swift build`, `swift test`, `simctl boot` or a repository's `gate.sh`; nil otherwise.
+/// run tool or `DeviceInteractionInstallAndRun`, or a Bash command that runs `xcodebuild` (other
+/// than a query such as `-version`), `swift build`, `swift test`, `simctl boot` or a
+/// repository's `gate.sh`; nil otherwise.
 func heavyWork(_ event: [String: Any]) -> String? {
   let tool = event["tool_name"] as? String ?? ""
   if tool.hasPrefix("mcp__"),
@@ -826,6 +921,7 @@ if event["hook_event_name"] as? String == "PreToolUse" {
 
 let here = Box(Repository(path: cwd))
 let leftoverState = Box<Leftovers?>(nil)
+let handoffState = Box([WaitingHandoff]())
 let xcode = Box<[(String, Repository)]?>(nil)
 let simulatorState = Box<Simulators?>(nil)
 let sessions = Box([OtherSession]())
@@ -837,6 +933,7 @@ func concurrently(_ work: @escaping @Sendable () -> Void) {
 concurrently {
   let repo = repository(at: cwd)
   here.value = repo
+  handoffState.value = repo.common.map(waitingHandoffs) ?? []
   leftoverState.value = leftovers(of: repo, cache: cache)
 }
 concurrently {
@@ -858,7 +955,8 @@ let measured =
   machine.value
   ?? Host(load: 0, processors: 1, memoryFree: nil, simulatorProcesses: 0, volume: "volume")
 let shown = lines(
-  here: here.value, leftovers: leftoverState.value, xcode: xcode.value,
+  here: here.value, leftovers: leftoverState.value, handoffs: handoffState.value,
+  xcode: xcode.value,
   simulators: simulatorState.value, sessions: sessions.value, host: measured, home: home)
 var guidance =
   "Live session environment, read just now. Before editing, building, testing, committing or "
@@ -872,6 +970,12 @@ if let found = leftoverState.value,
   guidance +=
     " Merged pull requests left branches or worktrees here: follow git-workflow branch "
     + "hygiene, start new work on a new branch, and remove only what this task created."
+}
+if !handoffState.value.isEmpty {
+  guidance +=
+    " A handoff from another agent is waiting for Claude in this repository: tell the user, "
+    + "and when they want to continue it, follow the session-handoff skill and run "
+    + "`handoff resume --as claude` with the apple-verify it locates."
 }
 if measured.isOverloaded || measured.isStorageLow {
   guidance +=

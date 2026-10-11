@@ -39,6 +39,7 @@
     "open-xcode-handoff",
     "release-qa-handoff",
     "screenshot",
+    "session-handoff",
     "sketch-design-from-codebase",
     "skill-maintenance",
     "storekit-sandbox-testing",
