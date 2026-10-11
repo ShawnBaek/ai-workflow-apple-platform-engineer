@@ -4,9 +4,18 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+## [2.1] - 2026-10-11
+
+The Claude Code plugin now enforces the PR delivery review and shows each session where it works and how loaded the host is. Both hooks are Swift, compiled once per revision into the plugin's data folder; Codex and other Skills CLI installs have neither.
+
+### Migration
+
+- **Private harnesses: re-observe the skill bundle** ([#130], [#131]). They change `git-workflow`, `agent-harness` and `apple-platform-setup`, which every harness requires; re-derive `expected_bundle_sha256` as the 2.0.0-beta.12 Migration item describes. The verifier's Swift sources are unchanged, so `runtime-identity` stays.
+- **Allow Automation for Xcode** once when macOS asks, so the session status can list the open Xcode workspaces.
+
 ### Added
 
-- **Session status hook in the Claude Code plugin.** At session start and with every prompt, a Swift hook shows you (`systemMessage`) and gives the agent (`additionalContext`) a short status:
+- **Session status hook in the Claude Code plugin** ([#131]). At session start and with every prompt, a Swift hook shows you (`systemMessage`) and gives the agent (`additionalContext`) a short status:
   - the working directory's branch, upstream with ahead/behind, changed-file count and worktree;
   - each workspace or project open in Xcode, with its branch and worktree (read through Automation);
   - the booted Simulators (cached for a minute) and the number of CoreSimulator processes;
@@ -14,12 +23,12 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
   - the other Claude sessions active in the last 30 minutes, with their directory and branch.
 
   The agent is told to stop and ask when the target checkout differs, or another session works in it, and on an overloaded or full host to tell the user before starting a build, test run or Simulator instead of waiting silently. Git runs without optional locks, so the hook never rewrites an index. Mid-turn, the same Swift binary checks the host before a build, test run or Simulator boot (`xcodebuild`, `swift build`/`test`, `simctl boot`, a `gate.sh`, or an Xcode MCP build, test or run tool) and, when it is overloaded or full, asks the user whether to run now instead of letting the agent wait silently. Git calls run concurrently (about 0.7 s with four open Xcode projects), and a failure prints nothing and never blocks the prompt ([updating](skills/apple-platform-setup/references/updating.md#claude-code-plugin)).
-- **PR gate hook in the Claude Code plugin.** A `PreToolUse` hook denies `gh pr create`, `gh pr ready`, `gh pr edit --base` and a branch `git push`, including inside `sh -c`, `env` or compound commands, unless that command's own `APE_REVIEWED_HEAD=<sha>` assignment names the commit it publishes or its `APE_REVIEW_OVERRIDE` records the user's explicit decision. It holds even when the agent never loaded `git-workflow` or lost it to context compaction, which let one app session open thirteen pull requests without the review loop. Tag pushes, deletions and text that only mentions these commands pass. A small `sh` wrapper passes unrelated commands at once and runs the Swift gate, compiled once per revision into the plugin's data folder ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
+- **PR gate hook in the Claude Code plugin** ([#130]). A `PreToolUse` hook denies `gh pr create`, `gh pr ready`, `gh pr edit --base` and a branch `git push`, including inside `sh -c`, `env` or compound commands, unless that command's own `APE_REVIEWED_HEAD=<sha>` assignment names the commit it publishes or its `APE_REVIEW_OVERRIDE` records the user's explicit decision. It holds even when the agent never loaded `git-workflow` or lost it to context compaction, which let one app session open thirteen pull requests without the review loop. Tag pushes, deletions and text that only mentions these commands pass. A small `sh` wrapper passes unrelated commands at once and runs the Swift gate, compiled once per revision into the plugin's data folder ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
 
 ### Changed
 
-- **A repository instruction owns only the steps it names.** [Repository skill precedence](skills/agent-harness/references/repo-skill-precedence.md) now says that a repository's partial procedure, such as a pull-request test gate, replaces only those steps; the review verdict, evidence attachment and readback still apply unless the repository or the user waives them by name.
-- Release tags are created with `git tag`, because `claude plugin tag` refuses a `MAJOR.MINOR` version ([contributing](CONTRIBUTING.md#add-a-skill)).
+- **A repository instruction owns only the steps it names** ([#130]). [Repository skill precedence](skills/agent-harness/references/repo-skill-precedence.md) now says that a repository's partial procedure, such as a pull-request test gate, replaces only those steps; the review verdict, evidence attachment and readback still apply unless the repository or the user waives them by name.
+- Release tags are created with `git tag` ([#130]), because `claude plugin tag` refuses a `MAJOR.MINOR` version ([contributing](CONTRIBUTING.md#add-a-skill)).
 
 ## [2.0] - 2026-10-11
 
@@ -224,7 +233,8 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 - Fail-open authorization paths are closed: a `stop` ends the run's authority, a later `rejected` repository decision revokes approval, dispatch re-reads the clock after health probes, and a direct Issue target must be the bound Issue ([#90]).
 - Observed staged and outgoing paths list both sides of a rename, so content cannot leave an unauthorized directory unchecked ([#73]).
 
-[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0...HEAD
+[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.1...HEAD
+[2.1]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0...v2.1
 [2.0]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.12...v2.0
 [2.0.0-beta.12]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.11...v2.0.0-beta.12
 [2.0.0-beta.11]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.10...v2.0.0-beta.11
@@ -311,3 +321,5 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 [#125]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/125
 [#126]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/126
 [#127]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/127
+[#130]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/130
+[#131]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/131
