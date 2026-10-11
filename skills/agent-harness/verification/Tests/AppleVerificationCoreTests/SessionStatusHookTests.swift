@@ -71,12 +71,13 @@ private struct Fixture {
     var environment = ProcessInfo.processInfo.environment
     environment["HOME"] = home.path
     environment["CLAUDE_PLUGIN_DATA"] = data.path
-    // A loaded host can take seconds per Git call; the test checks content, not speed.
+    // A loaded host can take seconds per Git call, and a test runner many hooks at once; the
+    // test checks content, not speed, so neither one call nor the whole status may run out.
     environment["APE_STATUS_TIMEOUT"] = "60"
     environment["APE_SIMULATOR_BUDGET"] = "2"
     // A failing `gh` keeps pull requests unknown unless a test supplies its own.
     environment["APE_GH"] = gh
-    if let budget { environment["APE_STATUS_BUDGET"] = budget }
+    environment["APE_STATUS_BUDGET"] = budget ?? "300"
     process.environment = environment
     // Keep the Simulator cache fresh however long the run has taken.
     try FileManager.default.setAttributes(
