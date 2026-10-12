@@ -35,6 +35,19 @@ the client cannot wait/resume, preserve the pending operation and its precise
 resumption condition; do not claim background progress. Release this task's
 unneeded leases before waiting for another resource or human input.
 
+Give every background command a deadline. A session wakes only when a background
+command ends, so a build, test run, Simulator capture or watch that hangs on a
+loaded host otherwise leaves the user waiting with no report. Pick a duration
+the work needs on this host (30 minutes by default), tell the user what runs and
+until when, and when the deadline stops it, report that instead of starting it
+again. In Claude Code, run it as `<plugin>/hooks/deadline.sh 30m -- <command>`,
+which stops the command's whole process group at the deadline and exits 124; the
+plugin refuses heavy background work without it and sends a turn back that
+would end while unbounded background work still runs. Processes that launchd
+starts for the command, such as a Simulator's services, are outside that group,
+so after a stopped `simctl boot` check the device state. Without the plugin,
+bound the work itself or run it in the foreground under the client's own timeout.
+
 Check relevant memory pressure, free disk, active builds/destinations and output sizes before admitting heavy work. Reduce concurrency before deleting caches. Capture only bounded logs and short recordings; stream large hashes, process images sequentially, and keep raw evidence only as long as the accepted retention policy needs it. Preserve original hashes and the final reviewable proof before cleaning task-owned temporary output.
 
 When builds or tests run much slower than usual, check host load before changing what a build or test gate runs. Background indexing or file sync of build output and worktrees (for example Spotlight or a sync client watching DerivedData), and heavy unrelated apps, compete with the build. Report what you observed and the suggested change; excluding folders from indexing or sync, or quitting apps, changes the person's machine, so do it only with their approval.

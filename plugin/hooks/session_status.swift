@@ -637,12 +637,26 @@ func lines(
   return out
 }
 
-/// The words of each simple command of a Bash command line, quotes removed and quoted text kept
-/// as one word, after the assignments and wrappers (`env`, `sudo`, `xcrun` with its options)
-/// that run the next word as the command. Only a command's first word names what it runs, so a
-/// word mentioned in an argument (`grep xcodebuild`, a commit message) never counts.
-func commandWords(_ command: String) -> [[String]] {
-  var commands = [[String]]()
+/// One simple command of a Bash command line.
+struct SimpleCommand {
+  /// The words after the assignments, wrappers and shell keywords that run the next word.
+  var words: [String]
+  /// The plugin's `deadline.sh` runs it.
+  var deadline = false
+  /// A single `&` after it runs it in the background.
+  var background = false
+  /// A `while` or `until` loop runs it, or it opens one.
+  var loop = false
+}
+
+/// The simple commands of a Bash command line, quotes removed and quoted text kept as one word,
+/// after the assignments, wrappers (`env`, `sudo`, `caffeinate`, `xcrun` with its options, the
+/// plugin's `deadline.sh` with its duration) and shell keywords (`if`, `then`, `do`, ...) that run
+/// the next word as the command. The script of `sh -c` is read as commands too. Only a command's
+/// first word names what it runs, so a word mentioned in an argument (`grep xcodebuild`, a
+/// commit message) never counts.
+func simpleCommands(_ command: String) -> [SimpleCommand] {
+  var commands = [(words: [String], background: Bool)]()
   var words = [String]()
   var word = ""
   var inWord = false
@@ -652,13 +666,24 @@ func commandWords(_ command: String) -> [[String]] {
     word = ""
     inWord = false
   }
-  func endCommand() {
+  // Where the current list (commands joined by `|`, `&&` or `||`) starts; a single `&` sends the
+  // whole list to the background, and `;`, a newline or `&` starts the next one.
+  var listStart = 0
+  func endCommand(endsList: Bool = false, background: Bool = false) {
     endWord()
-    if !words.isEmpty { commands.append(words) }
+    if !words.isEmpty { commands.append((words, false)) }
     words = []
+    guard endsList else { return }
+    if background {
+      for index in commands.indices.dropFirst(listStart) { commands[index].background = true }
+    }
+    listStart = commands.count
   }
+  let characters = Array(command)
   var escaped = false
-  for character in command {
+  for (index, character) in characters.enumerated() {
+    let previous = index > 0 ? characters[index - 1] : " "
+    let next = index + 1 < characters.count ? characters[index + 1] : " "
     if escaped {
       // A backslash and newline continue the line; any other escaped character is literal.
       if character != "\n" {
@@ -673,7 +698,15 @@ func commandWords(_ command: String) -> [[String]] {
     } else if character == "'" || character == "\"" {
       quote = character
       inWord = true
-    } else if ";&|()\n".contains(character) {
+    } else if character == "&" && (previous == ">" || next == ">") {
+      // A redirection such as `2>&1` or `&>log`, part of the command.
+      word.append(character)
+      inWord = true
+    } else if character == "&" && previous != "&" && next != "&" {
+      endCommand(endsList: true, background: true)
+    } else if ";\n".contains(character) {
+      endCommand(endsList: true)
+    } else if "&|()".contains(character) {
       endCommand()
     } else if character.isWhitespace {
       endWord()
@@ -683,14 +716,32 @@ func commandWords(_ command: String) -> [[String]] {
     }
   }
   endCommand()
-  let wrappers: Set = ["env", "sudo", "time", "nohup", "command", "exec", "nice"]
+  let wrappers: Set = ["env", "sudo", "time", "nohup", "command", "exec", "nice", "caffeinate"]
+  let keywords: Set = ["if", "then", "else", "elif", "do", "while", "until", "for", "!", "{", "}"]
+  let loops: Set = ["while", "until", "for"]
+  // The open loops around the current command; only `while` and `until` may never end.
+  var openLoops = [String]()
+  let shells: Set = ["sh", "bash", "zsh"]
   let xcrunValueOptions: Set = ["--sdk", "-sdk", "--toolchain", "-toolchain"]
-  return commands.map { words in
-    var words = words
+  var result = [SimpleCommand]()
+  for (raw, background) in commands {
+    if raw[0] == "done", !openLoops.isEmpty { openLoops.removeLast() }
+    var words = raw
+    var deadline = false
     while let first = words.first {
       let name = (first as NSString).lastPathComponent
-      if first.contains("=") && !first.hasPrefix("-") || wrappers.contains(name) {
+      let second = words.dropFirst().first.map { ($0 as NSString).lastPathComponent }
+      if keywords.contains(first) || first.contains("=") && !first.hasPrefix("-")
+        || wrappers.contains(name)
+      {
+        // A loop opens wherever its keyword stands, such as `do while ...` inside another loop.
+        if loops.contains(first) { openLoops.append(first) }
         words.removeFirst()
+      } else if name == "deadline.sh" || shells.contains(name) && second == "deadline.sh" {
+        words.removeFirst(name == "deadline.sh" ? 1 : 2)
+        if !words.isEmpty { words.removeFirst() }  // the duration
+        if words.first == "--" { words.removeFirst() }
+        deadline = true
       } else if name == "xcrun" {
         words.removeFirst()
         while let option = words.first, option.hasPrefix("-") {
@@ -701,14 +752,74 @@ func commandWords(_ command: String) -> [[String]] {
         break
       }
     }
-    return words
+    guard !words.isEmpty else { continue }
+    let looped = openLoops.contains { $0 != "for" }
+    if shells.contains((words[0] as NSString).lastPathComponent), words.count >= 3,
+      words[1].hasPrefix("-"), !words[1].hasPrefix("--"), words[1].contains("c")
+    {
+      // `sh -c '<script>'`: the script's commands run with this command's deadline and mode.
+      for inner in simpleCommands(words[2]) {
+        var inner = inner
+        inner.deadline = inner.deadline || deadline
+        inner.background = inner.background || background
+        inner.loop = inner.loop || looped
+        result.append(inner)
+      }
+    } else {
+      result.append(
+        SimpleCommand(words: words, deadline: deadline, background: background, loop: looped))
+    }
+  }
+  return result
+}
+
+func commandWords(_ command: String) -> [[String]] {
+  simpleCommands(command).map(\.words)
+}
+
+/// What a simple command starts that an overloaded host would stall: `xcodebuild` (other than a
+/// query such as `-version`), `swift build`, `swift test`, `simctl boot` or a repository's
+/// `gate.sh`; nil otherwise.
+func heavyProgram(_ words: [String]) -> String? {
+  let queries: Set = [
+    "-version", "-list", "-showsdks", "-showBuildSettings", "-showdestinations", "-help",
+    "-usage", "-showTestPlans", "-showComponent",
+  ]
+  guard let program = words.first.map({ ($0 as NSString).lastPathComponent }) else {
+    return nil
+  }
+  let arguments = words.dropFirst()
+  switch program {
+  case "xcodebuild" where !arguments.contains(where: queries.contains):
+    return "xcodebuild"
+  case "gate.sh":
+    return "gate.sh"
+  case _
+  where ["sh", "bash", "zsh"].contains(program)
+    && arguments.first.map({ ($0 as NSString).lastPathComponent == "gate.sh" }) == true:
+    return "gate.sh"
+  case "swift" where arguments.first == "build" || arguments.first == "test":
+    return "swift \(arguments.first!)"
+  case "simctl" where arguments.first == "boot":
+    return "simctl boot"
+  default:
+    return nil
   }
 }
 
+/// A simple command that may wait without end on something outside this session: a `gh` watch,
+/// or anything run by a `while` or `until` loop. A plain `sleep` or a `for` loop ends by itself.
+func mayWaitWithoutEnd(_ command: SimpleCommand) -> Bool {
+  guard let program = command.words.first.map({ ($0 as NSString).lastPathComponent }) else {
+    return false
+  }
+  return command.loop
+    || program == "gh" && command.words.contains { $0 == "watch" || $0 == "--watch" }
+}
+
 /// What a tool call starts that an overloaded host would stall: an Xcode MCP build, test or
-/// run tool or `DeviceInteractionInstallAndRun`, or a Bash command that runs `xcodebuild` (other
-/// than a query such as `-version`), `swift build`, `swift test`, `simctl boot` or a
-/// repository's `gate.sh`; nil otherwise.
+/// run tool or `DeviceInteractionInstallAndRun`, or a Bash command that `heavyProgram` names;
+/// nil otherwise.
 func heavyWork(_ event: [String: Any]) -> String? {
   let tool = event["tool_name"] as? String ?? ""
   if tool.hasPrefix("mcp__"),
@@ -723,33 +834,7 @@ func heavyWork(_ event: [String: Any]) -> String? {
   guard tool == "Bash",
     let command = (event["tool_input"] as? [String: Any])?["command"] as? String
   else { return nil }
-  let queries: Set = [
-    "-version", "-list", "-showsdks", "-showBuildSettings", "-showdestinations", "-help",
-    "-usage", "-showTestPlans", "-showComponent",
-  ]
-  for words in commandWords(command) {
-    guard let program = words.first.map({ ($0 as NSString).lastPathComponent }) else {
-      continue
-    }
-    let arguments = words.dropFirst()
-    switch program {
-    case "xcodebuild" where !arguments.contains(where: queries.contains):
-      return "xcodebuild"
-    case "gate.sh":
-      return "gate.sh"
-    case _
-    where ["sh", "bash", "zsh"].contains(program)
-      && arguments.first.map({ ($0 as NSString).lastPathComponent == "gate.sh" }) == true:
-      return "gate.sh"
-    case "swift" where arguments.first == "build" || arguments.first == "test":
-      return "swift \(arguments.first!)"
-    case "simctl" where arguments.first == "boot":
-      return "simctl boot"
-    default:
-      continue
-    }
-  }
-  return nil
+  return commandWords(command).lazy.compactMap(heavyProgram).first
 }
 
 /// Each `simctl` call in a Bash command line: its device set, subcommand and remaining words.
@@ -858,6 +943,60 @@ func simulatorReasons(_ event: [String: Any], simulators: () -> Simulators?) -> 
   return reasons
 }
 
+/// The shell commands in flight in this session: the `background_tasks` Claude Code sends with
+/// `Stop` (running or pending, backgrounded by the agent or moved there), or, from a client that
+/// does not send it, the background Bash starts in the transcript's tail without a later task
+/// notification.
+func runningShellCommands(event: [String: Any]) -> [String] {
+  if let tasks = event["background_tasks"] as? [[String: Any]] {
+    return tasks.filter {
+      $0["type"] as? String == "shell"
+        && ["running", "pending"].contains($0["status"] as? String ?? "running")
+    }.compactMap { $0["command"] as? String }
+  }
+  guard let path = event["transcript_path"] as? String,
+    let handle = try? FileHandle(forReadingFrom: URL(fileURLWithPath: path))
+  else { return [] }
+  defer { try? handle.close() }
+  let size = (try? handle.seekToEnd()) ?? 0
+  let window: UInt64 = 16_000_000
+  try? handle.seek(toOffset: size > window ? size - window : 0)
+  let text = String(decoding: handle.readDataToEndOfFile(), as: UTF8.self)
+  var started = [(id: String, command: String)]()
+  var notified = Set<Substring>()
+  for line in text.split(separator: "\n") {
+    // The closing tag may be written as `<\/`, so the id ends at the next `<`.
+    var rest = line[...]
+    while let open = rest.range(of: "<tool-use-id>") {
+      let tail = rest[open.upperBound...]
+      let id = tail.prefix { $0 != "<" }
+      notified.insert(id)
+      rest = tail.dropFirst(id.count)
+    }
+    guard line.contains("\"run_in_background\""),
+      let entry = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+      let content = (entry["message"] as? [String: Any])?["content"] as? [[String: Any]]
+    else { continue }
+    for item in content
+    where item["type"] as? String == "tool_use" && item["name"] as? String == "Bash" {
+      guard let id = item["id"] as? String, let input = item["input"] as? [String: Any],
+        input["run_in_background"] as? Bool == true, let command = input["command"] as? String
+      else { continue }
+      started.append((id, command))
+    }
+  }
+  return started.filter { !notified.contains(Substring($0.id)) }.map(\.command)
+}
+
+/// The first heavy work a command line starts in the background (the whole call, or a command
+/// followed by `&`) without the deadline wrapper.
+func undeadlinedHeavyWork(_ command: String, background: Bool) -> String? {
+  simpleCommands(command).lazy.filter { !$0.deadline && (background || $0.background) }
+    .compactMap { heavyProgram($0.words) }.first
+}
+
+let defaultDeadline = "30m"
+
 let input = FileHandle.standardInput.readDataToEndOfFile()
 let event = (try? JSONSerialization.jsonObject(with: input) as? [String: Any]) ?? [:]
 let environment = ProcessInfo.processInfo.environment
@@ -868,9 +1007,64 @@ let cache = URL(
   fileURLWithPath: environment["CLAUDE_PLUGIN_DATA"]
     ?? "\(home)/Library/Caches/apple-platform-engineer")
 
+/// The deadline wrapper by path, as the agent can run it.
+let deadlineWrapper =
+  environment["APE_PLUGIN_HOOKS"].map { "'\($0)/deadline.sh'" }
+  ?? "\"${CLAUDE_PLUGIN_ROOT}/hooks/deadline.sh\""
+
+func write(_ object: [String: Any]) {
+  if let data = try? JSONSerialization.data(withJSONObject: object) {
+    FileHandle.standardOutput.write(data + Data("\n".utf8))
+  }
+}
+
+// Ending a turn while background work without a deadline still runs leaves the user waiting with
+// nothing to wake this session if that work hangs; the agent is sent back once to fix it.
+if event["hook_event_name"] as? String == "Stop" {
+  guard event["stop_hook_active"] as? Bool != true else { exit(0) }
+  let unbounded = runningShellCommands(event: event).filter {
+    simpleCommands($0).contains {
+      !$0.deadline && (heavyProgram($0.words) != nil || mayWaitWithoutEnd($0))
+    }
+  }
+  if let first = unbounded.first {
+    let shown = first.count > 120 ? String(first.prefix(117)) + "..." : first
+    write([
+      "decision": "block",
+      "reason":
+        "apple-platform-engineer: \(unbounded.count) background command(s) still run without a "
+        + "deadline, such as `\(shown)`. If one hangs, nothing wakes this session and the user "
+        + "waits indefinitely. Before ending the turn, stop it and rerun it as "
+        + "`\(deadlineWrapper) \(defaultDeadline) -- <command>`, or wait for it now, or tell the "
+        + "user plainly that it has no deadline and how to check on it.",
+    ])
+  }
+  exit(0)
+}
+
 // Before a build, test run or Simulator boot, an overloaded or full host goes to the user
-// instead of a silent wait; so does a call that breaks the Simulator rules.
+// instead of a silent wait; so does a call that breaks the Simulator rules. Heavy work started
+// in the background must carry a deadline, so a hang always ends and reports back.
 if event["hook_event_name"] as? String == "PreToolUse" {
+  if event["tool_name"] as? String == "Bash",
+    let toolInput = event["tool_input"] as? [String: Any],
+    let command = toolInput["command"] as? String,
+    let work = undeadlinedHeavyWork(
+      command, background: toolInput["run_in_background"] as? Bool == true)
+  {
+    write([
+      "hookSpecificOutput": [
+        "hookEventName": "PreToolUse", "permissionDecision": "deny",
+        "permissionDecisionReason":
+          "apple-platform-engineer: \(work) would run in the background without a deadline, so "
+          + "if it hangs nothing ever reports back and the user waits indefinitely. Run it as "
+          + "`\(deadlineWrapper) \(defaultDeadline) -- <command>` (a longer duration only when the "
+          + "work needs it) and tell the user the deadline. At the deadline the command's process "
+          + "group is stopped and the call ends with exit 124.",
+      ]
+    ])
+    exit(0)
+  }
   var reasons = [String]()
   if let work = heavyWork(event) {
     let measured = host(cwd: cwd)
