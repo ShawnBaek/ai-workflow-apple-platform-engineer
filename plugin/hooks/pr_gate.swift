@@ -328,12 +328,22 @@ func assignments(_ words: [Word]) -> ([String: String], ArraySlice<Word>) {
 struct Gate {
   var directory: String
   var reasons = [String]()
+  /// Tags that the `git tag` commands right before this one create, as repository and name. The
+  /// hook runs before the line does, so `git tag v2 && git push origin v2` must not take the new
+  /// tag for a branch. Any other command in between clears them: it could delete the tag or
+  /// create a branch of that name before the push runs.
+  var createdTags = Set<String>()
 
   func expand(_ path: String) -> String {
     let home = NSHomeDirectory()
     let expanded =
       path == "~" ? home : path.hasPrefix("~/") ? home + path.dropFirst() : path
     return expanded.hasPrefix("/") ? expanded : directory + "/" + expanded
+  }
+
+  /// The repository's Git directory, so the same repository written two ways matches.
+  func repositoryKey(_ directory: String) -> String {
+    git(["rev-parse", "--absolute-git-dir"], in: directory) ?? directory
   }
 
   func git(_ arguments: [String], in directory: String) -> String? {
@@ -392,7 +402,10 @@ struct Gate {
     }
     var (marker, rest) = assignments(command)
     for word in command {
-      for source in word.substitutions { checkLine(source, marker, depth: depth) }
+      for source in word.substitutions {
+        createdTags.removeAll()
+        checkLine(source, marker, depth: depth)
+      }
     }
     // Keywords and wrappers that run the following words as the command.
     let optionArguments: Set = ["-u", "-g", "-n", "-s", "-k", "-I", "-L", "-P", "-E", "-d"]
@@ -406,6 +419,7 @@ struct Gate {
         marker.merge(more) { _, new in new }
         rest = after
       } else if first == "eval" {
+        createdTags.removeAll()
         checkLine(rest.dropFirst().map(\.text).joined(separator: " "), marker, depth: depth)
         return
       } else if [
@@ -424,6 +438,8 @@ struct Gate {
     guard let program = rest.first?.text else { return }
     let arguments = rest.dropFirst().map(\.text)
     let name = (program as NSString).lastPathComponent
+    // Only a `git` command can keep the tags just created; `checkGit` decides which.
+    if name != "git" { createdTags.removeAll() }
     if ["sh", "bash", "zsh", "dash"].contains(name),
       let flag = arguments.firstIndex(where: { $0.hasPrefix("-") && $0.contains("c") }),
       flag + 1 < arguments.count
@@ -480,7 +496,22 @@ struct Gate {
         index += 1
       }
     }
-    guard index < arguments.count, arguments[index] == "push" else { return }
+    guard index < arguments.count else {
+      createdTags.removeAll()
+      return
+    }
+    if arguments[index] == "tag" {
+      if let name = createdTag(arguments[(index + 1)...]) {
+        createdTags.insert(repositoryKey(repository) + "\u{0}" + name)
+      } else {
+        createdTags.removeAll()  // listing or deleting tags
+      }
+      return
+    }
+    guard arguments[index] == "push" else {
+      createdTags.removeAll()
+      return
+    }
     var positional = [String]()
     var tagsOnly = false
     var options = arguments[(index + 1)...].makeIterator()
@@ -522,17 +553,74 @@ struct Gate {
         continue
       }
       let toTag = destination.hasPrefix("refs/tags/") || destination == source
+      let isBranch =
+        git(["show-ref", "--verify", "--quiet", "refs/heads/\(source)"], in: repository) != nil
+      // A tag this line creates counts only while its plain name still resolves to nothing in the
+      // push's repository: then the push succeeds only if the tag really is created, and no other
+      // spelling (`refs/heads/x`, `heads/x`, `HEAD`) can reach a branch through it.
+      let isCreatedTag =
+        createdTags.contains(repositoryKey(repository) + "\u{0}" + source)
+        && isPlainTagName(source)
+        && git(["rev-parse", "--verify", "--quiet", source], in: repository) == nil
       let isTag =
         source.hasPrefix("refs/tags/")
-        || (git(["show-ref", "--verify", "--quiet", "refs/tags/\(source)"], in: repository) != nil
-          && git(["show-ref", "--verify", "--quiet", "refs/heads/\(source)"], in: repository)
-            == nil)
+        || !isBranch
+          && (isCreatedTag
+            || git(["show-ref", "--verify", "--quiet", "refs/tags/\(source)"], in: repository)
+              != nil)
       if toTag && isTag {
         continue
       }
       require(marker, publishing: source, in: repository, "git push \(refspec)")
     }
   }
+}
+
+/// A name `git tag` would create under `refs/tags/` and nothing else can mean: no `refs/` prefix,
+/// not `HEAD` or `@`, and none of the characters of a revision expression.
+func isPlainTagName(_ name: String) -> Bool {
+  !name.isEmpty && !name.hasPrefix("refs/") && !name.hasPrefix("-") && name != "HEAD"
+    && name != "@" && !name.contains(where: { "~^:?*[\\ @{".contains($0) })
+}
+
+/// The tag a `git tag` invocation creates: its first name after the options; nil when it lists,
+/// verifies or deletes tags instead.
+func createdTag(_ arguments: ArraySlice<String>) -> String? {
+  let valued: Set = [
+    "-m", "--message", "-F", "--file", "-u", "--local-user", "--cleanup", "--trailer",
+  ]
+  let listing: Set = [
+    "-l", "--list", "-v", "--verify", "-d", "--delete", "-i", "--ignore-case", "--column",
+    "--no-column",
+  ]
+  let listingPrefixes = [
+    "-n", "--contains", "--no-contains", "--points-at", "--merged", "--no-merged", "--sort",
+    "--format", "--column=",
+  ]
+  var words = arguments.makeIterator()
+  while let word = words.next() {
+    if listing.contains(word) || listingPrefixes.contains(where: { word.hasPrefix($0) }) {
+      return nil
+    }
+    if word == "--" { return words.next() }
+    if valued.contains(word) {
+      _ = words.next()
+    } else if word.hasPrefix("--") {
+      continue  // `--message=...` and other options with their value attached
+    } else if word.hasPrefix("-") {
+      // A cluster of short flags such as `-am` or `-sm`: a last `m`, `F` or `u` takes the next
+      // word as its value; one written into the cluster (`-m"msg"`) does not.
+      let flags = word.dropFirst()
+      if let last = flags.last, "mFu".contains(last),
+        flags.firstIndex(where: { "mFu".contains($0) }) == flags.index(before: flags.endIndex)
+      {
+        _ = words.next()
+      }
+    } else {
+      return word
+    }
+  }
+  return nil
 }
 
 func deny(_ reason: String) {
