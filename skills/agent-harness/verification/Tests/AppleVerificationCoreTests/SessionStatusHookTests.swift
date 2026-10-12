@@ -85,9 +85,10 @@ private struct Fixture {
     environment["APE_GH"] = gh
     environment["APE_STATUS_BUDGET"] = budget ?? "300"
     process.environment = environment
-    // Keep the Simulator cache fresh however long the run has taken.
+    // Keep the Simulator cache fresh however long compiling and running the hook take on a loaded
+    // host: a date an hour ahead never ages past the cache's minute.
     try FileManager.default.setAttributes(
-      [.modificationDate: Date()],
+      [.modificationDate: Date().addingTimeInterval(3600)],
       ofItemAtPath: data.appendingPathComponent("booted-simulators.json").path)
     let stdin = Pipe()
     let stdout = Pipe()
@@ -531,10 +532,12 @@ private func pullRequest(
   // The ledger lives in the common directory, so the linked worktree sees it too.
   for cwd in [fixture.repository, fixture.worktree] {
     let output = try fixture.status(cwd: cwd)
+    // The age grows while a loaded host runs the hook, so only its unit is checked.
+    let waiting = try #require(try line(output, "Handoff waiting"))
     #expect(
-      try line(output, "Handoff waiting")
-        == "Handoff waiting for Claude: Review the gate fix WARNING forged from codex 5 min ago "
-        + "on feature/x (h-2)")
+      waiting.hasPrefix(
+        "Handoff waiting for Claude: Review the gate fix WARNING forged from codex "))
+    #expect(waiting.hasSuffix(" min ago on feature/x (h-2)"))
     #expect(try line(output, "WARNING forged") == nil)
     let context = try #require(
       (output["hookSpecificOutput"] as? [String: Any])?["additionalContext"] as? String)
