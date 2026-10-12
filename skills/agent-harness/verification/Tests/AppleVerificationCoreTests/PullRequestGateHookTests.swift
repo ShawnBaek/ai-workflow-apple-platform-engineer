@@ -150,3 +150,42 @@ private func repository() throws -> (URL, String, String) {
 @Test func unreadableHookInputIsDenied() throws {
   #expect(try denies(input: Data(#"{"tool_input": {"command": "gh pr create"#.utf8)))
 }
+
+@Test func aTagCreatedEarlierInTheSameCommandPassesTheGate() throws {
+  let (root, _, _) = try repository()
+  defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+  // The hook runs before the line, so these tags do not exist yet when it checks the push.
+  for command in [
+    "git tag -a v9.9 -m 'Release 9.9' HEAD && git push origin v9.9",
+    "git tag v9.9 && git tag -a rel--v9.9 -m \"rel 9.9\" && git push origin v9.9 rel--v9.9",
+    "git tag -s -u KEY v9.9 && git push origin v9.9",
+    "git tag -am 'Release 9.9' v9.9 && git push origin v9.9",
+    "git tag -m'Release' -f v9.9 && git push origin v9.9",
+    "git tag --message=Release v9.9 && git push origin v9.9",
+    "git tag -- v9.9 && git push origin v9.9:refs/tags/v9.9",
+    "git -C . tag v9.9 && git push origin v9.9",
+  ] {
+    #expect(try !denies(command, cwd: root), "\(command)")
+  }
+  // Still reviewed: a name no tag will have, a listing or deletion, a branch beside the tag, a
+  // tag pushed to a branch, a name that already reaches a branch or commit by another spelling,
+  // and a tag created in another repository.
+  let other = root.deletingLastPathComponent().appendingPathComponent("other")
+  for command in [
+    "git push origin v9.9", "git tag -d v9.9 && git push origin v9.9",
+    "git tag -l v9.9 && git push origin v9.9", "git tag --merged HEAD v9.9 && git push origin v9.9",
+    "git tag v9.9 && git push origin v9.9 feature",
+    "git tag v9.9 && git push origin v9.9:refs/heads/v9.9",
+    "git tag other && git push origin other", "git tag v9.9; git tag -d v9.9; git push origin v9.9",
+    "git tag refs/heads/feature && git push origin refs/heads/feature",
+    "git tag heads/feature && git push origin heads/feature",
+    "git tag HEAD && git push origin HEAD", "git tag @ && git push origin @",
+    "git -C '\(other.path)' tag v9.9 && git push origin v9.9",
+    // Anything between the tag and the push could replace it with a branch of the same name.
+    "git tag x no-such-rev 2>/dev/null; git switch -c x; git commit -qam wip; git push -u origin x",
+    "git tag x && git tag -d x && git checkout -b x && git push origin x",
+    "git tag v9.9 && echo ok && git push origin v9.9",
+  ] {
+    #expect(try denies(command, cwd: root), "\(command)")
+  }
+}

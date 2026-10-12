@@ -15,6 +15,10 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
   [Host resources](skills/agent-harness/references/host-resources.md) owns the rule for every client.
 
+### Fixed
+
+- **PR gate: a tag created in the same command.** `git tag -a v2.2 -m … && git push origin v2.2` was denied as a branch push: the hook runs before the command, so the new tag did not exist yet when it checked. The gate now counts a tag that the `git tag` right before the push in the same command line creates (any other command in between voids it) in the same repository, only under a plain name (no `refs/`, not `HEAD`) that does not yet resolve to a branch or anything else, so no other spelling can push a branch through it; listing, verifying or deleting tags creates none ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
+
 ## [2.2] - 2026-10-12
 
 The Claude Code plugin now keeps agents from piling up Simulators and merged branches, and a task can move between Claude Code and Codex sessions with a record of every handoff.
