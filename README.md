@@ -121,4 +121,4 @@ linked third-party projects retain their own licenses.
 
 [Skills](docs/skills.md) · [Workflow](skills/apple-platform-engineer/SKILL.md) · [Verification](docs/verification.md) · [Changelog](CHANGELOG.md) · [Contribute](CONTRIBUTING.md) · [Report a problem](skills/skill-maintenance/SKILL.md)
 
-**Version:** 2.2
+**Version:** 2.3

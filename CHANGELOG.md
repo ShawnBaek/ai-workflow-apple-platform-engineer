@@ -4,9 +4,18 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+## [2.3] - 2026-10-13
+
+Background work the agent starts now always ends and reports, and the PR gate lets a release tag through when the same command creates it.
+
+### Migration
+
+- **Private harnesses: re-observe the skill bundle** ([#137], [#138], [#139]). They change `agent-harness` (`host-resources` and the verifier's tests), `git-workflow` and `apple-platform-setup`, which every harness requires; re-derive `expected_bundle_sha256` as the 2.0.0-beta.12 Migration item describes. The verifier's Swift sources are unchanged, so `runtime-identity` stays.
+- **Expect a deadline on background builds:** in Claude Code, heavy work started in the background without `hooks/deadline.sh` is denied with the command to run instead, and a turn that would end while unbounded background work runs is sent back once.
+
 ### Added
 
-- **Background work gets a deadline.** An agent started a Simulator screenshot capture in the background on an overloaded host, ended its turn with "I'll show you when it's done", and the capture hung: nothing woke the session for 44 minutes. The Claude Code plugin now:
+- **Background work gets a deadline** ([#137]). An agent started a Simulator screenshot capture in the background on an overloaded host, ended its turn with "I'll show you when it's done", and the capture hung: nothing woke the session for 44 minutes. The Claude Code plugin now:
   - ships `hooks/deadline.sh <duration> [--] <command>` (Swift; at most 24 hours), which runs the command in its own process group and, at the deadline or when the wrapper is stopped, sends the group SIGTERM, then SIGKILL after ten seconds; at the deadline it exits 124 with a message, which wakes the session. It is compiled at session start;
   - denies `xcodebuild`, `swift build`/`test`, `simctl boot` or a `gate.sh` started in the background without that wrapper, whether the whole call runs in the background or the command ends in `&`, also inside `sh -c`, `caffeinate`, `nohup` or `if`/`while` bodies, naming the command to run (30 minutes by default);
   - adds a `Stop` hook that sends the turn back once when a shell task Claude Code still lists as running, including one moved to the background, is heavy work or may wait without end (a `gh` watch or a loop) and has no deadline.
@@ -17,7 +26,7 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ### Fixed
 
-- **PR gate: a tag created in the same command.** `git tag -a v2.2 -m … && git push origin v2.2` was denied as a branch push: the hook runs before the command, so the new tag did not exist yet when it checked. The gate now counts a tag that the `git tag` right before the push in the same command line creates (any other command in between voids it) in the same repository, only under a plain name (no `refs/`, not `HEAD`) that does not yet resolve to a branch or anything else, so no other spelling can push a branch through it; listing, verifying or deleting tags creates none ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
+- **PR gate: a tag created in the same command** ([#138]). `git tag -a v2.2 -m … && git push origin v2.2` was denied as a branch push: the hook runs before the command, so the new tag did not exist yet when it checked. The gate now counts a tag that the `git tag` right before the push in the same command line creates (any other command in between voids it) in the same repository, only under a plain name (no `refs/`, not `HEAD`) that does not yet resolve to a branch or anything else, so no other spelling can push a branch through it; listing, verifying or deleting tags creates none ([PR delivery](skills/git-workflow/references/pr-delivery.md)).
 
 ## [2.2] - 2026-10-12
 
@@ -273,7 +282,8 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 - Fail-open authorization paths are closed: a `stop` ends the run's authority, a later `rejected` repository decision revokes approval, dispatch re-reads the clock after health probes, and a direct Issue target must be the bound Issue ([#90]).
 - Observed staged and outgoing paths list both sides of a rename, so content cannot leave an unauthorized directory unchecked ([#73]).
 
-[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.2...HEAD
+[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.3...HEAD
+[2.3]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.2...v2.3
 [2.2]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.1...v2.2
 [2.1]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0...v2.1
 [2.0]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0.0-beta.12...v2.0
@@ -367,3 +377,6 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 [#133]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/133
 [#134]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/134
 [#135]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/135
+[#137]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/137
+[#138]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/138
+[#139]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/139
