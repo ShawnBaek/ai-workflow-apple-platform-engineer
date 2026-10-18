@@ -122,6 +122,10 @@ jobs:
       - name: Type-check standalone Swift scripts
         run: |
           for script in skills/*/scripts/*.swift plugin/hooks/*.swift docs/evidence/generate-comparison.swift; do
+            if [ "$script" = plugin/hooks/session_status.swift ]; then
+              sh plugin/hooks/session-status.sh --typecheck
+              continue
+            fi
             echo "swiftc -typecheck $script"
             xcrun swiftc -typecheck "$script"
           done

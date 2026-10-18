@@ -116,7 +116,7 @@ gives the order and each client's behavior.
 | Issues/Projects board | `github-projects` |
 | marketing site | `app-website` |
 | staged-diff commit text | `commit-message` |
-| hand a task to or resume it from the other agent (Claude Code ↔ Codex) | `session-handoff` |
+| check, continue or peer-review the other client's work toward one shared goal (Claude Code ↔ Codex) | `session-handoff` |
 
 ## Typical flow
 

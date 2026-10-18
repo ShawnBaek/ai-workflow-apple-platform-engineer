@@ -38,7 +38,7 @@ Load one specialist for a small task. Use `apple-platform-engineer` for a featur
 | [open-xcode-handoff](../skills/open-xcode-handoff/SKILL.md) | On request, apply an agent's worktree, clone or sandbox changes to the checkout your open Xcode uses, verify there, and undo |
 | [release-qa-handoff](../skills/release-qa-handoff/SKILL.md) | On request, hand a processed build to QA: after one confirmation, stamp cards with version/build and what changed and move them; draft the tester note that `app-store-connect` publishes |
 | [screenshot](../skills/screenshot/SKILL.md) | Deterministic screenshots, recordings, and aligned comparisons |
-| [session-handoff](../skills/session-handoff/SKILL.md) | Hand a task between Claude Code and Codex sessions, resume it, and keep the handoff record |
+| [session-handoff](../skills/session-handoff/SKILL.md) | Check Claude/Codex sessions, agree on implementation methods and separately verify one shared goal without restarting |
 | [sketch-design-from-codebase](../skills/sketch-design-from-codebase/SKILL.md) | Sketch design system and every screen from the codebase, reproduced or redesigned |
 | [skill-maintenance](../skills/skill-maintenance/SKILL.md) | Report, investigate and fix collection skill or workflow problems |
 | [storekit-sandbox-testing](../skills/storekit-sandbox-testing/SKILL.md) | Verify StoreKit purchases, restoration, renewal and failure behavior in local and sandbox environments |

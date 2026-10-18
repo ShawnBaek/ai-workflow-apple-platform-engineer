@@ -43,6 +43,8 @@ Explicit flags go before the subcommand. `--app-root <absolute-app-repository>` 
 | `companion` | [Reference-only upstream check](../../icon-composer/references/companion-upstream.md) or authorized review-issue reconciliation |
 | `repository --root <root> [--output <new-report.json>]` | Contract and documentation validation of a skills repository checkout |
 | `flow record\|render` | [Session flow summary](session-flow.md) from client hooks; no harness |
+| `sessions list [--repo <dir>] [--json]` | Read-only recent Claude/Codex metadata; activity is not ownership |
+| `handoff create\|resume\|list\|show\|close` | [One shared goal, continuation and peer review](../../session-handoff/SKILL.md); no harness |
 
 ## Existing installations
 

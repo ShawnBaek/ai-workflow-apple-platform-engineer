@@ -32,6 +32,37 @@ and only then allow the selected new writer to acquire the lease. If revocation
 or state-hash verification cannot be proven, stop rather than running two
 potential writers.
 
+## Method agreement and exact-HEAD verification
+
+Use [session-handoff](../../session-handoff/SKILL.md) to keep one shared Claude/
+Codex goal and ledger thread. Separate the user's task/delivery authorization,
+peer agreement to an exact method, and the peer's verdict on an exact committed
+HEAD. A peer report cannot expand the user's authority.
+
+Before **each** peer proposal, response, review request, or review response,
+establish repository, branch, full HEAD, and staged/unstaged/untracked
+source/index state. An approach proposal and its decision require the same clean
+original snapshot. The method agreement remains effective as implementation
+advances until a later proposal supersedes it. An implementation verdict is
+bound to its clean committed HEAD and stales if HEAD or dirty state changes.
+
+Method exchanges use immutable `proposal` and `decision` events in an existing
+thread; they are never writer handoffs and cannot be continued. The actual peer
+returns its response in the same native chat; the caller saves it outside the
+repository and records the response. The event distinguishes respondent from
+the ledger recorder. Rejections for stale, superseded, wrong peer/session/
+surface, self-review, closed, or duplicate requests append nothing. Readiness,
+pickup, CI, and passing checks are evidence, never peer agreement.
+
+Stay on the user's native Desktop surface where applicable and preserve host,
+model, and effort. Establish a source/index read-only boundary before each peer
+message; Plan mode may be selected when appropriate. Native Desktop Plan mode
+can create a plan artifact outside the source checkout, so document that
+artifact where relevant while preserving the source/index boundary. Do not infer
+an execution-plan approval from a peer report. Native-session tests are required
+for native routing claims; CI alone is insufficient, and limits must be stated
+honestly.
+
 ## Local LLM boundary
 
 A local model may:
@@ -48,6 +79,13 @@ Bind Ollama only to loopback; its local HTTP endpoint has no authentication by
 default. Require structured output containing known source or log-line IDs.
 
 ## Three operating examples
+
+Across native Claude and Codex conversations, use [session-handoff](../../session-handoff/SKILL.md)
+to discover both clients, preserve one shared goal and progress thread, resume
+the recipient's existing conversation, and distinguish implementation from
+read-only peer review. Reuse completed work and still-valid evidence; changing
+clients is not a reason to restart. The handoff record does not replace the
+writer ownership or frozen review envelope defined above.
 
 1. Codex primary: Codex plans, writes, verifies, and prepares evidence.
 2. Claude primary: Claude does the same under the identical ledger/schema.

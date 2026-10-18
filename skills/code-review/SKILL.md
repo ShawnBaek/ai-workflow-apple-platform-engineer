@@ -13,6 +13,11 @@ Use the collection's existing agent-harness for reviewer selection, resource own
 
 ## Independent perspective
 
+For Claude/Codex peer review, use [session-handoff](../session-handoff/SKILL.md)
+with `--purpose review` in the existing shared-goal thread. Resume the peer's
+recorded native conversation instead of creating an independent duplicate task.
+Keep it read-only and return findings to the writer in that same thread.
+
 For the requested independent review, use a separate agent when available and authorized. A fresh reviewer using the same model is acceptable; a different model is optional. Select one relevant lens, or a small combination justified by the diff: correctness, concurrency/resource use, UI/accessibility/motion, data integrity, performance, or maintainability. Do not spawn a reviewer for every possible concern.
 
 Label the role “Reviewer” and use a concrete assignment name, such as `review_storyboard_wiring`, when the host supports naming. Keep its model and runtime identity separate from the role label. The same reviewer can perform authorized Simulator checks; a separate Test Runner is needed only when execution must be handed off.

@@ -21,9 +21,36 @@ let usage = """
       [--ledger <run-ledger.jsonl>] [--max-steps <n>] [--include-labels]
     handoff create --from claude|codex --to claude|codex --task <text>
       --brief <text>|--brief-file <file> [--thread <id>] [--session <id>] [--repo <dir>]
+      [--purpose continue|review] [--base <full-SHA>] [--target-session <native-session-id>]
+      [--surface cli|desktop] [--target-surface cli|desktop]
     handoff resume --as claude|codex [--id <id>] [--session <id>] [--repo <dir>]
     handoff list [--pending-for claude|codex] [--json] [--repo <dir>]
+    handoff show --thread <id> [--repo <dir>]
+    handoff propose --thread <existing-thread> --from claude|codex --to claude|codex
+      --task <text> --brief-file <file> --session <native-id> --surface cli|desktop
+      --target-session <native-id> --target-surface cli|desktop [--supersedes <proposal-id>] [--repo <dir>]
+    handoff respond --id <proposal-or-review-id> --as claude|codex --session <native-id>
+      --surface cli|desktop --by claude|codex|user --decision approve|changes-requested
+      --brief-file <actual-peer-reply> [--delivery <completed-delivery-id>] [--repo <dir>]
+    handoff send --id <proposal-or-review-id> --as claude --session <native-id>
+      --surface cli|desktop --host <native-host-id> [--timeout <0...300>] [--repo <dir>]
+    handoff transport register --dispatcher <id> --host <native-host-id>
+      --target-session <codex-desktop-id> --sender-session <claude-desktop-id>
+      --authorization <actual-user-turn-reference-or-quote> --ttl <60...3600> --limit <1...20> [--repo <dir>]
+    handoff transport next --dispatcher <id> --host <native-host-id>
+      --target-session <codex-desktop-id> [--wait <0...30>] [--repo <dir>]
+    handoff transport stop --dispatcher <id> [--repo <dir>]
+    handoff transport status --id <delivery-id> [--repo <dir>]
+    handoff transport begin --id <delivery-id> --claim <token> --baseline <native-turn-or-none> [--repo <dir>]
+    handoff transport sent --id <delivery-id> --claim <token> --turn <correlated-native-turn> [--repo <dir>]
+    handoff transport complete --id <delivery-id> --claim <token> --turn <correlated-native-turn>
+      --reply-file <actual-full-reply> [--repo <dir>]
+    handoff transport no-reply --id <delivery-id> --claim <token> --turn <native-turn> --note <reason> [--repo <dir>]
+    handoff transport fail --id <delivery-id> --claim <token> --note <unsent-reason> [--repo <dir>]
+    handoff transport recover --id <delivery-id> --dispatcher <id> [--repo <dir>]
+    handoff transport resolve --id <delivery-id> --dispatcher <id> --note <reconciliation-reason> [--repo <dir>]
     handoff close --thread <id> --by claude|codex [--note <text>] [--repo <dir>]
+    sessions list [--repo <dir>] [--own-client claude|codex --own-session <id>] [--json]
 
   See docs/verification.md and each skill's reference for command arguments.
   The runtime uses Swift and Apple's tools; it does not prove app behavior by itself.
@@ -90,6 +117,9 @@ do {
     exit(
       try SessionHandoff.run(
         arguments: arguments, executable: try ResourceCoordinator.runningExecutableURL().path))
+  }
+  if command == "sessions" {
+    exit(try SessionInventoryCommand.run(arguments: arguments))
   }
   let installedContext = try runtimeContext(repositoryRoot: explicitRoot)
   let context =

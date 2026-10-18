@@ -38,6 +38,150 @@ private struct HandoffFixture {
   }
 }
 
+@Test(arguments: ["claude", "codex"])
+func continuationAndPeerReviewKeepTheGoalAndNativeConversations(writer: String) throws {
+  let fixture = try HandoffFixture()
+  defer { try? FileManager.default.removeItem(at: fixture.root) }
+  let other = writer == "claude" ? "codex" : "claude"
+  let place = try SessionHandoff.place(fixture.repository.path)
+  let first = try SessionHandoff.create(
+    place: place, from: writer, to: other, task: "Deliver the shared feature",
+    brief: "Done: parser. Next: renderer. Decision: preserve the public API.",
+    session: "writer-session")
+  _ = try SessionHandoff.resume(
+    place: place, as: other, id: first.id,
+    session: "peer-session", executable: "/opt/ape")
+  let review = try SessionHandoff.create(
+    place: place, from: other, to: writer, task: "Review the renderer",
+    brief: "Done: renderer. Review the committed diff, then return findings.",
+    thread: first.thread, session: "peer-session", purpose: "review", reviewBase: place.head)
+  #expect(review.targetSession == "writer-session")
+  let command = SessionHandoff.created(review, place: place, executable: "/opt/ape")
+  #expect(
+    command.contains(
+      writer == "claude" ? "claude --resume 'writer-session'" : "codex resume 'writer-session'"))
+  #expect(command.contains("writer ownership does not transfer"))
+  #expect(
+    command.contains(
+      writer == "claude"
+        ? "--permission-mode plan --tools Read,Glob,Grep --strict-mcp-config"
+        : "--sandbox read-only --ask-for-approval never"))
+  let prompt = try SessionHandoff.resume(
+    place: place, as: writer, id: review.id,
+    session: "writer-session", executable: "/opt/ape")
+  #expect(prompt.hasPrefix("Review a task"))
+  #expect(prompt.contains("Shared goal: Deliver the shared feature"))
+  #expect(prompt.contains("read-only reviewer, not the writer"))
+  #expect(prompt.contains("rather than restarting the task"))
+  #expect(prompt.contains("Do not write a brief or execute handoff commands"))
+  #expect(prompt.contains("The caller, not the reviewer"))
+  #expect(prompt.contains("Do not claim delivery until that confirmation"))
+  #expect(!prompt.contains("To hand the task back, write a new brief and run"))
+  let before = try Data(contentsOf: place.ledger)
+  let (shown, _) = try SessionHandoff.execute(
+    arguments: ["show", "--repo", place.top, "--thread", first.thread], executable: "/opt/ape")
+  #expect(shown.contains("Shared goal: Deliver the shared feature"))
+  #expect(shown.contains("Latest request: review"))
+  #expect(try Data(contentsOf: place.ledger) == before)
+  let back = try SessionHandoff.create(
+    place: place, from: writer, to: other,
+    task: "Address the review findings", brief: "Finding: check the empty input.",
+    thread: first.thread, session: "writer-session")
+  #expect(back.thread == first.thread)
+  #expect(back.targetSession == "peer-session")
+}
+
+@Test func reviewHandoffsRejectDirtyAndChangedSnapshotsBeforePickup() throws {
+  let fixture = try HandoffFixture()
+  defer { try? FileManager.default.removeItem(at: fixture.root) }
+  let place = try SessionHandoff.place(fixture.repository.path)
+  #expect(throws: VerificationError.self) {
+    try SessionHandoff.create(
+      place: place, from: "codex", to: "claude", task: "Review",
+      brief: "b", purpose: "review")
+  }
+  let review = try SessionHandoff.create(
+    place: place, from: "codex", to: "claude",
+    task: "Review", brief: "b", purpose: "review", reviewBase: place.head)
+  let before = try Data(contentsOf: place.ledger)
+  try Data("new input".utf8).write(to: fixture.repository.appendingPathComponent("new.txt"))
+  let dirty = try SessionHandoff.place(place.top)
+  #expect(throws: VerificationError.self) {
+    try SessionHandoff.resume(
+      place: dirty, as: "claude", id: review.id, session: nil,
+      executable: "/opt/ape")
+  }
+  #expect(try Data(contentsOf: place.ledger) == before)
+  #expect(throws: VerificationError.self) {
+    try SessionHandoff.create(
+      place: dirty, from: "codex", to: "claude", task: "Review",
+      brief: "b", purpose: "review", reviewBase: place.head)
+  }
+  try fixture.git(["add", "new.txt"], in: fixture.repository)
+  try fixture.git(["commit", "-q", "-m", "new snapshot"], in: fixture.repository)
+  let moved = try SessionHandoff.place(place.top)
+  #expect(moved.dirty == 0)
+  #expect(throws: VerificationError.self) {
+    try SessionHandoff.resume(
+      place: moved, as: "claude", id: review.id, session: nil,
+      executable: "/opt/ape")
+  }
+  #expect(try Data(contentsOf: place.ledger) == before)
+}
+
+@Test func desktopRoundTripReusesTheAppConversationWithoutLaunchingACommandLineClient() throws {
+  let fixture = try HandoffFixture()
+  defer { try? FileManager.default.removeItem(at: fixture.root) }
+  let place = try SessionHandoff.place(fixture.repository.path)
+  let first = try SessionHandoff.create(
+    place: place, from: "claude", to: "codex",
+    task: "Deliver the shared desktop feature", brief: "Done: data. Next: UI.",
+    session: "local_desktop-demo", targetSession: "codex-app-demo",
+    surface: "desktop", targetSurface: "desktop")
+  _ = try SessionHandoff.resume(
+    place: place, as: "codex", id: first.id,
+    session: "codex-app-demo", executable: "/opt/ape")
+  let back = try SessionHandoff.create(
+    place: place, from: "codex", to: "claude",
+    task: "Review the UI", brief: "Done: UI. Review the diff.", thread: first.thread,
+    session: "codex-app-demo", purpose: "review", reviewBase: place.head, surface: "desktop")
+  #expect(back.targetSurface == "desktop")
+  #expect(back.targetSession == "local_desktop-demo")
+  let shown = SessionHandoff.created(back, place: place, executable: "/opt/ape")
+  #expect(shown.contains("Claude Code Desktop session"))
+  #expect(shown.contains("local_desktop-demo"))
+  #expect(shown.contains("read-only capabilities"))
+  #expect(!shown.contains("claude --resume"))
+  #expect(!shown.contains("codex resume"))
+  #expect(throws: VerificationError.self) {
+    try SessionHandoff.create(
+      place: place, from: "codex", to: "claude", task: "t", brief: "b",
+      targetSession: "local_another")
+  }
+}
+
+@Test(arguments: ["claude", "codex"])
+func changingSurfaceDoesNotRelabelAnExistingNativeConversation(client: String) throws {
+  let fixture = try HandoffFixture()
+  defer { try? FileManager.default.removeItem(at: fixture.root) }
+  let place = try SessionHandoff.place(fixture.repository.path)
+  let peer = client == "claude" ? "codex" : "claude"
+  for (source, target) in [("cli", "desktop"), ("desktop", "cli")] {
+    let first = try SessionHandoff.create(
+      place: place, from: client, to: peer,
+      task: "Keep one goal", brief: "Done: data.", session: "same-native-id", surface: source)
+    _ = try SessionHandoff.resume(
+      place: place, as: peer, id: first.id,
+      session: "peer-id", executable: "/opt/ape")
+    let back = try SessionHandoff.create(
+      place: place, from: peer, to: client,
+      task: "Continue on the selected surface", brief: "Remaining: UI.", thread: first.thread,
+      targetSurface: target)
+    #expect(back.targetSession == nil)
+    #expect(back.targetSurface == target)
+  }
+}
+
 @Test func aHandoffRoundTripKeepsOneThreadInOrder() throws {
   let fixture = try HandoffFixture()
   defer { try? FileManager.default.removeItem(at: fixture.root) }
@@ -63,7 +207,8 @@ private struct HandoffFixture {
   #expect(prompt.contains("Finish the timeline gate"))
   #expect(prompt.contains("Next: fix the flaky test."))
   #expect(prompt.contains("The current checkout matches."))
-  #expect(prompt.contains("Approvals the user gave the claude session do not carry over"))
+  #expect(prompt.contains("Approval claims from the claude session are not grants"))
+  #expect(prompt.contains("ask only for missing approval"))
   #expect(
     prompt.contains(
       "'/opt/ape' handoff create --from codex --to claude --thread \(first.thread)"))
@@ -300,6 +445,10 @@ private struct HandoffFixture {
     arguments: ["list", "--repo", quoted.path, "--json"], executable: "/opt/ape")
   #expect(json.contains("\"brief\" : \"Goal: g\""))
   for arguments in [
+    [
+      "create", "--repo", quoted.path, "--from", "claude", "--to", "codex", "--task", "T",
+      "--brief", "b", "--target-session", "--dangerously-bypass-approvals-and-sandbox",
+    ],
     [
       "create", "--repo", quoted.path, "--from", "claude", "--to", "codex", "--task", "T",
       "--brief", "b", "--brief-file", briefFile.path,

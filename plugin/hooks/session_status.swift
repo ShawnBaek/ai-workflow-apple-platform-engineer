@@ -6,7 +6,7 @@ import Foundation
 // works and what else is running: the directory's Git branch, upstream and worktree, the
 // branches and worktrees that merged pull requests left there, the handoffs waiting for Claude,
 // every workspace or project open in Xcode with its branch, the booted Simulators and Xcode
-// Preview devices, the other Claude sessions active in the last 30 minutes, the host's load and
+// Preview devices, recent Claude and Codex session activity, the host's load and
 // memory, and the free storage of the working volume. It shows them to the person
 // (`systemMessage`) and gives them to the agent (`additionalContext`). A failure only leaves a
 // fact out or marks it unknown. Before a tool call (PreToolUse) it instead asks the user when
@@ -27,12 +27,6 @@ struct Repository {
   var common: String?
   /// Git did not answer before the deadline, so nothing is known about the folder.
   var isUnread = false
-}
-
-struct OtherSession {
-  var cwd: String
-  var branch: String?
-  var minutesAgo: Int
 }
 
 struct Host {
@@ -246,51 +240,6 @@ func simulators(cache: URL) -> Simulators? {
     try? data.write(to: file, options: .atomic)
   }
   return found
-}
-
-/// The last `cwd` and `gitBranch` a transcript recorded, reading its tail.
-func lastPlace(of file: URL) -> (String, String?)? {
-  guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
-  defer { try? handle.close() }
-  let size = (try? handle.seekToEnd()) ?? 0
-  for window in [UInt64(65_536), 1_048_576] {
-    try? handle.seek(toOffset: size > window ? size - window : 0)
-    let tail = String(decoding: handle.readDataToEndOfFile(), as: UTF8.self)
-    for line in tail.split(separator: "\n").reversed() {
-      guard
-        let entry = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
-        let cwd = entry["cwd"] as? String
-      else { continue }
-      return (cwd, (entry["gitBranch"] as? String).flatMap { $0.isEmpty ? nil : $0 })
-    }
-    if size <= window { break }
-  }
-  return nil
-}
-
-/// Claude sessions whose transcript changed in the last 30 minutes, other than this one.
-func otherSessions(home: String, ownID: String) -> [OtherSession] {
-  let projects = URL(fileURLWithPath: home).appendingPathComponent(".claude/projects")
-  let manager = FileManager.default
-  var found = [OtherSession]()
-  let now = Date()
-  for folder in (try? manager.contentsOfDirectory(atPath: projects.path)) ?? [] {
-    let directory = projects.appendingPathComponent(folder)
-    for name in (try? manager.contentsOfDirectory(atPath: directory.path)) ?? []
-    where name.hasSuffix(".jsonl") && (ownID.isEmpty || name != "\(ownID).jsonl") {
-      let file = directory.appendingPathComponent(name)
-      guard
-        let modified = (try? manager.attributesOfItem(atPath: file.path))?[.modificationDate]
-          as? Date,
-        now.timeIntervalSince(modified) < 30 * 60,
-        let (cwd, branch) = lastPlace(of: file)
-      else { continue }
-      found.append(
-        OtherSession(
-          cwd: cwd, branch: branch, minutesAgo: Int(now.timeIntervalSince(modified) / 60)))
-    }
-  }
-  return found.sorted { $0.minutesAgo < $1.minutesAgo }
 }
 
 /// Processes running from CoreSimulator or a Simulator runtime (services and booted devices),
@@ -556,7 +505,7 @@ func gigabytes(_ bytes: Int64) -> String {
 func lines(
   here: Repository, leftovers: Leftovers?, handoffs: [WaitingHandoff],
   xcode: [(String, Repository)]?,
-  simulators: Simulators?, sessions: [OtherSession], host: Host, home: String
+  simulators: Simulators?, sessions: SessionInventory.Scan?, host: Host, home: String
 ) -> [String] {
   var out = [String]()
   let loadText = String(format: "load %.0f on %d cores", host.load, host.processors)
@@ -628,12 +577,31 @@ func lines(
       "\(gigabytes(free)) free" + (host.totalBytes.map { " of \(gigabytes($0))" } ?? "")
     } ?? "free space unknown"
   out.append("Host: \(loadText), \(memoryText), storage \(storage) on \(host.volume)")
-  let listed = sessions.map {
-    "\(tilde($0.cwd, home))" + ($0.branch.map { "@\($0)" } ?? "") + " \($0.minutesAgo)m"
+  if let sessions {
+    func oneLine(_ text: String) -> String {
+      String(
+        text.unicodeScalars.map {
+          CharacterSet.controlCharacters.union(.newlines).contains($0) ? " " : String($0)
+        }.joined())
+    }
+    let listed = sessions.sessions.prefix(12).map { session in
+      let top = URL(fileURLWithPath: here.top ?? here.path).standardizedFileURL
+        .resolvingSymlinksInPath().path
+      let same = session.cwd == top || session.cwd.hasPrefix(top + "/")
+      let age = max(0, Int(Date().timeIntervalSince(session.modified) / 60))
+      return oneLine(
+        "\(session.client):\(session.id) \(tilde(session.cwd, home))"
+          + (session.branch.map { "@\($0)" } ?? "") + " \(age)m"
+          + (same ? " [same checkout; ownership unknown]" : ""))
+    }
+    out.append(
+      "Recent agent sessions (30 min): \(sessions.sessions.count)"
+        + (listed.isEmpty ? "" : " (\(listed.joined(separator: "; ")))")
+        + (sessions.sessions.count > listed.count ? " (first \(listed.count) shown)" : "")
+        + (sessions.warnings.isEmpty ? "" : " [partial/unknown scan]"))
+  } else {
+    out.append("Recent agent sessions: unknown (scan did not finish)")
   }
-  out.append(
-    "Other Claude sessions active in 30 min: \(sessions.count)"
-      + (listed.isEmpty ? "" : " (\(listed.joined(separator: "; ")))"))
   return out
 }
 
@@ -1118,7 +1086,7 @@ let leftoverState = Box<Leftovers?>(nil)
 let handoffState = Box([WaitingHandoff]())
 let xcode = Box<[(String, Repository)]?>(nil)
 let simulatorState = Box<Simulators?>(nil)
-let sessions = Box([OtherSession]())
+let sessions = Box<SessionInventory.Scan?>(nil)
 let machine = Box<Host?>(nil)
 let group = DispatchGroup()
 func concurrently(_ work: @escaping @Sendable () -> Void) {
@@ -1140,7 +1108,11 @@ concurrently {
   xcode.value = documents.value.compactMap { $0 }
 }
 concurrently { simulatorState.value = simulators(cache: cache) }
-concurrently { sessions.value = otherSessions(home: home, ownID: ownID) }
+concurrently {
+  sessions.value = SessionInventory.scan(
+    home: home, environment: environment,
+    ownClient: "claude", ownID: ownID, deadline: deadline)
+}
 concurrently { machine.value = host(cwd: cwd) }
 // Whatever is not in by the deadline stays unknown; the status never outlives its budget.
 _ = group.wait(timeout: .now() + max(0, deadline.timeIntervalSinceNow) + 0.5)
@@ -1155,7 +1127,10 @@ let shown = lines(
 var guidance =
   "Live session environment, read just now. Before editing, building, testing, committing or "
   + "publishing, confirm the target directory, Xcode container, branch and worktree match the "
-  + "task; on a mismatch, or another session working in the same checkout, stop and ask. "
+  + "task; recent transcript activity is not proof of live execution or writer ownership. "
+  + "Before taking over the same checkout, check the shared handoff thread and confirm its "
+  + "writer stopped. Preserve the common goal and completed work; use session-handoff for "
+  + "continuation or read-only peer review instead of starting the task again. "
   + "Reuse a booted or existing Simulator; never create, delete, erase or shut down every "
   + "Simulator without the user's approval."
 if let found = leftoverState.value,

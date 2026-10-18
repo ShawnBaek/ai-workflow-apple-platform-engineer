@@ -185,7 +185,8 @@ pull requests left behind), each workspace or
 project open in Xcode with its branch, the booted Simulators and Xcode Preview
 devices (with a warning above the Simulator budget), the host's load,
 memory and free storage (with a warning when overloaded or low) and the other
-Claude sessions active in the last 30 minutes, at session start and with every
+Claude and Codex sessions with transcript activity in the last 30 minutes (not
+proof of live execution or writer ownership), at session start and with every
 prompt; it reads Xcode through Automation, so allow that once when macOS asks.
 On an overloaded or full host, a build, test run or Simulator boot (`xcodebuild`,
 `swift build` or `swift test`, `simctl boot`, a `gate.sh`, or an Xcode MCP
