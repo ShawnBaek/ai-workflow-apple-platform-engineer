@@ -206,19 +206,27 @@ func liveProtocolPhasesKeepPendingWorkAndSeparateAgreementFromImplementation(wri
 
 @Test func proposalReplacementAndResponseSerializeAndNeverLeaveStaleEffectiveApproval() throws {
   let f = try DecisionFixture()
-  defer { try? FileManager.default.removeItem(at: f.root) }
-  let first = try f.proposal()
-  let id = try #require(first.id)
-  let place = f.place
-  let thread = f.thread
   let result = OSAllocatedUnfairLock(initialState: [String]())
   let ready = DispatchGroup()
   let finished = DispatchGroup()
   let start = DispatchSemaphore(value: 0)
+  defer {
+    start.signal()
+    start.signal()
+    if finished.wait(timeout: .now() + 10) == .success {
+      try? FileManager.default.removeItem(at: f.root)
+    } else {
+      Issue.record("Concurrent handoff workers did not finish; retaining fixture for diagnosis.")
+    }
+  }
+  let first = try f.proposal()
+  let id = try #require(first.id)
+  let place = f.place
+  let thread = f.thread
   for operation in 0..<2 {
     ready.enter()
     finished.enter()
-    DispatchQueue.global().async {
+    Thread {
       ready.leave()
       _ = start.wait(timeout: .now() + 10)
       defer { finished.leave() }
@@ -237,12 +245,14 @@ func liveProtocolPhasesKeepPendingWorkAndSeparateAgreementFromImplementation(wri
           result.withLock { $0.append("old decision") }
         }
       } catch { result.withLock { $0.append(String(describing: error)) } }
-    }
+    }.start()
   }
-  #expect(ready.wait(timeout: .now() + 10) == .success)
+  let workersReady = ready.wait(timeout: .now() + 10)
   start.signal()
   start.signal()
-  #expect(finished.wait(timeout: .now() + 10) == .success)
+  let workersFinished = finished.wait(timeout: .now() + 10)
+  try #require(workersReady == .success)
+  try #require(workersFinished == .success)
   let outcomes = result.withLock { $0 }
   #expect(outcomes.contains("replacement"))
   #expect(
