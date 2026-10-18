@@ -46,7 +46,8 @@ extension SessionHandoff {
   /// The caller records the actual peer reply. Attribution is a consistency claim, not authentication.
   public static func respond(
     place: Place, id: String, as respondent: String, session: String, surface: String,
-    recordedBy: String, decision: String, brief: String, now: Date = Date()
+    recordedBy: String, decision: String, brief: String, deliveryID: String? = nil,
+    now: Date = Date()
   ) throws -> Event {
     _ = try agent(respondent)
     try validateNativeSession(session, surface: surface, client: respondent)
@@ -59,6 +60,11 @@ extension SessionHandoff {
     else {
       throw VerificationError.invalid(
         "A decision and the actual nonempty peer response are required")
+    }
+    if let deliveryID {
+      try SessionHandoffTransport.verifyReply(
+        place: place, deliveryID: deliveryID, requestID: id,
+        respondent: respondent, session: session, surface: surface, brief: brief)
     }
     // Decision requests must already exist. Do not create an empty ledger for an invalid response.
     guard try read(place.ledger).events.contains(where: { $0.id == id }) else {
@@ -108,7 +114,7 @@ extension SessionHandoff {
         purpose: approach ? "approach" : "implementation-verification",
         reviewBase: request.reviewBase, surface: surface,
         proposalRevision: request.proposalRevision, responseTo: id,
-        decision: decision, respondent: respondent, recordedBy: recordedBy)
+        decision: decision, respondent: respondent, recordedBy: recordedBy, deliveryID: deliveryID)
     }
   }
 

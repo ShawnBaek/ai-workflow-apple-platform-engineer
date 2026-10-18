@@ -43,6 +43,7 @@ public enum SessionHandoff {
     public var decision: String?
     public var respondent: String?
     public var recordedBy: String?
+    public var deliveryID: String?
   }
 
   /// Where a command runs: the worktree, its repository's common directory and its Git state.
@@ -75,6 +76,17 @@ public enum SessionHandoff {
   public static func execute(arguments: [String], executable: String) throws -> (
     String, String?
   ) {
+    if arguments.first == "transport" {
+      return (
+        try SessionHandoffTransport.execute(
+          arguments: Array(arguments.dropFirst()), executable: executable), nil
+      )
+    }
+    if arguments.first == "send" {
+      return (
+        try SessionHandoffTransport.execute(arguments: arguments, executable: executable), nil
+      )
+    }
     let commands = ["create", "resume", "list", "show", "close", "propose", "respond"]
     guard let command = arguments.first, commands.contains(command) else {
       throw VerificationError.invalid(
@@ -95,6 +107,7 @@ public enum SessionHandoff {
     case "respond":
       try options.allow([
         "--repo", "--id", "--as", "--session", "--surface", "--by", "--decision", "--brief-file",
+        "--delivery",
       ])
     case "resume": try options.allow(["--repo", "--as", "--id", "--session"])
     case "list": try options.allow(["--repo", "--pending-for", "--json"])
@@ -127,7 +140,8 @@ public enum SessionHandoff {
         place: place, id: try options.required("--id"), as: try options.required("--as"),
         session: try options.required("--session"), surface: try options.required("--surface"),
         recordedBy: try options.required("--by"), decision: try options.required("--decision"),
-        brief: try String(contentsOfFile: options.required("--brief-file"), encoding: .utf8))
+        brief: try String(contentsOfFile: options.required("--brief-file"), encoding: .utf8),
+        deliveryID: options.value("--delivery"))
       return (
         "Decision \(event.id ?? "") recorded for \(event.responseTo ?? ""): \(event.purpose ?? "") "
           + "\(event.decision ?? "") by \(event.respondent ?? ""), recorded by \(event.recordedBy ?? "").\n"

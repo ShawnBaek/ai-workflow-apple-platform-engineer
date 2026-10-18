@@ -19,7 +19,10 @@ The append-only record lives in the repository's Git common directory at
 never committed. Do not create a worktree to collaborate unless the user asks.
 Locate `APE` with [Build and locate the verifier](../agent-harness/references/swift-verification.md#build-and-locate-the-verifier).
 Every command below accepts `--repo <dir>`; use the authoritative checkout.
-No command starts another agent or sends a message by itself.
+No queue command starts an agent or invokes app tools by itself. An explicitly
+running Codex dispatcher can automatically deliver a peer request and return its
+actual reply; see [Desktop delivery bridge](references/desktop-delivery.md).
+Without that dispatcher, recording a request is not delivery.
 
 ## Three distinct approvals
 
@@ -116,6 +119,19 @@ describes the separate histories and shared project configuration. Local app
 metadata is a best-effort discovery adapter, not a stable public API or proof
 that a conversation is running. Archived and remote Desktop records are not
 included in this local scan.
+
+### Automatic Claude → existing Codex Desktop delivery
+
+When the user requests direct delivery without copying between chats, use the
+[Desktop delivery bridge](references/desktop-delivery.md). First establish the
+exact existing recipient through the native task index and an authorized active
+Codex dispatcher. Claude runs `handoff send` for a bound proposal or read-only
+review; the dispatcher forwards it with supported app tools and returns only its
+correlated actual final response. Keep the same goal and native conversations.
+A `queued`, `sent`, timed-out or uncertain receipt is not a completed reply or a
+peer approval. Do not substitute PR comments or manual copying for this check.
+Ordinary writer continuation and automatic Codex → Claude delivery are outside
+this first bridge; use the client's supported interface and report that limit.
 
 ### Shared progress and optional CLI transport
 
