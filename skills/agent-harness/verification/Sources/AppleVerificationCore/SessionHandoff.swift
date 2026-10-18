@@ -240,6 +240,7 @@ public enum SessionHandoff {
       $0.thread == threadID && $0.worktree == place.top && $0.branch == place.branch
         && (($0.event == "resume" && $0.by == to) || ($0.event == "handoff" && $0.from == to))
         && $0.session != nil
+        && (targetSurface == nil || ($0.surface ?? "cli") == targetSurface)
     })
     let recipient = targetSession ?? previous?.session
     let recipientSurface =

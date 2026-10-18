@@ -160,6 +160,28 @@ func continuationAndPeerReviewKeepTheGoalAndNativeConversations(writer: String) 
   }
 }
 
+@Test(arguments: ["claude", "codex"])
+func changingSurfaceDoesNotRelabelAnExistingNativeConversation(client: String) throws {
+  let fixture = try HandoffFixture()
+  defer { try? FileManager.default.removeItem(at: fixture.root) }
+  let place = try SessionHandoff.place(fixture.repository.path)
+  let peer = client == "claude" ? "codex" : "claude"
+  for (source, target) in [("cli", "desktop"), ("desktop", "cli")] {
+    let first = try SessionHandoff.create(
+      place: place, from: client, to: peer,
+      task: "Keep one goal", brief: "Done: data.", session: "same-native-id", surface: source)
+    _ = try SessionHandoff.resume(
+      place: place, as: peer, id: first.id,
+      session: "peer-id", executable: "/opt/ape")
+    let back = try SessionHandoff.create(
+      place: place, from: peer, to: client,
+      task: "Continue on the selected surface", brief: "Remaining: UI.", thread: first.thread,
+      targetSurface: target)
+    #expect(back.targetSession == nil)
+    #expect(back.targetSurface == target)
+  }
+}
+
 @Test func aHandoffRoundTripKeepsOneThreadInOrder() throws {
   let fixture = try HandoffFixture()
   defer { try? FileManager.default.removeItem(at: fixture.root) }

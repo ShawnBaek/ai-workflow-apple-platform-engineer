@@ -128,7 +128,9 @@ the output labels its new-conversation fallback; find the existing chat before
 using that fallback. Never resume an already-running CLI session concurrently.
 Desktop hand-backs also reuse the recorded surface. Legacy entries without a
 surface retain their CLI behavior; select `--target-surface desktop` explicitly
-when recovering a legacy record into an app. A Claude `local_...` Desktop ID is
+and choose the existing app ID from its index when recovering into an app.
+Automatic reuse requires the recorded surface to match; selecting a different
+surface never converts or relabels its old session ID. A Claude `local_...` Desktop ID is
 refused as a CLI recipient.
 
 The recipient records pickup in its existing conversation:
