@@ -26,6 +26,12 @@ let usage = """
     handoff resume --as claude|codex [--id <id>] [--session <id>] [--repo <dir>]
     handoff list [--pending-for claude|codex] [--json] [--repo <dir>]
     handoff show --thread <id> [--repo <dir>]
+    handoff propose --thread <existing-thread> --from claude|codex --to claude|codex
+      --task <text> --brief-file <file> --session <native-id> --surface cli|desktop
+      --target-session <native-id> --target-surface cli|desktop [--supersedes <proposal-id>] [--repo <dir>]
+    handoff respond --id <proposal-or-review-id> --as claude|codex --session <native-id>
+      --surface cli|desktop --by claude|codex|user --decision approve|changes-requested
+      --brief-file <actual-peer-reply> [--repo <dir>]
     handoff close --thread <id> --by claude|codex [--note <text>] [--repo <dir>]
     sessions list [--repo <dir>] [--own-client claude|codex --own-session <id>] [--json]
 

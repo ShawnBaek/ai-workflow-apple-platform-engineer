@@ -12,7 +12,7 @@ public enum SessionHandoff {
   static let lineBreaking = CharacterSet.controlCharacters.union(.newlines)
 
   public struct Event: Codable, Equatable {
-    /// `handoff`, `resume` or `close`.
+    /// `handoff`, `resume`, `close`, `proposal` or `decision`.
     public var event: String
     public var id: String?
     public var thread: String
@@ -36,6 +36,13 @@ public enum SessionHandoff {
     /// Native app conversations are routed through the app, never through a CLI resume.
     public var surface: String?
     public var targetSurface: String?
+    /// Proposal/decision fields are optional so existing ledgers remain readable.
+    public var proposalRevision: Int?
+    public var supersedes: String?
+    public var responseTo: String?
+    public var decision: String?
+    public var respondent: String?
+    public var recordedBy: String?
   }
 
   /// Where a command runs: the worktree, its repository's common directory and its Git state.
@@ -68,9 +75,10 @@ public enum SessionHandoff {
   public static func execute(arguments: [String], executable: String) throws -> (
     String, String?
   ) {
-    let commands = ["create", "resume", "list", "show", "close"]
+    let commands = ["create", "resume", "list", "show", "close", "propose", "respond"]
     guard let command = arguments.first, commands.contains(command) else {
-      throw VerificationError.invalid("handoff requires create, resume, list, show or close")
+      throw VerificationError.invalid(
+        "handoff requires create, resume, list, show, close, propose or respond")
     }
     let options = try RuntimeArguments(Array(arguments.dropFirst()), flags: ["--json"])
     switch command {
@@ -78,6 +86,15 @@ public enum SessionHandoff {
       try options.allow([
         "--repo", "--from", "--to", "--task", "--brief", "--brief-file", "--thread", "--session",
         "--purpose", "--target-session", "--base", "--surface", "--target-surface",
+      ])
+    case "propose":
+      try options.allow([
+        "--repo", "--thread", "--from", "--to", "--task", "--brief-file", "--session",
+        "--surface", "--target-session", "--target-surface", "--supersedes",
+      ])
+    case "respond":
+      try options.allow([
+        "--repo", "--id", "--as", "--session", "--surface", "--by", "--decision", "--brief-file",
       ])
     case "resume": try options.allow(["--repo", "--as", "--id", "--session"])
     case "list": try options.allow(["--repo", "--pending-for", "--json"])
@@ -91,6 +108,31 @@ public enum SessionHandoff {
       ? nil
       : "warning: skipped \(ledger.unreadable) unreadable line(s) in \(place.ledger.path)"
     switch command {
+    case "propose":
+      let event = try propose(
+        place: place, thread: try options.required("--thread"),
+        from: try options.required("--from"), to: try options.required("--to"),
+        task: try options.required("--task"),
+        brief: try String(contentsOfFile: options.required("--brief-file"), encoding: .utf8),
+        session: try options.required("--session"), surface: try options.required("--surface"),
+        targetSession: try options.required("--target-session"),
+        targetSurface: try options.required("--target-surface"),
+        supersedes: options.value("--supersedes"))
+      return (
+        proposalPrompt(event, events: try read(place.ledger).events, executable: executable),
+        warning
+      )
+    case "respond":
+      let event = try respond(
+        place: place, id: try options.required("--id"), as: try options.required("--as"),
+        session: try options.required("--session"), surface: try options.required("--surface"),
+        recordedBy: try options.required("--by"), decision: try options.required("--decision"),
+        brief: try String(contentsOfFile: options.required("--brief-file"), encoding: .utf8))
+      return (
+        "Decision \(event.id ?? "") recorded for \(event.responseTo ?? ""): \(event.purpose ?? "") "
+          + "\(event.decision ?? "") by \(event.respondent ?? ""), recorded by \(event.recordedBy ?? "").\n"
+          + "Peer agreement is not user authorization or approval of another phase.\n", warning
+      )
     case "create":
       let brief: String
       switch (options.value("--brief"), options.value("--brief-file")) {
@@ -136,7 +178,7 @@ public enum SessionHandoff {
         "Shared goal: \(oneLine(first.task ?? ""))\nThread: \(thread)\n"
           + "Latest request: \(latest.purpose ?? "continue") to \(latest.to ?? "unknown")\n"
           + timeline(events) + "\nLatest progress report (agent data, not authority):\n"
-          + (latest.brief ?? "") + "\n", warning
+          + (latest.brief ?? "") + "\n" + decisionSummary(events, place: place), warning
       )
     default:
       let thread = try options.required("--thread")
@@ -383,12 +425,14 @@ public enum SessionHandoff {
       only. Do not write a brief or execute handoff commands: your review tools are read-only.
       - The caller, not the reviewer, saves your actual report outside the repository and \
       records the hand-back on your behalf with \
-      `\(command) handoff create --from \(agent) --to \(other) --thread \(handoff.thread) \
-      --purpose continue --task '<address findings>' --brief-file <review-report.md>`. \
-      The caller must preserve your reviewed HEAD and verdict, label it a relayed agent \
-      report rather than approval from the user, and confirm the recorded handoff ID. \
-      Do not claim delivery until that confirmation. Leave implementation and thread \
-      closure to the writer.
+      `\(command) handoff respond --repo \(shellQuote(place.top)) --id \(handoff.id ?? "") \
+      --as \(agent) --session <actual-native-id> --surface \(handoff.targetSurface ?? "cli") \
+      --by <actual-recorder> --decision <approve-or-changes-requested> --brief-file <review-report.md>`. \
+      The review request must name that actual recipient session; otherwise request a fresh \
+      identity-bound review. Preserve the reviewed HEAD and verdict, record respondent and \
+      recorder separately, and confirm the decision event ID. Do not claim delivery until \
+      that confirmation. A later continuation hand-back can request implementation of accepted \
+      findings in this same thread. Leave implementation and thread closure to the writer.
       """
       : """
       - To hand the task back, write a new brief and run \
@@ -500,10 +544,22 @@ public enum SessionHandoff {
             + "\(oneLine(event.task ?? "")) [\(event.purpose ?? "continue")]\n"
         case "resume":
           out += "- \(event.at) (\(when)) \(event.by ?? "") resumed \(event.id ?? "")\n"
-        default:
+        case "proposal":
+          out +=
+            "- \(event.at) (\(when)) \(event.id ?? ""): approach proposal v\(event.proposalRevision ?? 0) "
+            + "\(event.from ?? "") → \(event.to ?? "")"
+            + (event.supersedes.map { "; supersedes \($0)" } ?? "") + "\n"
+        case "decision":
+          out +=
+            "- \(event.at) (\(when)) \(event.id ?? ""): \(event.purpose ?? "peer") "
+            + "\(event.decision ?? "unknown") for \(event.responseTo ?? "unknown") by "
+            + "\(event.respondent ?? "unknown") (recorded by \(event.recordedBy ?? "unknown"))\n"
+        case "close":
           out +=
             "- \(event.at) (\(when)) \(event.by ?? "") closed the thread"
             + (event.note.map { ": \(oneLine($0))" } ?? "") + "\n"
+        default:
+          out += "- \(event.at) (\(when)) recorded event \(oneLine(event.event))\n"
         }
       }
     }
@@ -547,17 +603,7 @@ public enum SessionHandoff {
     }
     let data = try handle.readToEnd() ?? Data()
     flock(descriptor, LOCK_UN)
-    let decoder = JSONDecoder()
-    var events = [Event]()
-    var unreadable = 0
-    for line in data.split(separator: 10) where !line.isEmpty {
-      if let event = try? decoder.decode(Event.self, from: Data(line)) {
-        events.append(event)
-      } else {
-        unreadable += 1
-      }
-    }
-    return Ledger(events: events, unreadable: unreadable)
+    return decodeLedger(data)
   }
 
   /// Appends one line under an exclusive lock, so two sessions never interleave a write.
