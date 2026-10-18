@@ -358,6 +358,27 @@ public enum SessionHandoff {
       ? "The current checkout matches."
       : checks.map { "- \($0)" }.joined(
         separator: "\n")
+    let returnRules =
+      isReview
+      ? """
+      - Return your verdict, findings and limitations in this existing conversation or stdout \
+      only. Do not write a brief or execute handoff commands: your review tools are read-only.
+      - The caller, not the reviewer, saves your actual report outside the repository and \
+      records the hand-back on your behalf with \
+      `\(command) handoff create --from \(agent) --to \(other) --thread \(handoff.thread) \
+      --purpose continue --task '<address findings>' --brief-file <review-report.md>`. \
+      The caller must preserve your reviewed HEAD and verdict, label it a relayed agent \
+      report rather than approval from the user, and confirm the recorded handoff ID. \
+      Do not claim delivery until that confirmation. Leave implementation and thread \
+      closure to the writer.
+      """
+      : """
+      - To hand the task back, write a new brief and run \
+      `\(command) handoff create --from \(agent) --to \(other) --thread \(handoff.thread) \
+      --task '<task>' --brief-file <brief.md>`.
+      - When the task is finished, run \
+      `\(command) handoff close --thread \(handoff.thread) --by \(agent)`.
+      """
     return """
       \(isReview ? "Review" : "Continue") a task that \(from) handed to \(agent) \(age(handoff.at, now: now)) \
       (handoff \(handoff.id ?? ""), thread \(handoff.thread)), recorded with \
@@ -377,11 +398,7 @@ public enum SessionHandoff {
       PR, merge, deletion or other gated action.
       - Check the checkout below before editing, and tell the user that you resumed this \
       handoff.
-      - To hand the task back, write a new brief and run \
-      `\(command) handoff create --from \(agent) --to \(other) --thread \(handoff.thread) \
-      --task '<task>' --brief-file <brief.md>`.
-      - When the task is finished, run \
-      `\(command) handoff close --thread \(handoff.thread) --by \(agent)`.
+      \(returnRules)
 
       Where: worktree \(handoff.worktree ?? "unknown"), branch \(handoff.branch ?? "detached") \
       at \(short(handoff.head)), \(handoff.dirty ?? 0) changed files when handed over.

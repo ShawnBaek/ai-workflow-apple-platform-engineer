@@ -133,10 +133,29 @@ client's supported permissions. Do not bypass a configured reviewer boundary.
 Follow [code-review](../code-review/SKILL.md) for the frozen envelope, findings,
 head-bound verdict and bounded fix/re-review loop. The brief includes acceptance
 criteria, base/head, changed paths, diff and existing check evidence. The reviewer
-checks those claims and returns findings and limitations in the **same thread**,
-addressed back to the writer with `--purpose continue`. The writer assesses each
-finding, applies only accepted fixes, verifies them and requests review again if
-the snapshot changed. The reviewer does not silently become the implementer.
+checks those claims and returns its verdict, reviewed HEAD, findings and
+limitations in the **existing conversation or stdout**. Its read-only tools
+cannot write a brief or append the handoff ledger.
+
+The caller (writer, host dispatcher, or user running the command) saves that
+actual response outside the repository and relays it into the **same thread**:
+
+```sh
+"$APE" handoff create --repo '<checkout>' --from claude --to codex \
+  --thread '<existing-thread>' --purpose continue --task '<address findings>' \
+  --brief-file '<review-report.md>'
+```
+
+Reverse the clients for a Codex review. Label the brief a report relayed on the
+reviewer's behalf; preserve its verdict, exact reviewed HEAD and limitations,
+and do not invent approval or a recipient session ID. Confirm the returned
+handoff ID before claiming delivery. If the caller cannot record it, return the
+response to the writer/user and state that ledger delivery is pending. This
+explicit recording fallback is not an automatic post-review launcher.
+
+The writer assesses each finding, applies only accepted fixes, verifies them
+and requests review again if the snapshot changed. The reviewer never gains
+source/index mutation rights or silently becomes the implementer.
 
 ## Authority and completion
 
