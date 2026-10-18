@@ -129,10 +129,14 @@ intent without an exact matching native turn is uncertain.
 
 A live scoped dispatcher may explicitly `recover --id ... --dispatcher ...`
 after claim expiry. This fences the old token and only reconciles the original
-marker: it never returns to a sendable state. Supply `--baseline` if the old claim
-never recorded one. Inspect native history before binding a recovered turn.
-Unresolved uncertainty blocks further messages to that destination; do not clear
-it by fabricating an unsent failure or automatically generating another request.
+marker: it never returns to a sendable state. A claim that never recorded intent
+is permanently `abandoned-unsent` and cannot be recovered. Inspect native history
+before binding a recovered turn. If the original marker cannot be established,
+a live scoped dispatcher can explicitly `resolve --id ... --dispatcher ...
+--note ...` to close it as `unresolved`. This records who reconciled it, fences the
+old worker and frees the destination without making that request sendable again.
+Never label uncertain delivery as unsent or automatically generate another
+request to resend it.
 
 Private state is `<git-common-dir>/ape-handoffs/transport/` (directory `0700`,
 files `0600`, bounded to 8 MiB/256 receipts). It contains full prompts/replies and

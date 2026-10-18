@@ -31,6 +31,7 @@ public enum SessionHandoffTransport {
     var turnID: String?
     var response: String?
     var note: String?
+    var resolvedBy: String?
   }
 
   struct State: Codable {
@@ -40,7 +41,9 @@ public enum SessionHandoffTransport {
 
   static let leaseSeconds: TimeInterval = 180
   static let maximumBytes = 8 * 1024 * 1024
-  static let terminal = ["reply-complete", "failed", "no-final-reply", "abandoned-unsent"]
+  static let terminal = [
+    "reply-complete", "failed", "no-final-reply", "abandoned-unsent", "unresolved",
+  ]
 
   /// Public command boundary, also used by focused tests. All state is private Git metadata.
   public static func execute(arguments: [String], executable: String) throws -> String {
@@ -66,7 +69,8 @@ public enum SessionHandoffTransport {
     case "complete": keys = ["--id", "--claim", "--turn", "--reply-file"]
     case "fail": keys = ["--id", "--claim", "--note"]
     case "no-reply": keys = ["--id", "--claim", "--turn", "--note"]
-    case "recover": keys = ["--id", "--dispatcher", "--baseline"]
+    case "recover": keys = ["--id", "--dispatcher"]
+    case "resolve": keys = ["--id", "--dispatcher", "--note"]
     default: throw VerificationError.invalid("Unknown transport action")
     }
     try options.allow(common.union(keys))
@@ -115,13 +119,44 @@ public enum SessionHandoffTransport {
       var delivery = state.deliveries[index]
       if action == "status" { return try encoded(delivery, place: place) }
       let now = Date()
-      if action == "recover" {
+      if action == "resolve" {
         let worker = try options.required("--dispatcher")
-        guard !terminal.contains(delivery.status), delivery.status != "queued",
-          let expiry = delivery.claimExpires, expiry < now,
+        let event = try SessionHandoff.read(place.ledger).events.first(where: {
+          $0.id == delivery.requestID
+        })
+        guard delivery.status == "delivery-unknown", delivery.baseline != nil,
+          delivery.dispatcher == worker || delivery.claimExpires.map({ $0 < now }) == true,
           state.dispatchers.contains(where: {
             $0.id == worker && $0.host == delivery.host
               && $0.targetSession == delivery.targetSession
+              && $0.senderSession == event?.session && $0.expires > now
+              && now.timeIntervalSince($0.heartbeat) < leaseSeconds
+          })
+        else {
+          throw VerificationError.invalid(
+            "Explicit unresolved closure needs a live matching scoped dispatcher and recorded intent"
+          )
+        }
+        let note = try options.required("--note")
+        guard !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+          throw VerificationError.invalid(
+            "Unresolved closure needs the actual reconciliation reason")
+        }
+        delivery.status = "unresolved"
+        delivery.resolvedBy = worker
+        delivery.note = note
+        delivery.claimToken = nil
+        delivery.claimExpires = nil
+      } else if action == "recover" {
+        let worker = try options.required("--dispatcher")
+        let recordedSender = try SessionHandoff.read(place.ledger).events.first(where: {
+          $0.id == delivery.requestID
+        })?.session
+        guard ["delivery-unknown", "sent"].contains(delivery.status), delivery.baseline != nil,
+          let expiry = delivery.claimExpires, expiry < now,
+          state.dispatchers.contains(where: {
+            $0.id == worker && $0.host == delivery.host
+              && $0.targetSession == delivery.targetSession && $0.senderSession == recordedSender
               && now.timeIntervalSince($0.heartbeat) < leaseSeconds && $0.expires > now
           })
         else {
@@ -129,9 +164,6 @@ public enum SessionHandoffTransport {
             "Recovery needs an expired claim and a live matching dispatcher")
         }
         // Recovery only fences the old worker. It NEVER makes this delivery sendable again.
-        if delivery.baseline == nil {
-          delivery.baseline = try options.required("--baseline")
-        }
         delivery.status = delivery.turnID == nil ? "delivery-unknown" : "sent"
         delivery.dispatcher = worker
         delivery.claimToken = UUID().uuidString
@@ -314,7 +346,12 @@ public enum SessionHandoffTransport {
         throw VerificationError.invalid(
           "Transport history is full; preserve receipts before starting another shared task")
       }
-      let deliveryID = "x-" + UUID().uuidString
+      var deliveryID: String
+      repeat {
+        var bytes = [UInt8](repeating: 0, count: 16)
+        bytes.withUnsafeMutableBytes { arc4random_buf($0.baseAddress!, $0.count) }
+        deliveryID = "x-" + bytes.map { String(format: "%02x", $0) }.joined()
+      } while state.deliveries.contains(where: { $0.id == deliveryID })
       let events = try SessionHandoff.read(place.ledger).events
       let body =
         event.event == "proposal"
@@ -477,9 +514,8 @@ public enum SessionHandoffTransport {
     if !terminal.contains(delivery.status), delivery.status != "queued",
       delivery.claimExpires.map({ $0 < Date() }) == true
     {
-      object["status"] = "delivery-unknown"
-      object["note"] =
-        "Claim expired; inspect the original native marker and explicitly recover; never resend"
+      object["status"] = delivery.baseline == nil ? "abandoned-unsent" : "delivery-unknown"
+      object["note"] = "Claim expired; inspect original intent/marker. No automatic resend."
     }
     return String(
       decoding: try JSONSerialization.data(
@@ -537,6 +573,16 @@ public enum SessionHandoffTransport {
       original = data
       state = try JSONDecoder().decode(State.self, from: data)
     }
+    for index in state.deliveries.indices
+    where state.deliveries[index].status == "claimed"
+      && state.deliveries[index].baseline == nil
+      && state.deliveries[index].claimExpires.map({ $0 < Date() }) == true
+    {
+      state.deliveries[index].status = "abandoned-unsent"
+      state.deliveries[index].claimToken = nil
+      state.deliveries[index].note =
+        "Claim expired before intent; no message sent and recovery cannot invent intent"
+    }
     let result = try body(&state)
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
@@ -553,6 +599,15 @@ public enum SessionHandoffTransport {
       Darwin.close(saved)
       guard flushed == 0 else {
         throw VerificationError.invalid("Cannot durably flush transport state")
+      }
+      let directoryFD = open(directory.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
+      guard directoryFD >= 0 else {
+        throw VerificationError.invalid("Cannot open transport directory for flush")
+      }
+      let directoryFlushed = fsync(directoryFD)
+      Darwin.close(directoryFD)
+      guard directoryFlushed == 0 else {
+        throw VerificationError.invalid("Cannot durably flush transport rename")
       }
     }
     return result

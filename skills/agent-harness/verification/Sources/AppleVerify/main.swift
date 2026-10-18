@@ -47,7 +47,8 @@ let usage = """
       --reply-file <actual-full-reply> [--repo <dir>]
     handoff transport no-reply --id <delivery-id> --claim <token> --turn <native-turn> --note <reason> [--repo <dir>]
     handoff transport fail --id <delivery-id> --claim <token> --note <unsent-reason> [--repo <dir>]
-    handoff transport recover --id <delivery-id> --dispatcher <id> [--baseline <native-turn-or-none>] [--repo <dir>]
+    handoff transport recover --id <delivery-id> --dispatcher <id> [--repo <dir>]
+    handoff transport resolve --id <delivery-id> --dispatcher <id> --note <reconciliation-reason> [--repo <dir>]
     handoff close --thread <id> --by claude|codex [--note <text>] [--repo <dir>]
     sessions list [--repo <dir>] [--own-client claude|codex --own-session <id>] [--json]
 

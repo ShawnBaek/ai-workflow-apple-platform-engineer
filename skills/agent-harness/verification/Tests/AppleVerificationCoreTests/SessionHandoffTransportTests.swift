@@ -384,6 +384,11 @@ private func register(
         "--wait", "0",
       ]))
   #expect(noAutoReclaim["status"] as? String == "idle")
+  _ = try register(secondPlace, dispatcher: "wrong-sender", sender: "otherClaude")
+  #expect(throws: VerificationError.self) {
+    _ = try transport(
+      command("recover", place: secondPlace, ["--id", secondID, "--dispatcher", "wrong-sender"]))
+  }
   let recovered = try transport(
     command("recover", place: secondPlace, ["--id", secondID, "--dispatcher", "dispatcher"]))
   #expect(recovered["status"] as? String == "delivery-unknown")
@@ -530,4 +535,76 @@ private func register(
     place: place, id: proposal.id!, as: "codex", session: "codexDesktop", surface: "desktop",
     recordedBy: "claude", decision: "approve", brief: reply, deliveryID: id)
   #expect(decision.deliveryID == id && Data(decision.brief!.utf8) == Data(reply.utf8))
+}
+
+@Test func transportExpiredClaimWithoutIntentIsFinalAndUncertainCanBeResolved() throws {
+  let fixture = try TransportFixture()
+  defer { try? FileManager.default.removeItem(at: fixture.root) }
+  let (place, proposal) = try fixture.request()
+  _ = try register(place)
+  let sendArgs = command(
+    "send", place: place,
+    [
+      "--id", proposal.id!, "--as", "claude", "--session", "claudeDesktop", "--surface", "desktop",
+      "--host", "host", "--timeout", "0",
+    ])
+  let queued = try transport(sendArgs)
+  let id = try #require(queued["id"] as? String)
+  let claimed = try transport(
+    command(
+      "next", place: place,
+      [
+        "--dispatcher", "dispatcher", "--host", "host", "--target-session", "codexDesktop",
+        "--wait", "0",
+      ]))
+  let oldToken = try #require(claimed["claimToken"] as? String)
+  try SessionHandoffTransport.withState(place) { $0.deliveries[0].claimExpires = Date.distantPast }
+  let status = try transport(command("status", place: place, ["--id", id]))
+  #expect(status["status"] as? String == "abandoned-unsent")
+  #expect((try transport(sendArgs))["status"] as? String == "abandoned-unsent")
+  #expect(throws: VerificationError.self) {
+    _ = try transport(command("recover", place: place, ["--id", id, "--dispatcher", "dispatcher"]))
+  }
+  #expect(throws: VerificationError.self) {
+    _ = try transport(
+      command(
+        "sent", place: place, ["--id", id, "--claim", oldToken, "--turn", "later-unrelated-turn"]))
+  }
+  let review = try SessionHandoff.create(
+    place: place, from: "claude", to: "codex", task: "Next review", brief: "Same goal",
+    thread: proposal.thread, session: "claudeDesktop", purpose: "review",
+    targetSession: "codexDesktop", reviewBase: place.head, surface: "desktop",
+    targetSurface: "desktop")
+  let nextSend = command(
+    "send", place: place,
+    [
+      "--id", review.id!, "--as", "claude", "--session", "claudeDesktop", "--surface", "desktop",
+      "--host", "host", "--timeout", "0",
+    ])
+  let nextQueued = try transport(nextSend)
+  let nextID = try #require(nextQueued["id"] as? String)
+  let nextClaim = try transport(
+    command(
+      "next", place: place,
+      [
+        "--dispatcher", "dispatcher", "--host", "host", "--target-session", "codexDesktop",
+        "--wait", "0",
+      ]))
+  let token = try #require(nextClaim["claimToken"] as? String)
+  _ = try transport(
+    command("begin", place: place, ["--id", nextID, "--claim", token, "--baseline", "baseline"]))
+  let resolved = try transport(
+    command(
+      "resolve", place: place,
+      [
+        "--id", nextID, "--dispatcher", "dispatcher", "--note",
+        "Native marker absent; explicitly close as unresolved, never retry",
+      ]))
+  #expect(resolved["status"] as? String == "unresolved")
+  #expect(resolved["resolvedBy"] as? String == "dispatcher")
+  #expect((try transport(nextSend))["status"] as? String == "unresolved")
+  #expect(throws: VerificationError.self) {
+    _ = try transport(
+      command("sent", place: place, ["--id", nextID, "--claim", token, "--turn", "late-turn"]))
+  }
 }
