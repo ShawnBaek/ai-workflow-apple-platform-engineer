@@ -21,9 +21,12 @@ let usage = """
       [--ledger <run-ledger.jsonl>] [--max-steps <n>] [--include-labels]
     handoff create --from claude|codex --to claude|codex --task <text>
       --brief <text>|--brief-file <file> [--thread <id>] [--session <id>] [--repo <dir>]
+      [--purpose continue|review] [--base <full-SHA>] [--target-session <native-session-id>]
     handoff resume --as claude|codex [--id <id>] [--session <id>] [--repo <dir>]
     handoff list [--pending-for claude|codex] [--json] [--repo <dir>]
+    handoff show --thread <id> [--repo <dir>]
     handoff close --thread <id> --by claude|codex [--note <text>] [--repo <dir>]
+    sessions list [--repo <dir>] [--own-client claude|codex --own-session <id>] [--json]
 
   See docs/verification.md and each skill's reference for command arguments.
   The runtime uses Swift and Apple's tools; it does not prove app behavior by itself.
@@ -90,6 +93,9 @@ do {
     exit(
       try SessionHandoff.run(
         arguments: arguments, executable: try ResourceCoordinator.runningExecutableURL().path))
+  }
+  if command == "sessions" {
+    exit(try SessionInventoryCommand.run(arguments: arguments))
   }
   let installedContext = try runtimeContext(repositoryRoot: explicitRoot)
   let context =

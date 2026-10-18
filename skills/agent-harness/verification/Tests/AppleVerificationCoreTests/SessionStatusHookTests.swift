@@ -76,6 +76,8 @@ private struct Fixture {
     process.arguments = [hook.path]
     var environment = ProcessInfo.processInfo.environment
     environment["HOME"] = home.path
+    environment["CLAUDE_CONFIG_DIR"] = nil
+    environment["CODEX_HOME"] = nil
     environment["CLAUDE_PLUGIN_DATA"] = data.path
     // A loaded host can take seconds per Git call, and a test runner many hooks at once; the
     // test checks content, not speed, so neither one call nor the whole status may run out.
@@ -126,8 +128,8 @@ private func line(_ output: [String: Any], _ prefix: String) throws -> String? {
   #expect(try line(output, "Host: load ")?.contains(" on ") == true)
   // This session's own transcript is not another session.
   #expect(
-    try line(output, "Other Claude sessions")?.hasPrefix(
-      "Other Claude sessions active in 30 min: 1 (/tmp/other@fix/y ") == true)
+    try line(output, "Recent agent sessions")?.hasPrefix(
+      "Recent agent sessions (30 min): 1 (claude:other-session /tmp/other@fix/y ") == true)
   let specific = try #require(output["hookSpecificOutput"] as? [String: Any])
   #expect(specific["hookEventName"] as? String == "UserPromptSubmit")
   let context = try #require(specific["additionalContext"] as? String)
@@ -163,8 +165,25 @@ private func line(_ output: [String: Any], _ prefix: String) throws -> String? {
   #expect(try line(output, "Directory")?.contains("· (detached ") == true)
   // Without a session id, every recent transcript counts as another session.
   #expect(
-    try line(output, "Other Claude sessions")?.hasPrefix(
-      "Other Claude sessions active in 30 min: 2") == true)
+    try line(output, "Recent agent sessions")?.hasPrefix(
+      "Recent agent sessions (30 min): 2") == true)
+}
+
+@Test func sessionStatusIncludesCodexEvenWhenItsIDMatchesClaude() throws {
+  let fixture = try Fixture()
+  defer { try? FileManager.default.removeItem(at: fixture.home) }
+  let directory = fixture.home.appendingPathComponent(".codex/sessions/2026/10/18")
+  try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+  let metadata = try fixtureJSON([
+    "type": "session_meta",
+    "payload": ["id": "own-session", "cwd": fixture.repository.path],
+  ])
+  try (metadata + Data("\n".utf8)).write(to: directory.appendingPathComponent("rollout.jsonl"))
+  let output = try fixture.status(cwd: fixture.repository)
+  let recent = try #require(try line(output, "Recent agent sessions"))
+  #expect(recent.contains("codex:own-session"))
+  #expect(recent.contains("same checkout; ownership unknown"))
+  #expect(!recent.contains("claude:own-session"))
 }
 
 @Test func sessionStatusOutsideGitStillAnswers() throws {

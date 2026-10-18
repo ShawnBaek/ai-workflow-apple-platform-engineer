@@ -49,6 +49,13 @@ default. Require structured output containing known source or log-line IDs.
 
 ## Three operating examples
 
+Across native Claude and Codex conversations, use [session-handoff](../../session-handoff/SKILL.md)
+to discover both clients, preserve one shared goal and progress thread, resume
+the recipient's existing conversation, and distinguish implementation from
+read-only peer review. Reuse completed work and still-valid evidence; changing
+clients is not a reason to restart. The handoff record does not replace the
+writer ownership or frozen review envelope defined above.
+
 1. Codex primary: Codex plans, writes, verifies, and prepares evidence.
 2. Claude primary: Claude does the same under the identical ledger/schema.
 3. Collaborative: the chosen writer implements; the other model reviews the
