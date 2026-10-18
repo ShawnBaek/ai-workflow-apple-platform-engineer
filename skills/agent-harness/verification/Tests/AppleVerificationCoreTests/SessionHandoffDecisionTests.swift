@@ -291,3 +291,26 @@ func liveProtocolPhasesKeepPendingWorkAndSeparateAgreementFromImplementation(wri
   expectDecisionError("Unreadable") { _ = try f.proposal(supersedes: proposal.id) }
   #expect(try Data(contentsOf: f.place.ledger) == bytes + Data("broken ledger line\n".utf8))
 }
+
+@Test func decisionTransactionsRefreshCapturedPlaceAfterCheckoutChanges() throws {
+  for commit in [false, true] {
+    let f = try DecisionFixture()
+    defer { try? FileManager.default.removeItem(at: f.root) }
+    let proposal = try f.proposal()
+    let bytes = try Data(contentsOf: f.place.ledger)
+    try Data("changed after capture".utf8).write(to: f.repo.appendingPathComponent("changed.txt"))
+    if commit {
+      try DecisionFixture.git(["add", "changed.txt"], in: f.repo)
+      try DecisionFixture.git(["commit", "-q", "-m", "moved after capture"], in: f.repo)
+    }
+    // Deliberately pass the original clean Place, as execute() can capture before waiting.
+    expectDecisionError("snapshot changed") {
+      _ = try SessionHandoff.respond(
+        place: f.place, id: try #require(proposal.id), as: "claude", session: "peer-native",
+        surface: "desktop", recordedBy: "codex", decision: "approve", brief: "Late response")
+    }
+    #expect(try Data(contentsOf: f.place.ledger) == bytes)
+    expectDecisionError("snapshot changed") { _ = try f.proposal(supersedes: proposal.id) }
+    #expect(try Data(contentsOf: f.place.ledger) == bytes)
+  }
+}

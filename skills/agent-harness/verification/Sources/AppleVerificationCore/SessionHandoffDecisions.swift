@@ -22,6 +22,7 @@ extension SessionHandoff {
     }
     return try withExclusiveLedgerTransaction(place.ledger) { ledger in
       try validateDecisionLedger(ledger, thread: thread)
+      _ = try refreshDecisionPlace(place, approach: true)
       let proposals = ledger.events.filter { $0.thread == thread && $0.event == "proposal" }
       if let current = proposals.last {
         guard supersedes == current.id else {
@@ -91,8 +92,9 @@ extension SessionHandoff {
         throw VerificationError.invalid(
           "Respondent must match the request's addressed peer, native session and surface")
       }
-      guard request.worktree == place.top, request.branch == place.branch,
-        request.head == place.head, place.dirty == 0, approach || request.reviewBase != nil
+      let current = try refreshDecisionPlace(place, approach: approach)
+      guard request.worktree == current.top, request.branch == current.branch,
+        request.head == current.head, current.dirty == 0, approach || request.reviewBase != nil
       else {
         throw VerificationError.invalid(
           approach
@@ -108,6 +110,21 @@ extension SessionHandoff {
         proposalRevision: request.proposalRevision, responseTo: id,
         decision: decision, respondent: respondent, recordedBy: recordedBy)
     }
+  }
+
+  /// Refresh after lock acquisition. The ledger lock is not an OS lock on external Git writers.
+  static func refreshDecisionPlace(_ captured: Place, approach: Bool) throws -> Place {
+    let current = try place(captured.top)
+    guard current.top == captured.top, current.common == captured.common,
+      current.branch == captured.branch, current.head == captured.head,
+      current.dirty == 0, captured.dirty == 0
+    else {
+      throw VerificationError.invalid(
+        approach
+          ? "Proposal snapshot changed; submit a new revision"
+          : "Review snapshot changed; request a fresh implementation review")
+    }
+    return current
   }
 
   static func validateNativeSession(_ id: String, surface: String, client: String) throws {
