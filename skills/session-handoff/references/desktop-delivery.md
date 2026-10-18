@@ -53,8 +53,9 @@ committed snapshot. Then use its immutable request ID:
 "$APE" handoff transport status --repo '<checkout>' --id '<returned-delivery-id>'
 ```
 
-The command needs ledger/IPC write permission separately from read-only source
-review. It fails before enqueueing when no matching live dispatcher exists. A
+All transport commands, including `status`, need private ledger/IPC write
+permission separately from read-only source review: loading the queue can
+persist an expired pre-intent claim as `abandoned-unsent`. It fails before enqueueing when no matching live dispatcher exists. A
 request gets one delivery ID and one destination; repeated sends reuse that
 receipt and never retry the native send. Use `status` after a waiting timeout or
 if the snapshot subsequently changes. `--timeout 0` returns immediately; waits
@@ -87,12 +88,29 @@ because a reply asks. This is one hop per request.
    and fixed data envelope. Omit `model` and `thinking`. The tool's acceptance
    result does not establish a turn ID or final reply. There is no atomic
    idle-and-send operation; intervening user input is an uncertain outcome.
-5. Use native `read_thread` pagination and `wait_threads` cursors, never raw logs.
-   Find the **first new user turn after the baseline**. Its full user text must
-   equal the complete queued prompt byte-for-byte and contain the delivery marker
-   exactly once. Require exactly one matching new turn. Zero/duplicate matches,
-   truncated content, normalization differences, an intervening human message or
-   unsupported schema leave `delivery-unknown`; never guess or resend.
+5. Use native `read_thread` pagination **including tool outputs** and
+   `wait_threads` cursors, never raw logs. Inspect the first new incoming request
+   turn after the baseline. Some hosts expose a `userMessage`; the tested Codex
+   app-tools host instead exposes a `functionCallOutput` item with namespace
+   `codex_app`, name `send_message_to_thread`, and an untruncated `output.text`
+   containing the provider-created `codex_delegation` envelope. Do not fabricate
+   that envelope or assume a user-message item exists.
+
+   For that adapter require exactly one ingress item, one complete envelope,
+   one `source_thread_id` and one `input`, no extra structure, and no truncation.
+   Verify the immediate caller through the supported native task index. An
+   authorized dispatcher subagent has its **own** native ID; establish its link
+   to the authorized parent through native subagent activity rather than assuming
+   that its ID equals the parent's. Decode XML entities once and compare the
+   decoded input's UTF-8 bytes to the **whole frozen prompt**. For a direct
+   user-message adapter compare that full input instead. These are host-specific
+   observed shapes, not a guarantee across app versions: reject unknown schemas.
+
+   Require exactly one matching first new request turn and one delivery marker.
+   Zero/duplicate matches, normalization differences, an intervening human
+   message, an unverified caller, unsupported schema or truncated content leave
+   `delivery-unknown`; never guess or resend. This correlation belongs to the
+   dispatcher; the Swift receipt cannot independently authenticate native items.
 6. Bind the correlated actual native turn, then wait for only that turn:
 
    ```sh
@@ -145,6 +163,8 @@ requests cleanup; stop dispatchers and resolve in-flight requests first, then
 preserve any needed evidence before authorized deletion. There is no automatic
 retention cleanup. This is cooperative same-user coordination, not a security
 boundary against hostile same-user processes or remote exactly-once delivery.
+File and directory `fsync` protect the local protocol's process-crash ordering;
+this does not claim drive-cache flush or hardware power-loss durability.
 
 Real acceptance requires Claude itself to run the send command, the dispatcher
 to deliver into the selected existing Codex chat, and Claude to observe that
