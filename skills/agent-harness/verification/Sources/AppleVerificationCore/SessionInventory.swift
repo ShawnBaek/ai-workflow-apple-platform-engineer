@@ -322,7 +322,8 @@ public enum SessionInventory {
   }
 
   private static func lines(from data: Data) throws -> [Data] {
-    data.split(separator: 10, omittingEmptySubsequences: true).map(Data.init)
+    let records: [Data] = data.split(separator: 10, omittingEmptySubsequences: true)
+    return records
   }
 
   private static func json(_ data: Data) -> [String: Any]? {
