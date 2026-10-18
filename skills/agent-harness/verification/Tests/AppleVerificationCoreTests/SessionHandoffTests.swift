@@ -129,6 +129,37 @@ func continuationAndPeerReviewKeepTheGoalAndNativeConversations(writer: String) 
   #expect(try Data(contentsOf: place.ledger) == before)
 }
 
+@Test func desktopRoundTripReusesTheAppConversationWithoutLaunchingACommandLineClient() throws {
+  let fixture = try HandoffFixture()
+  defer { try? FileManager.default.removeItem(at: fixture.root) }
+  let place = try SessionHandoff.place(fixture.repository.path)
+  let first = try SessionHandoff.create(
+    place: place, from: "claude", to: "codex",
+    task: "Deliver the shared desktop feature", brief: "Done: data. Next: UI.",
+    session: "local_desktop-demo", targetSession: "codex-app-demo",
+    surface: "desktop", targetSurface: "desktop")
+  _ = try SessionHandoff.resume(
+    place: place, as: "codex", id: first.id,
+    session: "codex-app-demo", executable: "/opt/ape")
+  let back = try SessionHandoff.create(
+    place: place, from: "codex", to: "claude",
+    task: "Review the UI", brief: "Done: UI. Review the diff.", thread: first.thread,
+    session: "codex-app-demo", purpose: "review", reviewBase: place.head, surface: "desktop")
+  #expect(back.targetSurface == "desktop")
+  #expect(back.targetSession == "local_desktop-demo")
+  let shown = SessionHandoff.created(back, place: place, executable: "/opt/ape")
+  #expect(shown.contains("Claude Code Desktop session"))
+  #expect(shown.contains("local_desktop-demo"))
+  #expect(shown.contains("read-only capabilities"))
+  #expect(!shown.contains("claude --resume"))
+  #expect(!shown.contains("codex resume"))
+  #expect(throws: VerificationError.self) {
+    try SessionHandoff.create(
+      place: place, from: "codex", to: "claude", task: "t", brief: "b",
+      targetSession: "local_another")
+  }
+}
+
 @Test func aHandoffRoundTripKeepsOneThreadInOrder() throws {
   let fixture = try HandoffFixture()
   defer { try? FileManager.default.removeItem(at: fixture.root) }

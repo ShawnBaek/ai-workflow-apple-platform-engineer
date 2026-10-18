@@ -45,6 +45,7 @@ public enum SessionInventoryCommand {
       }
       rows.append([
         "client": session.client, "id": session.id, "cwd": session.cwd,
+        "surface": session.surface ?? "cli",
         "branch": session.branch as Any? ?? NSNull(),
         "modified": ISO8601DateFormatter().string(from: session.modified), "relation": relation,
       ])
@@ -62,7 +63,8 @@ public enum SessionInventoryCommand {
       for row in rows {
         print(
           SessionHandoff.oneLine(
-            "\(row["client"]!) \(row["id"]!) · \(row["cwd"]!) · \(row["relation"]!)"))
+            "\(row["client"]!)/\(row["surface"]!) \(row["id"]!) · \(row["cwd"]!) · \(row["relation"]!)"
+          ))
       }
       for warning in Set(warnings).sorted() {
         print("Unknown/partial: \(SessionHandoff.oneLine(warning))")

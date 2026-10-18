@@ -22,6 +22,7 @@ let usage = """
     handoff create --from claude|codex --to claude|codex --task <text>
       --brief <text>|--brief-file <file> [--thread <id>] [--session <id>] [--repo <dir>]
       [--purpose continue|review] [--base <full-SHA>] [--target-session <native-session-id>]
+      [--surface cli|desktop] [--target-surface cli|desktop]
     handoff resume --as claude|codex [--id <id>] [--session <id>] [--repo <dir>]
     handoff list [--pending-for claude|codex] [--json] [--repo <dir>]
     handoff show --thread <id> [--repo <dir>]

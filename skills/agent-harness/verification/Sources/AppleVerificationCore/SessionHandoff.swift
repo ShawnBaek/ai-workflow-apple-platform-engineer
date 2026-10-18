@@ -33,6 +33,9 @@ public enum SessionHandoff {
     /// A recipient's existing native conversation, selected explicitly or from this thread.
     public var targetSession: String?
     public var reviewBase: String?
+    /// Native app conversations are routed through the app, never through a CLI resume.
+    public var surface: String?
+    public var targetSurface: String?
   }
 
   /// Where a command runs: the worktree, its repository's common directory and its Git state.
@@ -74,7 +77,7 @@ public enum SessionHandoff {
     case "create":
       try options.allow([
         "--repo", "--from", "--to", "--task", "--brief", "--brief-file", "--thread", "--session",
-        "--purpose", "--target-session", "--base",
+        "--purpose", "--target-session", "--base", "--surface", "--target-surface",
       ])
     case "resume": try options.allow(["--repo", "--as", "--id", "--session"])
     case "list": try options.allow(["--repo", "--pending-for", "--json"])
@@ -101,7 +104,9 @@ public enum SessionHandoff {
         to: try agent(options.required("--to")), task: try options.required("--task"),
         brief: brief, thread: options.value("--thread"), session: options.value("--session"),
         purpose: options.value("--purpose") ?? "continue",
-        targetSession: options.value("--target-session"), reviewBase: options.value("--base"))
+        targetSession: options.value("--target-session"), reviewBase: options.value("--base"),
+        surface: options.value("--surface") ?? "cli",
+        targetSurface: options.value("--target-surface"))
       return (created(event, place: place, executable: executable), warning)
     case "resume":
       return (
@@ -160,12 +165,16 @@ public enum SessionHandoff {
     place: Place, from: String, to: String, task: String, brief: String, thread: String? = nil,
     session: String? = nil, purpose: String = "continue", targetSession: String? = nil,
     reviewBase: String? = nil,
+    surface: String = "cli", targetSurface: String? = nil,
     now: Date = Date()
   ) throws -> Event {
     guard from != to else { throw VerificationError.invalid("--from and --to must differ") }
     guard ["continue", "review"].contains(purpose) else {
       throw VerificationError.invalid("--purpose must be continue or review")
     }
+    guard ["cli", "desktop"].contains(surface),
+      targetSurface.map({ ["cli", "desktop"].contains($0) }) ?? true
+    else { throw VerificationError.invalid("Session surface must be cli or desktop") }
     if purpose == "review" {
       guard place.dirty == 0, let reviewBase,
         [40, 64].contains(reviewBase.count), reviewBase.allSatisfy({ $0.isHexDigit })
@@ -227,12 +236,18 @@ public enum SessionHandoff {
         })?.thread
       }
     let threadID = continued ?? identifier("t", now)
-    let previousSession = events.last(where: {
+    let previous = events.last(where: {
       $0.thread == threadID && $0.worktree == place.top && $0.branch == place.branch
         && (($0.event == "resume" && $0.by == to) || ($0.event == "handoff" && $0.from == to))
         && $0.session != nil
-    })?.session
-    let recipient = targetSession ?? previousSession
+    })
+    let recipient = targetSession ?? previous?.session
+    let recipientSurface =
+      targetSurface ?? (targetSession == nil ? previous?.surface : nil) ?? "cli"
+    if to == "claude", recipientSurface == "cli", recipient?.hasPrefix("local_") == true {
+      throw VerificationError.invalid(
+        "A Claude Desktop ID requires --target-surface desktop; it is not a CLI session")
+    }
     if let recipient {
       guard !recipient.isEmpty, !recipient.hasPrefix("-"), recipient.count <= 200,
         recipient.unicodeScalars.allSatisfy({
@@ -247,7 +262,8 @@ public enum SessionHandoff {
       event: "handoff", id: identifier("h", now), thread: threadID,
       at: timestamp(now), from: from, to: to, session: session, worktree: place.top,
       branch: place.branch, head: place.head, dirty: place.dirty, task: task, brief: brief,
-      purpose: purpose, targetSession: recipient, reviewBase: reviewBase)
+      purpose: purpose, targetSession: recipient, reviewBase: reviewBase,
+      surface: surface, targetSurface: recipientSurface)
     try append(event, to: place.ledger)
     return event
   }
@@ -312,7 +328,8 @@ public enum SessionHandoff {
     try append(
       Event(
         event: "resume", id: handoff.id, thread: handoff.thread, at: timestamp(now), by: agent,
-        session: session, worktree: place.top, branch: place.branch, head: place.head),
+        session: session, worktree: place.top, branch: place.branch, head: place.head,
+        surface: handoff.targetSurface),
       to: place.ledger)
     return prompt(
       handoff, thread: try read(place.ledger).events, earlier: earlier, place: place,
@@ -419,6 +436,25 @@ public enum SessionHandoff {
 
   static func created(_ event: Event, place: Place, executable: String) -> String {
     let to = event.to ?? ""
+    if event.targetSurface == "desktop" {
+      let pickup =
+        "\(shellQuote(executable)) handoff resume --repo \(shellQuote(place.top)) "
+        + "--as \(to) --id \(event.id ?? "")"
+        + (event.targetSession.map { " --session \(shellQuote($0))" } ?? "")
+      return """
+        Handoff \(event.id ?? "") recorded in thread \(event.thread): \(event.from ?? "") → \(to).
+        Recipient surface: desktop\(event.targetSession.map { " (\($0))" } ?? "").
+        Use the existing \(to == "claude" ? "Claude Code Desktop session" : "Codex desktop chat") \
+        through its native task index. Do not launch a terminal CLI, request its login, create \
+        a duplicate conversation, or change the session's model and effort.
+        The caller records pickup with the command below and sends its returned prompt to \
+        that matched desktop conversation; this command does not open or message the app.
+        \(event.purpose == "review" ? "Keep the snapshot frozen and restrict the desktop reviewer to read-only capabilities before sending the review; if that boundary is unavailable, report the review blocked. The caller relays the returned findings in this same thread." : "Confirm the previous writer stopped and transfer any configured ownership before continuing.")
+
+          \(pickup)
+
+        """
+    }
     var client =
       event.targetSession.map {
         to == "claude" ? "claude --resume \(shellQuote($0))" : "codex resume \(shellQuote($0))"

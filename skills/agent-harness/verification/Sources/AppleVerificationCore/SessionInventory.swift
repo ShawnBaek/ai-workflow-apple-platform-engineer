@@ -8,6 +8,8 @@ public enum SessionInventory {
     public var cwd: String
     public var branch: String?
     public var modified: Date
+    /// Native frontend when known; Desktop IDs are not CLI resume IDs.
+    public var surface: String? = nil
   }
 
   public struct Scan: Sendable {
@@ -31,8 +33,11 @@ public enum SessionInventory {
     let claudeRoot = URL(fileURLWithPath: environment["CLAUDE_CONFIG_DIR"] ?? home + "/.claude")
     let codexRoot = URL(fileURLWithPath: environment["CODEX_HOME"] ?? home + "/.codex")
 
-    func append(_ entry: Entry) {
-      guard !(entry.client == ownClient && entry.id == ownID) else { return }
+    func append(_ entry: Entry, aliases: [String] = []) {
+      let isOwnDesktopAlias =
+        entry.client == "claude" && entry.surface == "desktop"
+        && ownClient == "claude" && ownID.map { $0 == entry.id || aliases.contains($0) } == true
+      guard !(entry.client == ownClient && entry.id == ownID), !isOwnDesktopAlias else { return }
       candidates.append(entry)
     }
 
@@ -86,6 +91,41 @@ public enum SessionInventory {
       return true
     }
 
+    func inspectDesktop(_ url: URL) -> Bool {
+      do {
+        let attributes = try fileManager.attributesOfItem(atPath: url.path)
+        guard attributes[.type] as? FileAttributeType == .typeRegular else { return true }
+        let size = (attributes[.size] as? NSNumber)?.uint64Value ?? 0
+        guard size <= UInt64(headerBytes) else {
+          result.warnings.append("desktop session metadata exceeds read limit at \(url.path)")
+          return true
+        }
+        let metadata = try JSONDecoder().decode(
+          DesktopMetadata.self, from: header(url, limit: headerBytes))
+        guard metadata.isArchived != true else { return true }
+        let cwd = metadata.cwd ?? metadata.originCwd
+        guard !metadata.sessionId.isEmpty, let cwd, cwd.hasPrefix("/") else {
+          result.warnings.append("malformed desktop session metadata at \(url.path)")
+          return true
+        }
+        let fileModified = attributes[.modificationDate] as? Date ?? now
+        let activity = metadata.lastActivityAt.flatMap { value -> Date? in
+          guard value.isFinite, value > 0 else { return nil }
+          return Date(timeIntervalSince1970: value / 1_000)
+        }
+        let modified = min(activity ?? fileModified, now)
+        guard max(0, now.timeIntervalSince(modified)) <= max(0, within) else { return true }
+        append(
+          Entry(
+            client: "claude", id: metadata.sessionId, cwd: normalized(cwd), branch: nil,
+            modified: modified, surface: "desktop"),
+          aliases: metadata.cliSessionId.map { [$0] } ?? [])
+      } catch {
+        result.warnings.append("could not inspect desktop session metadata at \(url.path)")
+      }
+      return true
+    }
+
     func visit() -> Bool {
       guard checkBudget() else { return false }
       visited += 1
@@ -132,14 +172,37 @@ public enum SessionInventory {
         guard level == 4, url.pathExtension == "jsonl" else { return true }
         return inspect(url, client: "codex", countVisit: false)
       })
+    let desktopRoot = URL(fileURLWithPath: home)
+      .appendingPathComponent(
+        "Library/Application Support/Claude/claude-code-sessions", isDirectory: true)
+    enumerate(
+      desktopRoot, fileManager: fileManager, onWarning: { result.warnings.append($0) },
+      body: { enumerator, url in
+        guard visit() else { return false }
+        if isSymlink(url, fileManager: fileManager) {
+          enumerator.skipDescendants()
+          return true
+        }
+        let level = enumerator.level
+        if isDirectory(url, fileManager: fileManager) {
+          if level >= 3 { enumerator.skipDescendants() }
+          return true
+        }
+        guard level == 3, url.lastPathComponent.hasPrefix("local_"), url.pathExtension == "json"
+        else { return true }
+        return inspectDesktop(url)
+      })
     candidates.sort {
       if $0.modified != $1.modified { return $0.modified > $1.modified }
       if $0.client != $1.client { return $0.client < $1.client }
       if $0.id != $1.id { return $0.id < $1.id }
+      if ($0.surface ?? "") != ($1.surface ?? "") { return ($0.surface ?? "") < ($1.surface ?? "") }
       return $0.cwd < $1.cwd
     }
     var seen = Set<String>()
-    result.sessions = candidates.filter { seen.insert($0.client + "\u{0}" + $0.id).inserted }
+    result.sessions = candidates.filter {
+      seen.insert($0.client + "\u{0}" + ($0.surface ?? "") + "\u{0}" + $0.id).inserted
+    }
     return result
   }
 
@@ -147,6 +210,15 @@ public enum SessionInventory {
     var id: String? = nil
     var cwd: String? = nil
     var branch: String? = nil
+  }
+
+  private struct DesktopMetadata: Decodable {
+    var sessionId: String
+    var cwd: String?
+    var originCwd: String?
+    var cliSessionId: String?
+    var isArchived: Bool?
+    var lastActivityAt: Double?
   }
 
   private static func enumerate(

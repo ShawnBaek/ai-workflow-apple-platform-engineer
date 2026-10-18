@@ -93,6 +93,34 @@ import Testing
   }
 }
 
+@Test func discoversOnlyRecentClaudeDesktopMetadataWithoutPersistingUnknownFields() throws {
+  try withHome { home, write in
+    let base = "Library/Application Support/Claude/claude-code-sessions/account/org/"
+    let recent =
+      #"{"sessionId":"local_demo","cwd":"/desktop","cliSessionId":"cli-demo","lastActivityAt":1700000000000,"title":"secret title","model":"secret model","prompt":"secret prompt","auth":"secret token"}"#
+    try write(base + "local_demo.json", recent)
+    try write(
+      base + "local_archived.json",
+      #"{"sessionId":"local_archived","cwd":"/archived","isArchived":true}"#)
+    try write(
+      base + "local_stale.json", #"{"sessionId":"local_stale","cwd":"/stale","lastActivityAt":1}"#)
+    try write(base + "local_big.json", String(repeating: "x", count: 1_100_000))
+    let now = Date(timeIntervalSince1970: 1_700_000_100)
+    let scan = SessionInventory.scan(home: home.path, environment: [:], now: now)
+    #expect(scan.sessions.count == 1)
+    #expect(scan.sessions.first?.client == "claude")
+    #expect(scan.sessions.first?.surface == "desktop")
+    #expect(scan.sessions.first?.id == "local_demo")
+    let encoded = String(decoding: try JSONEncoder().encode(scan.sessions[0]), as: UTF8.self)
+    #expect(!encoded.contains("secret"))
+    #expect(scan.warnings.contains(where: { $0.contains("exceeds read limit") }))
+
+    let excluded = SessionInventory.scan(
+      home: home.path, environment: [:], ownClient: "claude", ownID: "cli-demo", now: now)
+    #expect(excluded.sessions.isEmpty)
+  }
+}
+
 @Test func keepsTheNewestDuplicateDeterministically() throws {
   try withHome { home, write in
     try write(".claude/projects/demo/old.jsonl", #"{"sessionId":"duplicate","cwd":"/old"}"#)

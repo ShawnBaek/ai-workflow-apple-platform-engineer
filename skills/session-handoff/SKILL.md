@@ -41,6 +41,11 @@ No command starts another agent or sends a message by itself.
    file modification and checkout relation. It reads bounded local Claude
    transcript and Codex rollout regions, not the content of a remote host or
    archived Codex sessions. It honors `CLAUDE_CONFIG_DIR` and `CODEX_HOME`.
+   On macOS it also reads bounded, allowlisted local Claude Code Desktop session
+   metadata under `~/Library/Application Support/Claude/claude-code-sessions/`.
+   Desktop and CLI keep separate session histories. Desktop records use their
+   app session ID and `surface: desktop`; a bridge CLI ID is used only for
+   self-exclusion, never as authority to resume the app through a terminal.
    The window is 30 minutes: older conversations can still be resumed through
    the client index or an explicit ID. Missing storage is empty; failed,
    malformed or incomplete scans are reported as unknown/partial. Recent
@@ -61,6 +66,32 @@ No command starts another agent or sends a message by itself.
    An active owner or ambiguous checkout blocks writes, not read-only review.
 
 ## Hand over the remaining implementation
+
+### Desktop apps first
+
+When the person uses Claude Code Desktop or Codex desktop, keep them in that
+app. Do not require a terminal CLI installation or login to inspect or continue
+its existing conversation, and do not treat a failed CLI login as a broken
+desktop session. Use the app's native session index and messaging capability
+when exposed; otherwise prepare the exact pickup prompt for the person to send
+in that existing conversation. Do not hijack an unrelated busy session.
+
+Record native routing explicitly with `--surface desktop` for the sender and
+`--target-surface desktop` for the recipient. For example, add both to a
+Claude Desktop → Codex desktop handoff with the selected app session IDs.
+The generated desktop instructions return a pickup command for the caller;
+they do not start a CLI, open the app, or send a message. Keep the recipient's
+host, model and effort, and establish read-only capabilities in that app before
+requesting review. If that boundary or transport is unavailable, report the
+gap and retain the review request rather than switching surfaces silently.
+
+Claude's [Desktop reference](https://code.claude.com/docs/en/desktop#coming-from-the-cli)
+describes the separate histories and shared project configuration. Local app
+metadata is a best-effort discovery adapter, not a stable public API or proof
+that a conversation is running. Archived and remote Desktop records are not
+included in this local scan.
+
+### Shared progress and optional CLI transport
 
 Stop at a coherent point and write a short brief **outside the repository**:
 
@@ -95,6 +126,10 @@ Codex to a read-only sandbox with escalation disabled, for that invocation.
 If no recipient ID is known,
 the output labels its new-conversation fallback; find the existing chat before
 using that fallback. Never resume an already-running CLI session concurrently.
+Desktop hand-backs also reuse the recorded surface. Legacy entries without a
+surface retain their CLI behavior; select `--target-surface desktop` explicitly
+when recovering a legacy record into an app. A Claude `local_...` Desktop ID is
+refused as a CLI recipient.
 
 The recipient records pickup in its existing conversation:
 
