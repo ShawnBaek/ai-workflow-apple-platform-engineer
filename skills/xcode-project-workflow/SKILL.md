@@ -102,7 +102,7 @@ Xcode MCP bridge, see [Xcode selection](references/xcode-selection.md).
 ## Project format gate
 
 Xcode 27.2 introduced `project.xcproj`, a JSON5 project file with readable keys
-and no object IDs, which agents and reviewers can edit and diff directly. It is
+and far fewer object IDs, which agents and reviewers can edit and diff directly. It is
 this collection's project format; do not introduce XcodeGen, Tuist or another
 generator. Commands and edge cases are in
 [Xcode project format](references/project-format.md).
@@ -131,11 +131,25 @@ generator. Commands and edge cases are in
   session. Without approval, leave the format unchanged.
 - Legacy generator: while XcodeGen or Tuist remains the declared source of
   truth, do not hand-edit its generated project or regenerate merely because
-  files changed. A spec change needs explicit approval, the project closed in
-  Xcode, file changes before one generation at the authoritative root (a file
-  the generated project still lists fails the build with "Build input file
-  cannot be found"), and the same container verified in a new session. Offer
-  the move to `project.xcproj` instead of extending the generator.
+  files changed or the project looks stale. Offer the move to
+  `project.xcproj` instead of extending the generator. Until that move:
+  - Before adding a project-referenced file, decide whether a synchronized
+    folder discovers it or the spec and a regeneration are required. Do not
+    create an orphan source file.
+  - If a new file or spec change requires regeneration, stop before that file
+    or project mutation. Propose the change and the controlled transition:
+    explicit approval, the project closed in Xcode, the spec updated at the
+    authoritative root, then one generation. If that is not approved or Xcode
+    stays open, report a blocker.
+  - Make file additions and deletions before that generation; a file the
+    generated project still lists fails the build with "Build input file
+    cannot be found".
+  - Before the approved generation, record the spec diff and the expected
+    project diff; after it, verify the same intended container opens in a new
+    session.
+  - If the generated container is absent, as after a fresh clone, explain the
+    blocker and get permission for a new session and generation at the
+    authoritative root.
 
 This policy overrides any execution adapter that suggests automatic generation
 or conversion.

@@ -168,8 +168,9 @@ Membership is decided per path; a project can mix synchronized folders
 (`"kind": "folder"` in `project.xcproj`, `PBXFileSystemSynchronizedRootGroup`
 in a legacy `project.pbxproj`) and classic groups.
 A file added or deleted under a synchronized folder needs no project-file change
-unless the folder's exception set (`PBXFileSystemSynchronizedBuildFileExceptionSet`)
-must list it. Every other added or deleted project file in `handoff.paths`
+unless the folder's exception set (`membership-exceptions` on the `"kind":
+"folder"` entry in `project.xcproj`, `PBXFileSystemSynchronizedBuildFileExceptionSet`
+in a legacy `project.pbxproj`) must list it. Every other added or deleted project file in `handoff.paths`
 needs a matching hunk in the project-file diff.
 
 ## Apply, undo and repeat
