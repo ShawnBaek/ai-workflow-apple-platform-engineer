@@ -2,8 +2,10 @@
 
 These are starting points, not paste-and-run promises. Resolve the project's
 authoritative workspace/project, scheme, test plan, package lockfile, runner
-labels, Xcode build, and private account policy before use. Do not regenerate
-XcodeGen or change package versions inside a build job.
+labels, Xcode build, and private account policy before use. Do not convert the
+project format, regenerate a legacy generated project, or change package
+versions inside a build job. A job may check `project.xcproj` read-only with
+`xcrun xcprojformatter`.
 
 ## Build and minimum-sufficient test
 

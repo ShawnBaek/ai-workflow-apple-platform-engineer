@@ -24,8 +24,8 @@ schema. Resolve them from existing project instructions; do not commit populated
 private paths, account guards, board IDs, or design mappings to public templates.
 
 Use one repository writer at a time. Run Xcode and Simulator operations only in
-the logged-in host environment. Do not auto-regenerate XcodeGen, create a
-worktree, clean caches, publish, submit, merge, or broaden credentials without
+the logged-in host environment. Do not convert the project format, regenerate a legacy
+generated project, create a worktree, clean caches, publish, submit, merge, or broaden credentials without
 the explicit approval required by this project.
 
 For guarded execution, select a delivery target (`local_verified`, `pr_ready`, `testflight_uploaded`, or

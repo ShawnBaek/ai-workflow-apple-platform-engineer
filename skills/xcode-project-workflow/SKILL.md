@@ -1,7 +1,7 @@
 ---
 name: xcode-project-workflow
 description: >-
-  Mandatory Xcode preflight: project root and container, branch, which Xcode, host execution and XcodeGen. Use before any Xcode project edit, build, test, Simulator, signing, archive or generation step.
+  Mandatory Xcode preflight: project root and container, branch, which Xcode, host execution and project.xcproj format. Use before any Xcode project edit, build, test, Simulator, signing, archive or format conversion.
 ---
 
 # Xcode Project Workflow
@@ -99,32 +99,60 @@ eligibility is unclear, stop and let the user choose.
 For discovery commands, pins, tie-breaks, eligibility sources, and binding the
 Xcode MCP bridge, see [Xcode selection](references/xcode-selection.md).
 
-## XcodeGen gate
+## Project format gate
 
-- Detect whether XcodeGen is the declared source of truth, but do not regenerate
-  merely because source files changed or a generated project looks stale.
-- XcodeGen enumerates globbed files at generation time. When an approved
-  generation accompanies adding or deleting globbed resources (snapshot
-  baselines, fixtures), make the file change first and generate after it;
-  deleting a file that the generated project still lists fails the build with
-  "Build input file cannot be found".
-- Before adding a project-referenced file, determine whether the existing
-  container already discovers it through a synchronized group or whether the
-  XcodeGen spec and regeneration are required. Do not create an orphan source
-  file or edit generated project metadata as a shortcut.
-- Do not run generation while the current Xcode session is open unless the user
-  explicitly requests it.
-- If a new file requires regeneration, stop before that file/project mutation.
-  Propose the spec change and controlled transition: obtain explicit approval,
-  close the current Xcode session, update the spec at the authoritative root,
-  generate once, then verify the same intended container in a new session. If
-  that transition is not approved or Xcode remains open, report a blocker.
-- If the generated container is absent after a fresh clone, explain the blocker
-  and obtain permission for a new session/generation at the authoritative root.
-- Before permitted generation, record the spec diff and expected project diff,
-  run once at that root, then verify the same intended container opens.
+Xcode 27.2 introduced `project.xcproj`, a JSON5 project file with readable keys
+and far fewer object IDs, which agents and reviewers can edit and diff directly. It is
+this collection's project format; do not introduce XcodeGen, Tuist or another
+generator. Commands and edge cases are in
+[Xcode project format](references/project-format.md).
 
-This policy overrides any execution adapter that suggests automatic generation.
+- Detect the authoritative container's format first: `project.xcproj`, legacy
+  `project.pbxproj`, or a legacy project that a documented generator owns.
+- Edit `project.xcproj` as text, following its existing structure. Before
+  adding a project-referenced file, check whether a synchronized folder already
+  discovers it; do not create an orphan source file.
+- Validate every `project.xcproj` change with Apple's open-source
+  `xcprojformatter` (bundled with Xcode 27.2 and later, source at
+  [apple/xcode-project-format](https://github.com/apple/xcode-project-format)):
+  it must parse, already be canonical, list in `xcodebuild -list`, and build.
+  The formatter does not check that referenced files exist, so the build stays
+  required.
+- Do not edit `project.xcproj` while that project is open in Xcode unless the
+  user explicitly requests it; Xcode can overwrite the edit.
+- For a new app, create the container with the selected Xcode in
+  `project.xcproj` format. When the selected Xcode is older than 27.2, use
+  `project.pbxproj` with synchronized folders and report that choice.
+- Converting an existing `project.pbxproj` with `xcodebuild -convert-project`,
+  or moving a generator-owned project to `project.xcproj`, needs explicit
+  approval: the developer's Xcode, every CI lane and Xcode Cloud must run 27.2
+  or later. Close the project in Xcode, convert once at the authoritative root,
+  validate, compare build settings, then reopen the same container in a new
+  session. Without approval, leave the format unchanged.
+- Legacy generator: while XcodeGen or Tuist remains the declared source of
+  truth, do not hand-edit its generated project or regenerate merely because
+  files changed or the project looks stale. Offer the move to
+  `project.xcproj` instead of extending the generator. Until that move:
+  - Before adding a project-referenced file, decide whether a synchronized
+    folder discovers it or the spec and a regeneration are required. Do not
+    create an orphan source file.
+  - If a new file or spec change requires regeneration, stop before that file
+    or project mutation. Propose the change and the controlled transition:
+    explicit approval, the project closed in Xcode, the spec updated at the
+    authoritative root, then one generation. If that is not approved or Xcode
+    stays open, report a blocker.
+  - Make file additions and deletions before that generation; a file the
+    generated project still lists fails the build with "Build input file
+    cannot be found".
+  - Before the approved generation, record the spec diff and the expected
+    project diff; after it, verify the same intended container opens in a new
+    session.
+  - If the generated container is absent, as after a fresh clone, explain the
+    blocker and get permission for a new session and generation at the
+    authoritative root.
+
+This policy overrides any execution adapter that suggests automatic generation
+or conversion.
 
 ## Apple official-first routing
 
@@ -153,7 +181,8 @@ edited in place, only changes to its file), the remote default or intended base
 of a branch the task creates is unresolved,
 the Apple account boundary is unverified for an account action, Git metadata is
 not writable from the current environment, a user-named or project-pinned Xcode
-is not installed, or XcodeGen requires new authority.
+is not installed, `xcprojformatter` rejects the project, or a project format
+conversion or generator change requires new authority.
 
 References:
 

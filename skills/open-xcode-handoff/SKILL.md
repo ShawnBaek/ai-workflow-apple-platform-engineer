@@ -22,8 +22,8 @@ checkout at their request. The agent's workspace is never opened in the user's
 Xcode, and the project is never copied.
 
 Not for: routine build, run or test (`xcodebuild`); commits, branches, moving
-the user's branch or PR delivery (`git-workflow`); choosing the project root or
-XcodeGen generation (`xcode-project-workflow`). Exact commands are in
+the user's branch or PR delivery (`git-workflow`); choosing the project root, or
+project format conversion (`xcode-project-workflow`). Exact commands are in
 [change transfer](references/change-transfer.md).
 
 ## 1. Bind the open workspace — never guess
@@ -116,9 +116,10 @@ sandbox or to replay the patch.
   the same patch. If it is missing, fix membership in the agent's workspace and
   refreeze. Do not hand-edit the user's project file, and do not use
   `XcodeWrite`, which adds new files to the project structure automatically.
-- An XcodeGen-managed project whose spec must change follows the
-  `xcode-project-workflow` XcodeGen gate. Never regenerate the open project
-  without approval.
+- A `project.xcproj` hunk in the patch must pass `xcprojformatter` in the
+  agent's workspace before freezing. A legacy generator-managed project whose
+  spec must change follows the `xcode-project-workflow` project format gate.
+  Never regenerate or convert the open project without approval.
 - Ask the user to save or close editors for touched files first. Apple does not
   document how Xcode reloads files changed on disk; do not promise live reload.
 

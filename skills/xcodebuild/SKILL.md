@@ -36,8 +36,8 @@ and must not bypass an active coordinator.
 4. Acquire the needed scoped resource lease: build tuple, Simulator/device,
    host CoreSimulator runtime registry, Xcode project mutation, or signing. Do
    not serialize unrelated read-only work.
-5. Do not regenerate XcodeGen. Return to the project gate if generation is
-   genuinely required.
+5. Do not convert the project format or regenerate a legacy generated project.
+   Return to the project gate if either is genuinely required.
 
 Before adopting a workaround or narrowing platform evidence, read the release
 notes for the exact selected Xcode build. Record the affected build, issue,
@@ -267,7 +267,7 @@ relevant evidence.
 ## Never
 
 - require XcodeBuildMCP when official tools are available;
-- generate/regenerate XcodeGen automatically;
+- convert the project format or regenerate a legacy generated project automatically;
 - run Xcode/Simulator in a sandbox or reinterpret permission errors as tests;
 - select another checkout/container to make a build pass;
 - resolve packages on every build without an input change;

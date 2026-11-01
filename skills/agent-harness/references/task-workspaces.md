@@ -12,7 +12,7 @@ and required resource ownership. Separate paths the worker may read from paths
 it may change. Supply reviewers immutable source/diff inputs: a live checkout
 path alone does not freeze the source while another agent edits it.
 
-Agree who owns shared files such as the project spec, `.pbxproj`, package
+Agree who owns shared files such as `project.xcproj` (or `.pbxproj`), package
 manifest/resolution, app entry point, navigation, asset catalogs and storyboard
 connections before dispatch. Disjoint Swift files can still depend on these
 shared files. Return out-of-scope changes to the lead for reassignment; a path

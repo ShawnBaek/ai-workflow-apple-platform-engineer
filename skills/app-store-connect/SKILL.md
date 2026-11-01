@@ -126,7 +126,7 @@ successful external state automatically.
 - auto-confirm submission or arbitrary distribution, certificate/profile
   rotation, or capability changes; exact pre-authorized internal TestFlight
   distribution follows the separate bounded continuation;
-- archive from another checkout/container or regenerate XcodeGen implicitly;
+- archive from another checkout/container, or convert or regenerate the project implicitly;
 - treat upload as submission or processing as approval;
 - auto-merge source changes after a release operation.
 

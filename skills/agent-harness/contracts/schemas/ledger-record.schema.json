@@ -484,6 +484,7 @@
                 "branch",
                 "repository",
                 "xcodegen",
+                "project_format",
                 "external_write",
                 "destructive_action",
                 "improvement",

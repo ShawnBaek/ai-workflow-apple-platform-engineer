@@ -11,7 +11,7 @@ Use this skill to change an Apple app's marketing version or build number. It do
 
 ## Locate the version authority first
 
-Inspect the project before editing: XcodeGen specification, `.xcconfig` files, project build settings, and `Info.plist` values. Determine which one actually supplies `MARKETING_VERSION` / `CFBundleShortVersionString` and `CURRENT_PROJECT_VERSION` / `CFBundleVersion` for each affected app and extension. When values differ between targets or come from several places, follow [version source detection](references/version-source-detection.md).
+Inspect the project before editing: `project.xcproj` build settings (or a legacy generator specification when one owns the project), `.xcconfig` files, and `Info.plist` values. Determine which one actually supplies `MARKETING_VERSION` / `CFBundleShortVersionString` and `CURRENT_PROJECT_VERSION` / `CFBundleVersion` for each affected app and extension. When values differ between targets or come from several places, follow [version source detection](references/version-source-detection.md).
 
 - Edit the authoritative source once; do not blindly synchronize several files that merely mirror or inherit the values.
 - Change an app and the bundles it embeds together. An app extension (including a widget) and a watch app inside an iOS app must carry the containing app's `CFBundleShortVersionString` and `CFBundleVersion`; Xcode's embedded-binary validation reports a mismatch. Update every per-target copy that exists; recommend one inherited project- or `.xcconfig`-level value, but restructure existing per-target settings only when the task or project policy allows it. Ask only about a bundle that ships on its own; see [version boundaries](references/version-boundaries.md).
