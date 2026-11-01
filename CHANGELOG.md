@@ -4,9 +4,24 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+## [2.4] - 2026-11-01
+
+Claude Code and Codex sessions can now agree on an approach and review each other's committed work, and Xcode projects use Xcode 27.2's `project.xcproj` format instead of XcodeGen.
+
+### Migration
+
+- **Private harnesses: observe `runtime-identity` and the skill bundle again** ([#141], [#142]). Both change the verifier's source-bundle SHA-256: [#141] changes `verification/Sources` (it extends `apple-verify handoff` and adds session inventory) and [#142] changes `contracts/` (the ledger schema's new `project_format` approval kind). Recover the runtime binding as the 2.0.0-beta.11 Migration item describes: finish or safely recover active leases, [build and locate the verifier](skills/agent-harness/references/swift-verification.md#build-and-locate-the-verifier), run `runtime-identity`, and review and update the private bindings. Both also change `agent-harness`, which every harness requires, so re-derive `expected_bundle_sha256` as the 2.0.0-beta.12 Migration item describes. [#142] also changes the bundle for a `runtime_ui` or TestFlight harness, or one whose task skills include `xcode-project-workflow`, `xcodebuild`, `app-store-connect` or `app-versioning`; [#141] does so for one whose task skills include `apple-platform-engineer`, `code-review` or `session-handoff`.
+- **XcodeGen projects:** nothing converts automatically. A project XcodeGen or Tuist still generates keeps the legacy rules; moving it to `project.xcproj` needs your approval and Xcode 27.2 or later everywhere the project opens, CI and Xcode Cloud included.
+
+### Added
+
+- **Peer decisions and delivery between Claude Code and Codex** ([#141], [session-handoff](skills/session-handoff/SKILL.md)). Sessions keep one shared goal and their own native conversation identities, exchange proposals and decisions as distinct events in the shared handoff history, and review an exact committed result. A recorded handoff or a readiness reply no longer counts as delivery or agreement. Claude can queue a snapshot-bound request for an existing Codex Desktop conversation; an explicitly authorized, active Codex dispatcher forwards it and returns the correlated native reply ([desktop delivery](skills/session-handoff/references/desktop-delivery.md)). Transport completion and peer approval stay separate records. The Claude Code session status now lists Codex sessions as well as Claude sessions with transcript activity in the last 30 minutes, which is not proof of live execution or writer ownership.
+
+  Limits: delivery needs an active, human-authorized Codex dispatcher and covers Claude-to-existing-Codex proposals and read-only review. Native review restrictions and identity records are cooperative, not a sandbox or authentication.
+
 ### Changed
 
-- **Projects use Xcode's `project.xcproj` format instead of XcodeGen.** `xcode-project-workflow`'s XcodeGen gate is now a project format gate: agents edit the JSON5 `project.xcproj` that Xcode 27.2 introduced directly and validate every change with Apple's open-source `xcprojformatter` ([apple/xcode-project-format](https://github.com/apple/xcode-project-format), bundled with Xcode 27.2): parse, canonical layout, `xcodebuild -list`, then a build. Converting a `project.pbxproj` with `xcodebuild -convert-project` or moving off a generator needs approval; an XcodeGen or Tuist project stays under the legacy rules until then. The new [project format](skills/xcode-project-workflow/references/project-format.md) reference has the commands, and the ledger schema gains a `project_format` approval kind (`xcodegen` stays valid for existing records).
+- **Projects use Xcode's `project.xcproj` format instead of XcodeGen** ([#142]). `xcode-project-workflow`'s XcodeGen gate is now a project format gate: agents edit the JSON5 `project.xcproj` that Xcode 27.2 introduced directly and validate every change with Apple's open-source `xcprojformatter` ([apple/xcode-project-format](https://github.com/apple/xcode-project-format), bundled with Xcode 27.2): parse, canonical layout, `xcodebuild -list`, then a build. Converting a `project.pbxproj` with `xcodebuild -convert-project` or moving off a generator needs approval; an XcodeGen or Tuist project stays under the legacy rules until then. The new [project format](skills/xcode-project-workflow/references/project-format.md) reference has the commands, and the ledger schema gains a `project_format` approval kind (`xcodegen` stays valid for existing records).
 
 ## [2.3] - 2026-10-13
 
@@ -286,7 +301,8 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 - Fail-open authorization paths are closed: a `stop` ends the run's authority, a later `rejected` repository decision revokes approval, dispatch re-reads the clock after health probes, and a direct Issue target must be the bound Issue ([#90]).
 - Observed staged and outgoing paths list both sides of a rename, so content cannot leave an unauthorized directory unchecked ([#73]).
 
-[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.3...HEAD
+[Unreleased]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.4...HEAD
+[2.4]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.3...v2.4
 [2.3]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.2...v2.3
 [2.2]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.1...v2.2
 [2.1]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/compare/v2.0...v2.1
@@ -384,3 +400,5 @@ This entry covers the 49 pull requests merged to `main` after 2.0.0-beta.9, whic
 [#137]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/137
 [#138]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/138
 [#139]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/139
+[#141]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/141
+[#142]: https://github.com/ShawnBaek/ai-workflow-apple-platform-engineer/pull/142
