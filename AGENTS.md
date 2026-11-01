@@ -29,7 +29,9 @@ and issue triage through a verified, reviewable fix.
   skills to a client follows
   [Apple skill exposure](skills/apple-platform-setup/references/apple-skill-exposure.md).
 - Work in the authoritative checkout. A Git worktree is explicit opt-in only.
-- Do not regenerate an open XcodeGen project without explicit approval.
+- Projects use Xcode's `project.xcproj` format, validated with `xcprojformatter`.
+  Do not convert a project's format or regenerate a legacy generated project
+  without explicit approval.
 - Do not run Xcode or Simulator commands in a sandboxed process.
 - Never delete broad Xcode, Simulator, package, archive, or runner directories.
 

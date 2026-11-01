@@ -4,6 +4,10 @@ Notable changes to Apple Platform Engineer, in the format of [Keep a Changelog](
 
 ## [Unreleased]
 
+### Changed
+
+- **Projects use Xcode's `project.xcproj` format instead of XcodeGen.** `xcode-project-workflow`'s XcodeGen gate is now a project format gate: agents edit the JSON5 `project.xcproj` that Xcode 27.2 introduced directly and validate every change with Apple's open-source `xcprojformatter` ([apple/xcode-project-format](https://github.com/apple/xcode-project-format), bundled with Xcode 27.2): parse, canonical layout, `xcodebuild -list`, then a build. Converting a `project.pbxproj` with `xcodebuild -convert-project` or moving off a generator needs approval; an XcodeGen or Tuist project stays under the legacy rules until then. The new [project format](skills/xcode-project-workflow/references/project-format.md) reference has the commands, and the ledger schema gains a `project_format` approval kind (`xcodegen` stays valid for existing records).
+
 ## [2.3] - 2026-10-13
 
 Background work the agent starts now always ends and reports, and the PR gate lets a release tag through when the same command creates it.

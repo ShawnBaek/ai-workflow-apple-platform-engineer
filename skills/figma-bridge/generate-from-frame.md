@@ -131,7 +131,7 @@ When the designer updates the frame, the engineer comes back wanting to refresh 
 
 The safe loop:
 
-1. Generate the new draft *outside the project's build inputs* — the session scratchpad or `$TMPDIR`. Never write it under a synchronized (buildable) folder, an XcodeGen source glob, or a package's `Sources/` directory. Those compile every Swift file they contain, so a second `ProfileView` fails the build with an invalid redeclaration and can be committed by accident.
+1. Generate the new draft *outside the project's build inputs* — the session scratchpad or `$TMPDIR`. Never write it under a synchronized (buildable) folder, a legacy generator source glob, or a package's `Sources/` directory. Those compile every Swift file they contain, so a second `ProfileView` fails the build with an invalid redeclaration and can be committed by accident.
 2. Diff the draft against the live `ProfileView.swift`.
 3. Apply only the visual changes (layout, colors, fonts, spacing) to the live file. Leave the wiring alone.
 4. Update the `// figma:` comment if the node-id changed.

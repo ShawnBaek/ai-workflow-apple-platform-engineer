@@ -4,7 +4,7 @@ This reference extends `xcode-project-workflow`; it is not another intake skill.
 
 ## Read the actual support contract
 
-Record the target/platform, minimum deployment version, selected Xcode/SDK build, Swift compiler and language mode, and current test destination. Inspect the authoritative source: build settings and xcconfig inheritance, XcodeGen specification when used, and package platform declarations. App extensions, watch apps, and packages may have different minima.
+Record the target/platform, minimum deployment version, selected Xcode/SDK build, Swift compiler and language mode, and current test destination. Inspect the authoritative source: build settings in `project.xcproj` (or a legacy generator specification when one owns the project) and xcconfig inheritance, and package platform declarations. App extensions, watch apps, and packages may have different minima.
 
 Do not infer the minimum from the installed Simulator, the Mac's OS, the newest SDK, or another target. Do not alter minimum OS, signing, capabilities, or project-generation settings merely to make an example compile.
 

@@ -82,7 +82,7 @@ gives the order and each client's behavior.
 | first-run dependency setup, configuration or update | `apple-platform-setup` |
 | current CLI/skill/MCP/account/Spec Kit readiness | `apple-development-health` |
 | 1Password development ENV connection, secrets, or local mounts | `onepassword-environments` |
-| project root/container, host Xcode, XcodeGen | `xcode-project-workflow` |
+| project root/container, host Xcode, `project.xcproj` format | `xcode-project-workflow` |
 | branches, explicit worktrees, index locks, PR Git state | `git-workflow` |
 | on request, show an agent's worktree, clone or sandbox changes in the user's open Xcode | `open-xcode-handoff` |
 | UI implementation without Figma | `apple-platform-ui` |

@@ -165,7 +165,8 @@ HEAD lacks commits the agent built on, so the result differs from what the
 agent tested even without drift: report it and wait for approval.
 
 Membership is decided per path; a project can mix synchronized folders
-(`PBXFileSystemSynchronizedRootGroup` in `project.pbxproj`) and classic groups.
+(`"kind": "folder"` in `project.xcproj`, `PBXFileSystemSynchronizedRootGroup`
+in a legacy `project.pbxproj`) and classic groups.
 A file added or deleted under a synchronized folder needs no project-file change
 unless the folder's exception set (`PBXFileSystemSynchronizedBuildFileExceptionSet`)
 must list it. Every other added or deleted project file in `handoff.paths`

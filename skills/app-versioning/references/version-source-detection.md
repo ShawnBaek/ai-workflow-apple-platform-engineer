@@ -6,12 +6,12 @@ Read this when a project has more than one apparent version value or includes ex
 
 For the target and configuration being changed, inspect in this order:
 
-1. project generator input such as `project.yml` or an equivalent spec;
+1. legacy project generator input such as `project.yml`, only when a generator still owns the project;
 2. included `.xcconfig` settings and their precedence;
-3. Xcode project build settings, including conditional settings;
+3. Xcode project build settings in `project.xcproj` (or `project.pbxproj`), including conditional settings;
 4. `Info.plist` substitutions or literal values.
 
-Record whether `CFBundleShortVersionString` and `CFBundleVersion` expand from build settings or are literal. A literal `Info.plist` may be authoritative only when no higher project convention supplies it. Do not change a generated `.pbxproj` and generator input together. An embedded extension or watch app that sets its own value must still end with its containing app's values; report that per-target copy as part of the change instead of leaving it behind.
+Record whether `CFBundleShortVersionString` and `CFBundleVersion` expand from build settings or are literal. A literal `Info.plist` may be authoritative only when no higher project convention supplies it. Do not change a generated `.pbxproj` and generator input together. After editing `project.xcproj`, validate it with `xcprojformatter` as [Xcode project format](../../xcode-project-workflow/references/project-format.md) describes. An embedded extension or watch app that sets its own value must still end with its containing app's values; report that per-target copy as part of the change instead of leaving it behind.
 
 ## Effective-value proof
 

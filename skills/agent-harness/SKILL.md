@@ -245,7 +245,7 @@ that `mode` and `selected_writer` name. The steps follow
 
 | Concern | Skill |
 |---|---|
-| Xcode root, container, and XcodeGen gate | `xcode-project-workflow` |
+| Xcode root, container, and project format gate | `xcode-project-workflow` |
 | Git branch, worktree, index, and PR state | `git-workflow` |
 | Agent-workspace changes shown in the user's open Xcode, on request | `open-xcode-handoff` |
 | Swift package resolution and cache | `swift-package-manager` |
